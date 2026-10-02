@@ -1,0 +1,178 @@
+services:
+  # PostgreSQL Database
+  postgres:
+    image: postgres:15-alpine
+    container_name: ai-detector-postgres
+    environment:
+      POSTGRES_DB: ${DB_NAME}
+      POSTGRES_USER: ${DB_USER}
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./database/schema.sql:/docker-entrypoint-initdb.d/01-schema.sql:ro
+    ports:
+      - "5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+    networks:
+      - ai-detector-network
+
+  # AI Text Detector Service
+  detector:
+    build:
+      context: ../detector
+      dockerfile: Dockerfile
+    container_name: ai-detector-service
+    environment:
+      - DATABASE_URL=postgresql://${DB_USER}:${DB_PASSWORD}@postgres:5432/${DB_NAME}
+      - DETECTOR_VERSION=${DETECTOR_VERSION}
+      - FEATURE_SCHEMA_VERSION=${FEATURE_SCHEMA_VERSION}
+      - CLASSIFIER_VERSION=${CLASSIFIER_VERSION}
+      - THRESHOLD_VERSION=${THRESHOLD_VERSION}
+      - CACHE_ENABLED=${CACHE_ENABLED}
+      - CACHE_TTL_HOURS=${CACHE_TTL_HOURS}
+      - MIN_TEXT_LENGTH=${MIN_TEXT_LENGTH}
+      - MAX_TEXT_LENGTH=${MAX_TEXT_LENGTH}
+      - FLASK_DEBUG=false
+      - DETECTOR_SERVICE_PORT=5000
+    ports:
+      - "5000:5000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:5000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    restart: unless-stopped
+    networks:
+      - ai-detector-network
+
+  # n8n Workflow Automation
+  n8n:
+    image: n8nio/n8n:latest
+    container_name: ai-detector-n8n
+    environment:
+      - N8N_HOST=${N8N_HOST}
+      - N8N_PORT=${N8N_PORT}
+      - N8N_PROTOCOL=${N8N_PROTOCOL}
+      - N8N_WEBHOOK_URL=${WEBHOOK_URL}
+      - N8N_BASIC_AUTH_ACTIVE=true
+      - N8N_BASIC_AUTH_USER=${N8N_BASIC_AUTH_USER}
+      - N8N_BASIC_AUTH_PASSWORD=${N8N_BASIC_AUTH_PASSWORD}
+      - N8N_API_KEY=n8n-ai-detector-key-2026
+      - GENERIC_TIMEZONE=UTC
+      - N8N_METRICS=true
+      - EXECUTIONS_TIMEOUT=-1
+      - EXECUTIONS_TIMEOUT_MAX=-1
+      # Regular mode — single instance, no worker needed
+      - EXECUTIONS_MODE=regular
+      # PostgreSQL database for n8n (instead of SQLite)
+      - DB_TYPE=postgresdb
+      - DB_POSTGRESDB_HOST=postgres
+      - DB_POSTGRESDB_PORT=5432
+      - DB_POSTGRESDB_DATABASE=${DB_NAME}
+      - DB_POSTGRESDB_USER=${DB_USER}
+      - DB_POSTGRESDB_PASSWORD=${DB_PASSWORD}
+      - DB_POSTGRESDB_SCHEMA=public
+      # Pass through detector service URL
+      - DETECTOR_SERVICE_URL=http://detector:5000
+      # LLM provider lanes (AI-only workflow reads these via $env)
+      - PRIMARY_BASE_URL=${PRIMARY_BASE_URL}
+      - PRIMARY_API_KEY=${PRIMARY_API_KEY}
+      - PRIMARY_MODEL=${PRIMARY_MODEL}
+      - SECONDARY_BASE_URL=${SECONDARY_BASE_URL}
+      - SECONDARY_API_KEY=${SECONDARY_API_KEY}
+      - SECONDARY_MODEL=${SECONDARY_MODEL}
+      - GRAY_ZONE_LOW=${GRAY_ZONE_LOW}
+      - GRAY_ZONE_HIGH=${GRAY_ZONE_HIGH}
+      - LLM_TIMEOUT_MS=${LLM_TIMEOUT_MS}
+      - PRIMARY_MODEL_WEIGHT=${PRIMARY_MODEL_WEIGHT}
+      - SECONDARY_MODEL_WEIGHT=${SECONDARY_MODEL_WEIGHT}
+      # Rate limits
+      - CEREBRAS_RPM=${CEREBRAS_RPM}
+      - CEREBRAS_TPM=${CEREBRAS_TPM}
+      - NVIDIA_RPM=${NVIDIA_RPM}
+      - NVIDIA_TPM=${NVIDIA_TPM}
+      - OPENROUTER_RPM=${OPENROUTER_RPM}
+      - OPENROUTER_RPD=${OPENROUTER_RPD}
+      # Thresholds
+      - AI_PROBABILITY_THRESHOLD=${AI_PROBABILITY_THRESHOLD}
+      - AI_CONFIDENCE_THRESHOLD=${AI_CONFIDENCE_THRESHOLD}
+      - HUMAN_PROBABILITY_THRESHOLD=${HUMAN_PROBABILITY_THRESHOLD}
+      - HUMAN_CONFIDENCE_THRESHOLD=${HUMAN_CONFIDENCE_THRESHOLD}
+      - MAX_MODEL_DISAGREEMENT=${MAX_MODEL_DISAGREEMENT}
+      - SINGLE_MODEL_CONFIDENCE_PENALTY=${SINGLE_MODEL_CONFIDENCE_PENALTY}
+      # Ensemble weights
+      - STATISTICAL_WEIGHT=${STATISTICAL_WEIGHT}
+      - PRIMARY_MODEL_WEIGHT=${PRIMARY_MODEL_WEIGHT}
+      - SECONDARY_MODEL_WEIGHT=${SECONDARY_MODEL_WEIGHT}
+      # Allow env var access in Code nodes (dev mode)
+      - N8N_BLOCK_ENV_ACCESS_IN_NODE=false
+      # Allow builtin modules in Code nodes (crypto for SHA-256)
+      - NODE_FUNCTION_ALLOW_BUILTIN=crypto
+      # Skip Strapi community node fetch (offline/no internet)
+      - N8N_STRAPI_URL=
+    ports:
+      - "5678:5678"
+    volumes:
+      - n8n_data:/home/node/.n8n
+      - ./n8n:/n8n-workflows:ro
+    depends_on:
+      - postgres
+      - detector
+      - redis
+    restart: unless-stopped
+    networks:
+      - ai-detector-network
+
+  # Redis for n8n queue mode
+  redis:
+    image: redis:7-alpine
+    container_name: ai-detector-redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+    networks:
+      - ai-detector-network
+
+  # OmniRoute (optional - if running locally)
+  # Uncomment if you want to run OmniRoute in the same stack
+  # omniroute:
+  #   image: omniroute/omniroute:latest
+  #   container_name: ai-detector-omniroute
+  #   environment:
+  #     - OMNIROUTE_PORT=8080
+  #     - CEREBRAS_API_KEY=${CEREBRAS_API_KEY}
+  #     - NVIDIA_API_KEY=${NVIDIA_API_KEY}
+  #     - OPENROUTER_API_KEY=${OPENROUTER_API_KEY}
+  #   ports:
+  #     - "8080:8080"
+  #   restart: unless-stopped
+  #   networks:
+  #     - ai-detector-network
+
+volumes:
+  postgres_data:
+    driver: local
+  n8n_data:
+    driver: local
+  redis_data:
+    driver: local
+
+networks:
+  ai-detector-network:
+    driver: bridge

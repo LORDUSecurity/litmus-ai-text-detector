@@ -1,0 +1,773 @@
+You are a senior automation/backend engineer. Build a production-ready n8n workflow for an AI-text provenance and detection pipeline.
+
+Do not merely explain the architecture. Implement it.
+
+OBJECTIVE
+=========
+Build a system that accepts text and optional original-file metadata, checks reliable provenance first, checks applicable AI watermarks second, calculates statistical features third, uses free-tier AI models available through OmniRoute only where useful, combines the signals, and produces:
+
+1. AI_GENERATED
+2. HUMAN_LIKELY
+3. REVIEW_REQUIRED
+4. DETECTION_UNAVAILABLE
+
+IMPORTANT SEMANTIC RULE
+=======================
+"HUMAN_LIKELY" must NEVER mean proven human.
+
+It means:
+
+"No sufficiently strong AI-generation signal was detected."
+
+Do not claim certainty of human authorship from absence of an AI signal.
+
+CORE PIPELINE
+=============
+Implement this logical flow:
+
+Input
+  ->
+Normalize Input
+  ->
+Hash Text
+  ->
+Check Cache
+  ->
+Provenance / Metadata Detection
+  ->
+IF reliable provenance exists
+    ->
+    Verify signature
+    ->
+    IF valid signed AI provenance
+        -> AI_GENERATED
+        -> persist result
+        -> return
+    ELSE
+        -> continue
+ELSE
+    -> continue
+
+Continue:
+  ->
+Watermark Detection
+  ->
+IF applicable watermark detected with sufficient confidence
+    ->
+    AI_GENERATED
+    ->
+    persist result
+    ->
+    return
+ELSE
+    ->
+Statistical Feature Extraction
+    ->
+Primary model scoring through OmniRoute
+    ->
+Secondary model scoring through OmniRoute
+    ->
+Ensemble classification
+    ->
+Confidence / disagreement analysis
+    ->
+IF uncertain
+    -> REVIEW_REQUIRED
+    -> persist
+    -> notify / queue for human review
+ELSE
+    -> AI_GENERATED or HUMAN_LIKELY
+    -> persist
+    -> return
+
+TECHNOLOGY
+==========
+Use:
+
+- n8n for orchestration
+- n8n Code nodes for deterministic calculations
+- n8n HTTP Request nodes for APIs
+- OmniRoute as the unified OpenAI-compatible model gateway
+- free-tier providers only for model calls
+- a local Python service for specialized statistical/classification logic where appropriate
+- a specialized watermark detector service rather than asking an LLM whether a watermark exists
+- a database/cache for results and reviewed labels
+
+FREE-PROVIDER STRATEGY
+======================
+Use only free providers available to OmniRoute.
+
+Preferred architecture:
+
+1. Cerebras:
+   - primary model-scoring provider
+   - exploit token-level log probabilities where the selected model/API supports them
+   - use for measurable model-derived statistics and/or secondary classification
+
+2. NVIDIA NIM:
+   - secondary classifier and fallback
+
+3. OpenRouter free models:
+   - additional fallback/ensemble source
+   - use only models explicitly available as free
+
+Do not assume a provider remains free forever.
+Put provider names, model names, RPM, TPM, RPD and other limits into configuration variables rather than hard-coding them throughout the workflow.
+
+Do not use paid credits or "free trial" balances as if they were free-tier capacity.
+
+OMNIROUTE
+=========
+Assume OmniRoute exposes an OpenAI-compatible endpoint:
+
+POST /v1/chat/completions
+
+Make the base URL configurable:
+
+OMNIROUTE_BASE_URL
+
+Make API key configurable:
+
+OMNIROUTE_API_KEY
+
+Make model configurable:
+
+PRIMARY_MODEL
+SECONDARY_MODEL
+
+Do not hard-code localhost assumptions.
+
+Create an OmniRoute HTTP Request abstraction/helper so provider changes require editing configuration rather than many workflow nodes.
+
+INPUT SCHEMA
+============
+Accept:
+
+{
+  "document_id": "optional string",
+  "text": "required string",
+  "source_url": "optional string",
+  "content_type": "optional string",
+  "metadata": {},
+  "original_file": null,
+  "requested_by": "optional string"
+}
+
+Reject an empty text value.
+
+Generate document_id if absent.
+
+Normalize whitespace but preserve enough original information for statistical analysis.
+
+Always retain the original text hash.
+
+HASH
+====
+Use SHA-256 over the normalized text.
+
+Use:
+
+text_hash
+
+as a cache identifier.
+
+Cache key should include:
+
+- text_hash
+- detector version
+- feature schema version
+- classifier version
+- threshold version
+
+PROVENANCE
+==========
+Implement a provenance stage before text-only analysis whenever an original binary/file or metadata is available.
+
+Recognize relevant provenance mechanisms such as:
+
+- C2PA / Content Credentials
+- signed manifests
+- XMP
+- EXIF where applicable
+- generator metadata
+- supplied provenance claims
+
+Do NOT infer "AI-generated" merely from an unsigned metadata field.
+
+The output schema must be:
+
+{
+  "found": true,
+  "format": "C2PA",
+  "signature_present": true,
+  "signature_valid": true,
+  "ai_claim": true,
+  "issuer": "optional",
+  "details": {}
+}
+
+Only treat provenance as strong evidence when the signature/claim is actually verified.
+
+For a verified signed AI provenance result:
+
+classification = AI_GENERATED
+method = VERIFIED_PROVENANCE
+
+Then stop the pipeline.
+
+WATERMARK
+=========
+Implement a pluggable watermark detector interface.
+
+Do NOT create a generic LLM prompt such as:
+
+"Does this text contain an AI watermark?"
+
+That is not a valid universal watermark detector.
+
+Implement an HTTP interface like:
+
+POST /detect
+
+Request:
+
+{
+  "text": "..."
+}
+
+Response:
+
+{
+  "detected": false,
+  "provider": null,
+  "watermark_type": null,
+  "score": null,
+  "confidence": null,
+  "detector_version": "..."
+}
+
+The system must support model/configuration-specific watermark detectors.
+
+Treat watermark detection as strong evidence only when the applicable detector is valid for the watermark family being tested.
+
+Do not treat SynthID as a universal AI detector.
+
+STATISTICAL FEATURES
+====================
+Implement deterministic feature extraction.
+
+At minimum calculate:
+
+- character_count
+- word_count
+- sentence_count
+- paragraph_count
+- average_word_length
+- average_sentence_length
+- median_sentence_length
+- sentence_length_variance
+- sentence_length_stddev
+- type_token_ratio
+- unique_word_count
+- repetition_ratio
+- hapax_ratio where practical
+- punctuation_density
+- digit_density
+- uppercase_density
+- paragraph_length statistics
+- heading frequency where detectable
+- bullet frequency
+- URL frequency
+- quotation frequency
+
+Add other useful deterministic features where justified.
+
+Do not label a feature as an "AI feature" simply because an LLM says it is.
+
+MODEL-DERIVED STATISTICS
+========================
+Where the selected OmniRoute model/provider exposes token-level log probabilities, retrieve them.
+
+Calculate:
+
+- mean token log probability
+- median token log probability
+- log probability variance
+- negative log likelihood
+- token-level probability statistics
+- entropy-like statistics where mathematically valid
+
+Do not invent perplexity from incomplete information.
+
+Document exactly how each metric is calculated.
+
+MODEL CLASSIFIERS
+=================
+Use two independent model calls when available:
+
+PRIMARY:
+  OmniRoute -> Cerebras
+
+SECONDARY:
+  OmniRoute -> NVIDIA NIM or OpenRouter free
+
+Do not call an LLM for every deterministic operation.
+
+Send structured features to the model.
+
+Force JSON-only output.
+
+Expected model response:
+
+{
+  "ai_probability": 0.0,
+  "confidence": 0.0,
+  "signals": [
+    {
+      "name": "feature_name",
+      "direction": "AI",
+      "strength": 0.0
+    }
+  ]
+}
+
+Validate:
+
+0 <= ai_probability <= 1
+0 <= confidence <= 1
+
+Reject malformed responses.
+
+Do not trust explanatory prose.
+
+ENSEMBLE
+========
+Implement a deterministic ensemble in code.
+
+Initial configurable weights:
+
+statistical_probability = 0.60
+primary_model_probability = 0.25
+secondary_model_probability = 0.15
+
+Formula:
+
+ensemble_probability =
+    0.60 * statistical_probability
+  + 0.25 * primary_model_probability
+  + 0.15 * secondary_model_probability
+
+Make these weights configurable.
+
+Do not present them as scientifically universal weights.
+
+CALIBRATION
+===========
+Explicitly design the workflow so these weights and thresholds can later be calibrated from labeled validation data.
+
+Store all component scores so calibration is possible.
+
+DECISION THRESHOLDS
+===================
+Initial operational thresholds:
+
+AI:
+  probability >= 0.85
+  AND confidence >= 0.70
+  AND model disagreement <= 0.30
+
+HUMAN_LIKELY:
+  probability <= 0.20
+  AND confidence >= 0.70
+  AND model disagreement <= 0.30
+
+Everything else:
+
+REVIEW_REQUIRED
+
+Make thresholds configurable.
+
+Do not hard-code them in many workflow nodes.
+
+CONFIDENCE
+==========
+Keep confidence conceptually separate from probability.
+
+For the initial implementation, combine primary and secondary confidence:
+
+confidence =
+    0.5 * primary_confidence
+  + 0.5 * secondary_confidence
+
+Calculate model disagreement:
+
+abs(primary_probability - secondary_probability)
+
+Mark REVIEW_REQUIRED when confidence is low or disagreement is high.
+
+ERROR HANDLING
+==============
+Never convert provider failures into HUMAN_LIKELY.
+
+Use:
+
+DETECTION_UNAVAILABLE
+
+or:
+
+REVIEW_REQUIRED
+
+when analysis cannot be completed reliably.
+
+Handle:
+
+- HTTP 429
+- HTTP 500
+- HTTP 502
+- HTTP 503
+- connection failure
+- timeout
+- malformed JSON
+- empty model response
+- context length failure
+
+Implement retries with exponential backoff.
+
+Use provider-specific rate limiting.
+
+Never exceed configured free-tier rate limits.
+
+RATE LIMITING
+=============
+Create configurable provider settings such as:
+
+CEREBRAS_RPM
+CEREBRAS_TPM
+CEREBRAS_RPD
+
+NVIDIA_RPM
+
+OPENROUTER_RPM
+OPENROUTER_RPD
+
+Implement throttling rather than firing unlimited parallel requests.
+
+If a provider reaches its free-tier limit, fail over where safe.
+
+CACHE
+=====
+Before expensive model operations:
+
+check whether this exact text/version has already been analyzed.
+
+If cached, return the cached result unless cache policy says the result is stale.
+
+Persist:
+
+- text_hash
+- final result
+- provenance result
+- watermark result
+- statistical features
+- model scores
+- ensemble result
+- versions
+- timestamps
+
+VERSIONING
+==========
+Every result must contain:
+
+detector_version
+feature_schema_version
+classifier_version
+threshold_version
+
+Example:
+
+{
+  "detector_version": "1.0.0",
+  "feature_schema_version": "1.0.0",
+  "classifier_version": "1.0.0",
+  "threshold_version": "1.0.0"
+}
+
+HUMAN REVIEW
+============
+Create a second n8n workflow for review.
+
+Main workflow sends uncertain cases to:
+
+AI_Detection_Review_Queue
+
+Store:
+
+- document_id
+- text_hash
+- text
+- all model probabilities
+- statistical features
+- automatic classification
+- confidence
+- disagreement
+- review status
+- created_at
+
+Reviewer choices:
+
+AI
+HUMAN
+INCONCLUSIVE
+
+Persist the human label.
+
+These labels must be usable later for supervised calibration/model training.
+
+DATABASE
+========
+Create an abstraction so PostgreSQL is preferred but another database can be substituted.
+
+Suggested tables:
+
+analysis_results
+review_labels
+provider_usage
+detector_versions
+
+analysis_results should include:
+
+id
+document_id
+text_hash
+classification
+ai_probability
+confidence
+method
+provenance_json
+watermark_json
+features_json
+model_results_json
+review_required
+detector_version
+feature_schema_version
+classifier_version
+threshold_version
+created_at
+updated_at
+
+OBSERVABILITY
+=============
+Record:
+
+- provider used
+- model used
+- request latency
+- response latency
+- token counts if available
+- HTTP status
+- retries
+- rate-limit events
+- fallback events
+- final classification
+- detector version
+
+Never log API keys.
+
+Avoid logging unnecessarily sensitive text in production logs.
+
+FINAL RESPONSE
+==============
+Return:
+
+{
+  "document_id": "...",
+  "classification": "AI_GENERATED | HUMAN_LIKELY | REVIEW_REQUIRED | DETECTION_UNAVAILABLE",
+  "ai_probability": 0.0,
+  "confidence": 0.0,
+  "method": "...",
+  "review_required": false,
+
+  "evidence": {
+    "provenance": {},
+    "watermark": {},
+    "statistics": {},
+    "models": []
+  },
+
+  "warning": "Human-likely means no strong AI-generation signal was detected; it does not prove human authorship.",
+
+  "versions": {
+    "detector": "...",
+    "features": "...",
+    "classifier": "...",
+    "thresholds": "..."
+  }
+}
+
+N8N WORKFLOW
+============
+Create these logical nodes:
+
+1. Webhook
+2. Normalize Input
+3. Hash Text
+4. Cache Lookup
+5. IF Cached
+6. Provenance Extraction
+7. IF Provenance Found
+8. Provenance Verification
+9. IF Verified AI Provenance
+10. Watermark Detector
+11. IF Watermark Detected
+12. Statistical Feature Extraction
+13. OmniRoute Primary Classifier
+14. OmniRoute Secondary Classifier
+15. Parse/Validate Model JSON
+16. Ensemble Decision
+17. Confidence/Disagreement Check
+18. IF Review Required
+19. Save Result
+20. Review Queue
+21. Build Final Response
+22. Respond to Webhook
+
+Where appropriate, combine trivial nodes, but preserve clear separation between deterministic analysis and model inference.
+
+IMPLEMENTATION QUALITY
+======================
+Use clean, maintainable code.
+
+Do not make one giant Code node containing the entire system.
+
+Separate:
+
+- configuration
+- feature extraction
+- provider access
+- model parsing
+- ensemble logic
+- persistence
+- response formatting
+
+Make all provider/model URLs and thresholds configurable.
+
+Provide comments in code.
+
+Add validation for every external response.
+
+Add unit tests for the statistical feature functions and ensemble decision logic.
+
+TEST CASES
+==========
+Create tests for:
+
+1. Empty text
+2. Very short text
+3. Normal human-written sample
+4. AI-generated sample
+5. Text with valid AI provenance
+6. Text with invalid signature
+7. Text with no provenance
+8. Watermark-positive sample
+9. Watermark-negative sample
+10. Provider HTTP 429
+11. Provider timeout
+12. Malformed model JSON
+13. Large input
+14. Identical repeated input hitting cache
+15. Strong model disagreement
+16. Low confidence
+17. Probability exactly on threshold
+18. All providers unavailable
+
+LARGE INPUTS
+============
+Implement chunking for long text.
+
+Do not blindly send an arbitrarily large document to every model.
+
+For long text:
+
+1. split into chunks
+2. calculate deterministic features over the whole document
+3. analyze representative/model-compatible chunks
+4. aggregate chunk-level model scores
+5. preserve whole-document statistics
+
+Make chunk size configurable.
+
+IMPORTANT SAFETY/QUALITY RULES
+==============================
+Never output:
+
+"100% AI"
+"100% human"
+
+unless referring to a deterministic cryptographic/provenance fact such as:
+
+"valid signed provenance states AI generation."
+
+For ordinary statistical/model detection always describe the result as probabilistic.
+
+Do not use absence of watermark as evidence that text is human.
+
+Do not use a single LLM judgment as the final authority.
+
+Do not use an LLM to replace deterministic provenance verification.
+
+Do not treat generic metadata as proof unless cryptographically verified.
+
+DELIVERABLES
+============
+Produce ALL of the following:
+
+1. Complete n8n workflow JSON that can be imported.
+2. Any JavaScript Code-node implementations required by the workflow.
+3. Python code for the optional local detector/classifier service.
+4. Database schema/migrations.
+5. Environment variable template (.env.example).
+6. Docker Compose configuration for:
+   - n8n
+   - OmniRoute
+   - local detector service
+   - PostgreSQL
+7. README with setup instructions.
+8. Test data/examples.
+9. Explanation of exactly where I must insert API keys.
+10. Explanation of how to change free providers/models.
+11. Explanation of how rate limits are configured.
+12. Explanation of how to calibrate thresholds using human-reviewed labels.
+
+IMPORTANT OUTPUT FORMAT
+=======================
+Do not merely give me pseudocode.
+
+Generate real implementation files.
+
+Use sensible project structure:
+
+ai-text-detector/
+├── n8n/
+│   ├── main-workflow.json
+│   ├── review-workflow.json
+│   └── monitor-workflow.json
+├── detector/
+│   ├── app.py
+│   ├── features.py
+│   ├── classifier.py
+│   ├── requirements.txt
+│   └── tests/
+├── database/
+│   └── schema.sql
+├── docker/
+│   └── docker-compose.yml
+├── .env.example
+└── README.md
+
+Before finishing, validate that the n8n JSON is syntactically valid and that all node references are internally consistent.
+
+If an external dependency cannot be implemented without a specific package/API, isolate it behind a clean adapter instead of pretending it exists.
+
+Do not fabricate provider capabilities or free-tier limits. Put uncertain provider-specific values behind configuration and clearly mark them.
+
+Start by implementing the project structure and core n8n workflow, then fill in the supporting services and tests.

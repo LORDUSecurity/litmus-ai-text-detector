@@ -1,0 +1,744 @@
+{
+  "name": "AI Text Detection Pipeline",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "ai-detect",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "webhook-input",
+      "name": "Webhook Input",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1,
+      "position": [
+        250,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Normalize and validate input\nconst body = $input.item.json;\n\n// If nested under body key (some proxy/forwarding patterns), unwrap\nconst payload = body.body || body;\n\n// Validate required fields\nif (!payload.text || typeof payload.text !== 'string') {\n  throw new Error('Missing or invalid text field');\n}\n\nconst text = payload.text.trim();\n\n// Check length constraints\nconst minLength = parseInt($env.MIN_TEXT_LENGTH || '10');\nconst maxLength = parseInt($env.MAX_TEXT_LENGTH || '50000');\n\nif (text.length < minLength) {\n  throw new Error(`Text too short (min ${minLength} characters)`);\n}\n\nif (text.length > maxLength) {\n  throw new Error(`Text too long (max ${maxLength} characters)`);\n}\n\n// Generate document_id if not provided\nconst document_id = payload.document_id || `doc_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;\n\n// Compute text hash (SHA-256)\nconst crypto = require('crypto');\nconst normalized_text = text.replace(/\\s+/g, ' ').trim();\nconst text_hash = crypto.createHash('sha256').update(normalized_text).digest('hex');\n\nreturn [{ json: {\n  document_id,\n  text,\n  text_hash,\n  source_url: payload.source_url || null,\n  content_type: payload.content_type || null,\n  metadata: payload.metadata || {},\n  original_file: payload.original_file || null,\n  requested_by: payload.requested_by || null,\n  timestamp: new Date().toISOString()\n} }];"
+      },
+      "id": "normalize-input",
+      "name": "Normalize Input",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        450,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Capture all configuration from environment variables at workflow start\\nreturn [{ json: {\\n  detector_service_url: $env.DETECTOR_SERVICE_URL || 'http://detector:5000',\\n  omniroute_base_url: $env.OMNIROUTE_BASE_URL || '',\\n  omniroute_api_key: $env.OMNIROUTE_API_KEY || '',\\n  primary_model: $env.PRIMARY_MODEL || 'cerebras/llama3.1-8b',\\n  secondary_model: $env.SECONDARY_MODEL || 'nvidia/llama-3.1-nemotron-70b-instruct',\\n  fallback_model: $env.FALLBACK_MODEL || 'openrouter/meta-llama/llama-3.2-3b-instruct:free',\\n  detector_version: $env.DETECTOR_VERSION || '1.0.0',\\n  feature_schema_version: $env.FEATURE_SCHEMA_VERSION || '1.0.0',\\n  classifier_version: $env.CLASSIFIER_VERSION || '1.0.0',\\n  threshold_version: $env.THRESHOLD_VERSION || '1.0.0',\\n  webhook_url: $env.WEBHOOK_URL || 'http://localhost:5678',\\n  webhook_review_url: $env.WEBHOOK_URL + '/webhook/ai-review-queue' || 'http://localhost:5678/webhook/ai-review-queue',\\n  min_text_length: parseInt($env.MIN_TEXT_LENGTH || '10'),\\n  max_text_length: parseInt($env.MAX_TEXT_LENGTH || '50000'),\\n  statistical_weight: parseFloat($env.STATISTICAL_WEIGHT || '0.60'),\\n  primary_model_weight: parseFloat($env.PRIMARY_MODEL_WEIGHT || '0.25'),\\n  secondary_model_weight: parseFloat($env.SECONDARY_MODEL_WEIGHT || '0.15'),\\n  ai_prob_threshold: parseFloat($env.AI_PROBABILITY_THRESHOLD || '0.85'),\\n  ai_conf_threshold: parseFloat($env.AI_CONFIDENCE_THRESHOLD || '0.70'),\\n  human_prob_threshold: parseFloat($env.HUMAN_PROBABILITY_THRESHOLD || '0.20'),\\n  human_conf_threshold: parseFloat($env.HUMAN_CONFIDENCE_THRESHOLD || '0.70'),\\n  max_disagreement: parseFloat($env.MAX_MODEL_DISAGREEMENT || '0.30')\\n} }];"
+      },
+      "id": "config",
+      "name": "Config from Env",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        650,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "url": "={{$('Config from Env').item.json.detector_service_url}}/cache/lookup",
+        "method": "POST",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\"text_hash\": \"{{$json.text_hash}}\"}",
+        "options": {
+          "timeout": 5000
+        }
+      },
+      "id": "cache-lookup",
+      "name": "Cache Lookup",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4,
+      "position": [
+        650,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "boolean": [
+            {
+              "value1": "={{$json.found}}",
+              "value2": true
+            }
+          ]
+        }
+      },
+      "id": "if-cached",
+      "name": "IF Cached",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 1,
+      "position": [
+        850,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Return cached result\nconst cached = $input.item.json.result;\n\n// Add warning message\ncached.warning = \"Human-likely means no strong AI-generation signal was detected; it does not prove human authorship.\";\ncached.cached = true;\n\nreturn [{ json: cached }];"
+      },
+      "id": "return-cached",
+      "name": "Return Cached Result",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1050,
+        200
+      ]
+    },
+    {
+      "parameters": {
+        "url": "={{$('Config from Env').item.json.detector_service_url}}/provenance/check",
+        "method": "POST",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\"metadata\": {{$json.metadata}}, \"original_file\": {{$json.original_file}}}",
+        "options": {
+          "timeout": 10000
+        }
+      },
+      "id": "provenance-check",
+      "name": "Provenance Check",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4,
+      "position": [
+        1050,
+        400
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "boolean": [
+            {
+              "value1": "={{$json.found && $json.signature_valid && $json.ai_claim}}",
+              "value2": true
+            }
+          ]
+        }
+      },
+      "id": "if-verified-provenance",
+      "name": "IF Verified AI Provenance",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 1,
+      "position": [
+        1250,
+        400
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Build result from verified provenance\nconst input = $('Normalize Input').item.json;\nconst provenance = $input.item.json;\nconst config = $('Config from Env').item.json;\n\nreturn [{ json: {\n  document_id: input.document_id,\n  classification: 'AI_GENERATED',\n  ai_probability: 1.0,\n  confidence: 1.0,\n  method: 'VERIFIED_PROVENANCE',\n  review_required: false,\n  evidence: {\n    provenance: provenance,\n    watermark: {},\n    statistics: {},\n    models: []\n  },\n  versions: {\n    detector: config.detector_version,\n    features: config.feature_schema_version,\n    classifier: config.classifier_version,\n    thresholds: config.threshold_version\n  }\n} }];"
+      },
+      "id": "build-provenance-result",
+      "name": "Build Provenance Result",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1450,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "url": "={{$('Config from Env').item.json.detector_service_url}}/watermark/detect",
+        "method": "POST",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\"text\": \"{{$('Normalize Input').item.json.text}}\"}",
+        "options": {
+          "timeout": 15000
+        }
+      },
+      "id": "watermark-detect",
+      "name": "Watermark Detection",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4,
+      "position": [
+        1450,
+        500
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "boolean": [
+            {
+              "value1": "={{$json.detected && $json.confidence > 0.8}}",
+              "value2": true
+            }
+          ]
+        }
+      },
+      "id": "if-watermark-detected",
+      "name": "IF Watermark Detected",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 1,
+      "position": [
+        1650,
+        500
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Build result from watermark detection\nconst input = $('Normalize Input').item.json;\nconst watermark = $input.item.json;\nconst config = $('Config from Env').item.json;\n\nreturn [{ json: {\n  document_id: input.document_id,\n  classification: 'AI_GENERATED',\n  ai_probability: watermark.score || 0.95,\n  confidence: watermark.confidence || 0.9,\n  method: 'WATERMARK_DETECTED',\n  review_required: false,\n  evidence: {\n    provenance: {},\n    watermark: watermark,\n    statistics: {},\n    models: []\n  },\n  versions: {\n    detector: config.detector_version,\n    features: config.feature_schema_version,\n    classifier: config.classifier_version,\n    thresholds: config.threshold_version\n  }\n} }];"
+      },
+      "id": "build-watermark-result",
+      "name": "Build Watermark Result",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1850,
+        400
+      ]
+    },
+    {
+      "parameters": {
+        "url": "={{$('Config from Env').item.json.detector_service_url}}/features/extract",
+        "method": "POST",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\"text\": \"{{$('Normalize Input').item.json.text}}\"}",
+        "options": {
+          "timeout": 30000
+        }
+      },
+      "id": "extract-features",
+      "name": "Extract Statistical Features",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4,
+      "position": [
+        1850,
+        600
+      ]
+    },
+    {
+      "parameters": {
+        "url": "={{$('Config from Env').item.json.omniroute_base_url}}/chat/completions",
+        "method": "POST",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "=Bearer {{$('Config from Env').item.json.omniroute_api_key}}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"model\": \"{{$('Config from Env').item.json.primary_model}}\",\n  \"messages\": [\n    {\n      \"role\": \"system\",\n      \"content\": \"You are an AI text detection classifier. Analyze the provided statistical features and return ONLY valid JSON with no markdown formatting. Your response must validate against this exact schema: {\\\"ai_probability\\\": number 0-1, \\\"confidence\\\": number 0-1, \\\"signals\\\": [{\\\"name\\\": string, \\\"direction\\\": \\\"AI\\\" or \\\"HUMAN\\\", \\\"strength\\\": number 0-1}]}\"\n    },\n    {\n      \"role\": \"user\",\n      \"content\": \"Analyze these statistical features and determine AI generation probability:\\n\\n\" + JSON.stringify({{$json.features}}) + \"\\n\\nReturn ONLY valid JSON with ai_probability (0-1), confidence (0-1), and signals array. No markdown, no explanation.\"\n    }\n  ],\n  \"temperature\": 0.1,\n  \"max_tokens\": 500,\n  \"response_format\": { \"type\": \"json_object\" }\n}",
+        "options": {
+          "timeout": 60000,
+          "retry": {
+            "enabled": true,
+            "maxTries": 3,
+            "waitBetweenTries": 2000
+          }
+        }
+      },
+      "id": "primary-model",
+      "name": "Primary Model Classification",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4,
+      "position": [
+        2050,
+        600
+      ]
+    },
+    {
+      "parameters": {
+        "url": "={{$('Config from Env').item.json.omniroute_base_url}}/chat/completions",
+        "method": "POST",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "=Bearer {{$('Config from Env').item.json.omniroute_api_key}}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"model\": \"{{$('Config from Env').item.json.secondary_model}}\",\n  \"messages\": [\n    {\n      \"role\": \"system\",\n      \"content\": \"You are an AI text detection classifier. Analyze the provided statistical features and return ONLY valid JSON with no markdown formatting. Your response must validate against this exact schema: {\\\\\\\"ai_probability\\\\\\\": number 0-1, \\\\\\\"confidence\\\\\\\": number 0-1, \\\\\\\"signals\\\\\\\": [{\\\\\\\"name\\\\\\\": string, \\\\\\\"direction\\\\\\\": \\\\\\\"AI\\\\\\\" or \\\\\\\"HUMAN\\\\\\\", \\\\\\\"strength\\\\\\\": number 0-1}]}\"\n    },\n    {\n      \"role\": \"user\",\n      \"content\": \"Analyze these statistical features and determine AI generation probability:\\n\\n\" + JSON.stringify({{$json.features}}) + \"\\n\\nReturn ONLY valid JSON with ai_probability (0-1), confidence (0-1), and signals array. No markdown, no explanation.\"\n    }\n  ],\n  \"temperature\": 0.1,\n  \"max_tokens\": 500,\n  \"response_format\": { \"type\": \"json_object\" }\n}",
+        "options": {
+          "timeout": 60000,
+          "retry": {
+            "enabled": true,
+            "maxTries": 3,
+            "waitBetweenTries": 2000
+          }
+        }
+      },
+      "id": "secondary-model",
+      "name": "Secondary Model Classification",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4,
+      "position": [
+        2050,
+        750
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Parse and validate model responses\nconst features = $('Extract Statistical Features').item.json;\nconst primary_raw = $('Primary Model Classification').item.json;\nconst secondary_raw = $('Secondary Model Classification').item.json;\n\n// Parse primary response\nlet primary_result;\ntry {\n  const primary_content = primary_raw.choices[0].message.content;\n  primary_result = typeof primary_content === 'string' ? JSON.parse(primary_content) : primary_content;\n} catch (e) {\n  throw new Error('Failed to parse primary model response: ' + e.message);\n}\n\n// Validate primary\nif (!primary_result.ai_probability || primary_result.ai_probability < 0 || primary_result.ai_probability > 1) {\n  throw new Error('Invalid primary ai_probability');\n}\nif (!primary_result.confidence || primary_result.confidence < 0 || primary_result.confidence > 1) {\n  throw new Error('Invalid primary confidence');\n}\n\n// Parse secondary response\nlet secondary_result;\ntry {\n  const secondary_content = secondary_raw.choices[0].message.content;\n  secondary_result = typeof secondary_content === 'string' ? JSON.parse(secondary_content) : secondary_content;\n} catch (e) {\n  throw new Error('Failed to parse secondary model response: ' + e.message);\n}\n\n// Validate secondary\nif (!secondary_result.ai_probability || secondary_result.ai_probability < 0 || secondary_result.ai_probability > 1) {\n  throw new Error('Invalid secondary ai_probability');\n}\nif (!secondary_result.confidence || secondary_result.confidence < 0 || secondary_result.confidence > 1) {\n  throw new Error('Invalid secondary confidence');\n}\n\nreturn [{ json: {\n  statistical_probability: features.statistical_probability,\n  features: features.features,\n  primary_model_result: primary_result,\n  secondary_model_result: secondary_result\n} }];"
+      },
+      "id": "parse-validate-models",
+      "name": "Parse & Validate Model Responses",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2250,
+        675
+      ]
+    },
+    {
+      "parameters": {
+        "url": "={{$('Config from Env').item.json.detector_service_url}}/classify",
+        "method": "POST",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{JSON.stringify($json)}}",
+        "options": {
+          "timeout": 10000
+        }
+      },
+      "id": "ensemble-classify",
+      "name": "Ensemble Classification",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4,
+      "position": [
+        2450,
+        675
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Build final result object\nconst input = $('Normalize Input').item.json;\nconst features = $('Extract Statistical Features').item.json;\nconst ensemble = $input.item.json;\nconst provenance = $('Provenance Check').item.json;\nconst watermark = $('Watermark Detection').item.json;\nconst primary_raw = $('Primary Model Classification').item.json;\nconst secondary_raw = $('Secondary Model Classification').item.json;\nconst config = $('Config from Env').item.json;\n\nreturn [{ json: {\n  document_id: input.document_id,\n  classification: ensemble.classification,\n  ai_probability: ensemble.ai_probability,\n  confidence: ensemble.confidence,\n  method: ensemble.method,\n  review_required: ensemble.review_required,\n  \n  evidence: {\n    provenance: provenance.found ? provenance : {},\n    watermark: watermark.detected ? watermark : {},\n    statistics: features.features,\n    models: [\n      {\n        provider: 'primary',\n        model: config.primary_model,\n        result: ensemble.component_scores\n      },\n      {\n        provider: 'secondary',\n        model: config.secondary_model,\n        result: ensemble.component_scores\n      }\n    ]\n  },\n  \n  warning: \"Human-likely means no strong AI-generation signal was detected; it does not prove human authorship.\",\n  \n  versions: {\n    detector: config.detector_version,\n    features: config.feature_schema_version,\n    classifier: config.classifier_version,\n    thresholds: config.threshold_version\n  },\n  \n  _internal: {\n    text_hash: input.text_hash,\n    timestamp: input.timestamp\n  }\n} }];"
+      },
+      "id": "build-final-result",
+      "name": "Build Final Result",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2650,
+        675
+      ]
+    },
+    {
+      "parameters": {
+        "url": "={{$('Config from Env').item.json.detector_service_url}}/result/save",
+        "method": "POST",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"document_id\": \"{{$json.document_id}}\",\n  \"text_hash\": \"{{$json._internal.text_hash}}\",\n  \"result\": {{JSON.stringify($json)}}\n}",
+        "options": {
+          "timeout": 10000
+        }
+      },
+      "id": "save-result",
+      "name": "Save Result to Database",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4,
+      "position": [
+        2850,
+        675
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "boolean": [
+            {
+              "value1": "={{$('Build Final Result').item.json.review_required}}",
+              "value2": true
+            }
+          ]
+        }
+      },
+      "id": "if-review-required",
+      "name": "IF Review Required",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 1,
+      "position": [
+        3050,
+        675
+      ]
+    },
+    {
+      "parameters": {
+        "url": "={{$('Config from Env').item.json.webhook_review_url}}",
+        "method": "POST",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{JSON.stringify($('Build Final Result').item.json)}}",
+        "options": {
+          "timeout": 5000
+        }
+      },
+      "id": "queue-for-review",
+      "name": "Queue for Review",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4,
+      "position": [
+        3250,
+        600
+      ]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{JSON.stringify($('Build Final Result').item.json)}}",
+        "options": {
+          "responseCode": 200
+        }
+      },
+      "id": "respond-webhook",
+      "name": "Respond to Webhook",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1,
+      "position": [
+        3450,
+        675
+      ]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{JSON.stringify($input.item.json)}}",
+        "options": {
+          "responseCode": 200
+        }
+      },
+      "id": "respond-early-cached",
+      "name": "Respond (Cached)",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1,
+      "position": [
+        1250,
+        200
+      ]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{JSON.stringify($input.item.json)}}",
+        "options": {
+          "responseCode": 200
+        }
+      },
+      "id": "respond-early-provenance",
+      "name": "Respond (Provenance)",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1,
+      "position": [
+        1650,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{JSON.stringify($input.item.json)}}",
+        "options": {
+          "responseCode": 200
+        }
+      },
+      "id": "respond-early-watermark",
+      "name": "Respond (Watermark)",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1,
+      "position": [
+        2050,
+        400
+      ]
+    }
+  ],
+  "connections": {
+    "Webhook Input": {
+      "main": [
+        [
+          {
+            "node": "Normalize Input",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Normalize Input": {
+      "main": [
+        [
+          {
+            "node": "Config from Env",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Cache Lookup": {
+      "main": [
+        [
+          {
+            "node": "IF Cached",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "IF Cached": {
+      "main": [
+        [
+          {
+            "node": "Return Cached Result",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Provenance Check",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Return Cached Result": {
+      "main": [
+        [
+          {
+            "node": "Respond (Cached)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Provenance Check": {
+      "main": [
+        [
+          {
+            "node": "IF Verified AI Provenance",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "IF Verified AI Provenance": {
+      "main": [
+        [
+          {
+            "node": "Build Provenance Result",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Watermark Detection",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Build Provenance Result": {
+      "main": [
+        [
+          {
+            "node": "Respond (Provenance)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Watermark Detection": {
+      "main": [
+        [
+          {
+            "node": "IF Watermark Detected",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "IF Watermark Detected": {
+      "main": [
+        [
+          {
+            "node": "Build Watermark Result",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Extract Statistical Features",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Build Watermark Result": {
+      "main": [
+        [
+          {
+            "node": "Respond (Watermark)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Extract Statistical Features": {
+      "main": [
+        [
+          {
+            "node": "Primary Model Classification",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Secondary Model Classification",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Primary Model Classification": {
+      "main": [
+        [
+          {
+            "node": "Parse & Validate Model Responses",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Secondary Model Classification": {
+      "main": [
+        [
+          {
+            "node": "Parse & Validate Model Responses",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Parse & Validate Model Responses": {
+      "main": [
+        [
+          {
+            "node": "Ensemble Classification",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Ensemble Classification": {
+      "main": [
+        [
+          {
+            "node": "Build Final Result",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Build Final Result": {
+      "main": [
+        [
+          {
+            "node": "Save Result to Database",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Save Result to Database": {
+      "main": [
+        [
+          {
+            "node": "IF Review Required",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "IF Review Required": {
+      "main": [
+        [
+          {
+            "node": "Queue for Review",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Respond to Webhook",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Queue for Review": {
+      "main": [
+        [
+          {
+            "node": "Respond to Webhook",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Config from Env": {
+      "main": [
+        [
+          {
+            "node": "Cache Lookup",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "staticData": null,
+  "tags": [],
+  "triggerCount": 1,
+  "updatedAt": "2026-09-17T17:42:00.000Z",
+  "versionId": "1",
+  "id": "ai-text-detection-main",
+  "active": false
+}

@@ -1,0 +1,48 @@
+import json
+
+with open(r"C:\Users\adam\Desktop\humanizer ultra\ai-text-detector\n8n\main-workflow.json") as f:
+    wf = json.load(f)
+
+# Update node parameters to use config node instead of $env
+# Cache Lookup
+for node in wf['nodes']:
+    if node['id'] == 'cache-lookup':
+        node['parameters']['jsonBody'] = '={"text_hash": "{{$json.text_hash}}"}'
+    elif node['id'] == 'provenance-check':
+        node['parameters']['url'] = "={{$('Config from Env').item.json.detector_service_url}}/provenance/check"
+    elif node['id'] == 'watermark-detect':
+        node['parameters']['url'] = "={{$('Config from Env').item.json.detector_service_url}}/watermark/detect"
+    elif node['id'] == 'extract-features':
+        node['parameters']['url'] = "={{$('Config from Env').item.json.detector_service_url}}/features/extract"
+    elif node['id'] == 'primary-model':
+        node['parameters']['url'] = "={{$('Config from Env').item.json.omniroute_base_url}}/chat/completions"
+        node['parameters']['headerParameters']['parameters'][0]['value'] = "=Bearer {{$('Config from Env').item.json.omniroute_api_key}}"
+        node['parameters']['jsonBody'] = "={\n  \"model\": \"{{$('Config from Env').item.json.primary_model}}\",\n  \"messages\": [\n    {\n      \"role\": \"system\",\n      \"content\": \"You are an AI text detection classifier. Analyze the provided statistical features and return ONLY valid JSON with no markdown formatting. Your response must validate against this exact schema: {\\\"ai_probability\\\": number 0-1, \\\"confidence\\\": number 0-1, \\\"signals\\\": [{\\\"name\\\": string, \\\"direction\\\": \\\"AI\\\" or \\\"HUMAN\\\", \\\"strength\\\": number 0-1}]}\"\n    },\n    {\n      \"role\": \"user\",\n      \"content\": \"Analyze these statistical features and determine AI generation probability:\\n\\n\" + JSON.stringify({{$json.features}}) + \"\\n\\nReturn ONLY valid JSON with ai_probability (0-1), confidence (0-1), and signals array. No markdown, no explanation.\"\n    }\n  ],\n  \"temperature\": 0.1,\n  \"max_tokens\": 500,\n  \"response_format\": { \"type\": \"json_object\" }\n}"
+    elif node['id'] == 'secondary-model':
+        node['parameters']['url'] = "={{$('Config from Env').item.json.omniroute_base_url}}/chat/completions"
+        node['parameters']['headerParameters']['parameters'][0]['value'] = "=Bearer {{$('Config from Env').item.json.omniroute_api_key}}"
+        node['parameters']['jsonBody'] = "={\n  \"model\": \"{{$('Config from Env').item.json.secondary_model}}\",\n  \"messages\": [\n    {\n      \"role\": \"system\",\n      \"content\": \"You are an AI text detection classifier. Analyze the provided statistical features and return ONLY valid JSON with no markdown formatting. Your response must validate against this exact schema: {\\\\\\\"ai_probability\\\\\\\": number 0-1, \\\\\\\"confidence\\\\\\\": number 0-1, \\\\\\\"signals\\\\\\\": [{\\\\\\\"name\\\\\\\": string, \\\\\\\"direction\\\\\\\": \\\\\\\"AI\\\\\\\" or \\\\\\\"HUMAN\\\\\\\", \\\\\\\"strength\\\\\\\": number 0-1}]}\"\n    },\n    {\n      \"role\": \"user\",\n      \"content\": \"Analyze these statistical features and determine AI generation probability:\\n\\n\" + JSON.stringify({{$json.features}}) + \"\\n\\nReturn ONLY valid JSON with ai_probability (0-1), confidence (0-1), and signals array. No markdown, no explanation.\"\n    }\n  ],\n  \"temperature\": 0.1,\n  \"max_tokens\": 500,\n  \"response_format\": { \"type\": \"json_object\" }\n}"
+    elif node['id'] == 'build-provenance-result':
+        node['parameters']['jsCode'] = "// Build result from verified provenance\nconst input = $('Normalize Input').item.json;\nconst provenance = $input.item.json;\nconst config = $('Config from Env').item.json;\n\nreturn {\n  document_id: input.document_id,\n  classification: 'AI_GENERATED',\n  ai_probability: 1.0,\n  confidence: 1.0,\n  method: 'VERIFIED_PROVENANCE',\n  review_required: false,\n  evidence: {\n    provenance: provenance,\n    watermark: {},\n    statistics: {},\n    models: []\n  },\n  versions: {\n    detector: config.detector_version,\n    features: config.feature_schema_version,\n    classifier: config.classifier_version,\n    thresholds: config.threshold_version\n  }\n};"
+    elif node['id'] == 'build-watermark-result':
+        node['parameters']['jsCode'] = "// Build result from watermark detection\nconst input = $('Normalize Input').item.json;\nconst watermark = $input.item.json;\nconst config = $('Config from Env').item.json;\n\nreturn {\n  document_id: input.document_id,\n  classification: 'AI_GENERATED',\n  ai_probability: watermark.score || 0.95,\n  confidence: watermark.confidence || 0.9,\n  method: 'WATERMARK_DETECTED',\n  review_required: false,\n  evidence: {\n    provenance: {},\n    watermark: watermark,\n    statistics: {},\n    models: []\n  },\n  versions: {\n    detector: config.detector_version,\n    features: config.feature_schema_version,\n    classifier: config.classifier_version,\n    thresholds: config.threshold_version\n  }\n};"
+    elif node['id'] == 'parse-validate-models':
+        node['parameters']['jsCode'] = "// Parse and validate model responses\nconst features = $('Extract Statistical Features').item.json;\nconst primary_raw = $('Primary Model Classification').item.json;\nconst secondary_raw = $('Secondary Model Classification').item.json;\n\n// Parse primary response\nlet primary_result;\ntry {\n  const primary_content = primary_raw.choices[0].message.content;\n  primary_result = typeof primary_content === 'string' ? JSON.parse(primary_content) : primary_content;\n} catch (e) {\n  throw new Error('Failed to parse primary model response: ' + e.message);\n}\n\n// Validate primary\nif (!primary_result.ai_probability || primary_result.ai_probability < 0 || primary_result.ai_probability > 1) {\n  throw new Error('Invalid primary ai_probability');\n}\nif (!primary_result.confidence || primary_result.confidence < 0 || primary_result.confidence > 1) {\n  throw new Error('Invalid primary confidence');\n}\n\n// Parse secondary response\nlet secondary_result;\ntry {\n  const secondary_content = secondary_raw.choices[0].message.content;\n  secondary_result = typeof secondary_content === 'string' ? JSON.parse(secondary_content) : secondary_content;\n} catch (e) {\n  throw new Error('Failed to parse secondary model response: ' + e.message);\n}\n\n// Validate secondary\nif (!secondary_result.ai_probability || secondary_result.ai_probability < 0 || secondary_result.ai_probability > 1) {\n  throw new Error('Invalid secondary ai_probability');\n}\nif (!secondary_result.confidence || secondary_result.confidence < 0 || secondary_result.confidence > 1) {\n  throw new Error('Invalid secondary confidence');\n}\n\nreturn {\n  statistical_probability: features.statistical_probability,\n  features: features.features,\n  primary_model_result: primary_result,\n  secondary_model_result: secondary_result\n};"
+    elif node['id'] == 'ensemble-classify':
+        node['parameters']['url'] = "={{$('Config from Env').item.json.detector_service_url}}/classify"
+    elif node['id'] == 'build-final-result':
+        node['parameters']['jsCode'] = "// Build final result object\nconst input = $('Normalize Input').item.json;\nconst features = $('Extract Statistical Features').item.json;\nconst ensemble = $input.item.json;\nconst provenance = $('Provenance Check').item.json;\nconst watermark = $('Watermark Detection').item.json;\nconst primary_raw = $('Primary Model Classification').item.json;\nconst secondary_raw = $('Secondary Model Classification').item.json;\nconst config = $('Config from Env').item.json;\n\nreturn {\n  document_id: input.document_id,\n  classification: ensemble.classification,\n  ai_probability: ensemble.ai_probability,\n  confidence: ensemble.confidence,\n  method: ensemble.method,\n  review_required: ensemble.review_required,\n  \n  evidence: {\n    provenance: provenance.found ? provenance : {},\n    watermark: watermark.detected ? watermark : {},\n    statistics: features.features,\n    models: [\n      {\n        provider: 'primary',\n        model: config.primary_model,\n        result: ensemble.component_scores\n      },\n      {\n        provider: 'secondary',\n        model: config.secondary_model,\n        result: ensemble.component_scores\n      }\n    ]\n  },\n  \n  warning: \"Human-likely means no strong AI-generation signal was detected; it does not prove human authorship.\",\n  \n  versions: {\n    detector: config.detector_version,\n    features: config.feature_schema_version,\n    classifier: config.classifier_version,\n    thresholds: config.threshold_version\n  },\n  \n  _internal: {\n    text_hash: input.text_hash,\n    timestamp: input.timestamp\n  }\n};"
+    elif node['id'] == 'save-result':
+        node['parameters']['url'] = "={{$('Config from Env').item.json.detector_service_url}}/result/save"
+        node['parameters']['jsonBody'] = "={\n  \"document_id\": \"{{$json.document_id}}\",\n  \"text_hash\": \"{{$json._internal.text_hash}}\",\n  \"result\": {{JSON.stringify($json)}}\n}"
+    elif node['id'] == 'if-review-required':
+        node['parameters']['conditions']['boolean'][0]['value1'] = "={{$('Build Final Result').item.json.review_required}}"
+    elif node['id'] == 'queue-for-review':
+        node['parameters']['url'] = "={{$('Config from Env').item.json.webhook_review_url}}"
+        node['parameters']['jsonBody'] = "={{JSON.stringify($('Build Final Result').item.json)}}"
+
+# Save updated workflow
+with open(r"C:\Users\adam\Desktop\humanizer ultra\ai-text-detector\n8n\main-workflow.json", 'w') as f:
+    json.dump(wf, f, indent=2)
+
+print("Workflow updated successfully!")

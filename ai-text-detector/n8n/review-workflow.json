@@ -1,0 +1,184 @@
+{
+  "name": "AI Detection Review Workflow",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "ai-review-queue",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "webhook-review-queue",
+      "name": "Webhook Review Queue",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1,
+      "position": [
+        250,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "ai-review-submit",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "webhook-review-submit",
+      "name": "Webhook Review Submit",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1,
+      "position": [
+        250,
+        600
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Store review item in temporary queue\n// In production, use a proper queue system (Redis, RabbitMQ)\nconst item = $input.item.json;\n\nreturn {\n  queued: true,\n  document_id: item.document_id,\n  classification: item.classification,\n  ai_probability: item.ai_probability,\n  confidence: item.confidence,\n  method: item.method,\n  evidence: item.evidence,\n  queued_at: new Date().toISOString(),\n  status: 'pending'\n};"
+      },
+      "id": "store-review-item",
+      "name": "Store Review Item",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        450,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{JSON.stringify({success: true, message: 'Item queued for review'})}}",
+        "options": {
+          "responseCode": 202
+        }
+      },
+      "id": "respond-queued",
+      "name": "Respond Queued",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1,
+      "position": [
+        650,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Validate review submission\nconst body = $input.item.json.body || $input.item.json;\n\nconst required = ['analysis_result_id', 'reviewer_label'];\nfor (const field of required) {\n  if (!body[field]) {\n    throw new Error(`Missing required field: ${field}`);\n  }\n}\n\nconst validLabels = ['AI', 'HUMAN', 'INCONCLUSIVE', 'MIXED', 'INVALID'];\nif (!validLabels.includes(body.reviewer_label)) {\n  throw new Error(`Invalid reviewer_label. Must be one of: ${validLabels.join(', ')}`);\n}\n\nreturn {\n  analysis_result_id: body.analysis_result_id,\n  reviewer_label: body.reviewer_label,\n  reviewer_id: body.reviewer_id || null,\n  reviewer_notes: body.reviewer_notes || null,\n  review_confidence: body.review_confidence || 'medium',\n  text_sample: body.text_sample || null,\n  reviewed_at: new Date().toISOString()\n};"
+      },
+      "id": "validate-review",
+      "name": "Validate Review",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        450,
+        600
+      ]
+    },
+    {
+      "parameters": {
+        "url": "={{$env.DETECTOR_SERVICE_URL}}/review/submit",
+        "method": "POST",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{JSON.stringify($json)}}",
+        "options": {
+          "timeout": 10000
+        }
+      },
+      "id": "submit-review",
+      "name": "Submit Review to Database",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4,
+      "position": [
+        650,
+        600
+      ]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{JSON.stringify({success: true, review_id: $json.review_id, message: 'Review submitted successfully'})}}",
+        "options": {
+          "responseCode": 200
+        }
+      },
+      "id": "respond-review-success",
+      "name": "Respond Review Success",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1,
+      "position": [
+        850,
+        600
+      ]
+    }
+  ],
+  "connections": {
+    "Webhook Review Queue": {
+      "main": [
+        [
+          {
+            "node": "Store Review Item",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Store Review Item": {
+      "main": [
+        [
+          {
+            "node": "Respond Queued",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Webhook Review Submit": {
+      "main": [
+        [
+          {
+            "node": "Validate Review",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Validate Review": {
+      "main": [
+        [
+          {
+            "node": "Submit Review to Database",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Submit Review to Database": {
+      "main": [
+        [
+          {
+            "node": "Respond Review Success",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "staticData": null,
+  "tags": [],
+  "triggerCount": 2,
+  "updatedAt": "2026-09-17T17:42:00.000Z",
+  "versionId": "1",
+  "id": "ai-text-detection-review",
+  "active": false
+}

@@ -1,0 +1,14 @@
+# Normalize line endings so Windows and Unix checkouts do not produce
+# phantom whole-file diffs.
+* text=auto
+
+*.sh    text eol=lf
+*.py    text eol=lf
+*.js    text eol=lf
+*.json  text eol=lf
+*.jsonl text eol=lf
+*.md    text eol=lf
+
+*.png binary
+*.jpg binary
+*.sqlite binary

@@ -1,0 +1,36 @@
+# --- Secrets -------------------------------------------------------------
+# .env holds live provider API keys, the n8n admin password and the DB
+# password. Never commit it. .env.example is the shareable template.
+.env
+**/.env
+!.env.example
+*.pem
+*.key
+
+# --- n8n runtime state ---------------------------------------------------
+# The SQLite database persists webhook run data, which is exactly where a
+# BYOK key would land. Keep it out of version control.
+.n8n/
+*.sqlite
+*.sqlite-journal
+*.sqlite-wal
+
+# --- Python --------------------------------------------------------------
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+.pytest_cache/
+
+# --- Node / Angular ------------------------------------------------------
+node_modules/
+.angular/
+dist/
+npm-debug.log*
+yarn-error.log*
+
+# --- OS / editor ---------------------------------------------------------
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/

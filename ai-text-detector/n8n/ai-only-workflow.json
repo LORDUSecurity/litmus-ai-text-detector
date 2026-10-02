@@ -1,0 +1,479 @@
+{
+  "name": "AI Text Detection (AI-Only, OpenAI-compatible gateway)",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "ai-detect-ai",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "webhook-ai-input",
+      "name": "Webhook Input",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "webhookId": "7f3c1a20-6b41-4d5e-9a77-2c1e5d0b8a01",
+      "position": [
+        -400,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const raw = $input.first().json;\nconst payload = (raw && raw.body) ? raw.body : raw;\nconst env = $env || {};\n\nconst num = (v, d) => { const n = parseFloat(v); return isFinite(n) ? n : d; };\n\nconst cfg = {\n  primary_base_url:   env.PRIMARY_BASE_URL   || 'https://integrate.api.nvidia.com/v1',\n  primary_api_key:    env.PRIMARY_API_KEY    || '',\n  primary_model:      env.PRIMARY_MODEL      || 'nvidia/nemotron-3-ultra-550b-a55b',\n  secondary_base_url: env.SECONDARY_BASE_URL || 'https://integrate.api.nvidia.com/v1',\n  secondary_api_key:  env.SECONDARY_API_KEY  || '',\n  secondary_model:    env.SECONDARY_MODEL    || 'nvidia/nemotron-3-super-120b-a12b',\n\n  min_text_length: Math.max(1, Math.floor(num(env.MIN_TEXT_LENGTH, 10))),\n  max_text_length: Math.floor(num(env.MAX_TEXT_LENGTH, 50000)),\n\n  // Defaults are the values calibrated against the HC3 benchmark; see .env for\n  // the measured evidence behind each one.\n  ai_prob_threshold:    num(env.AI_PROBABILITY_THRESHOLD, 0.69),\n  ai_conf_threshold:    num(env.AI_CONFIDENCE_THRESHOLD, 0.60),\n  human_prob_threshold: num(env.HUMAN_PROBABILITY_THRESHOLD, 0.45),\n  human_conf_threshold: num(env.HUMAN_CONFIDENCE_THRESHOLD, 0.60),\n  max_disagreement:     num(env.MAX_MODEL_DISAGREEMENT, 0.30),\n\n  // Applied to confidence when only one lane answered. 1.0 disables it. The old\n  // hardcoded 0.85 turned a typical 0.82 into 0.697, just under the old 0.70\n  // gate, which is why clear-cut AI text kept landing in REVIEW_REQUIRED.\n  single_model_penalty: num(env.SINGLE_MODEL_CONFIDENCE_PENALTY, 1.0),\n\n  gray_low:  num(env.GRAY_ZONE_LOW, 0.45),\n  gray_high: num(env.GRAY_ZONE_HIGH, 0.69),\n\n  primary_weight:   num(env.PRIMARY_MODEL_WEIGHT, 0.9),\n  secondary_weight: num(env.SECONDARY_MODEL_WEIGHT, 0.1),\n\n  request_timeout_ms: Math.floor(num(env.LLM_TIMEOUT_MS, 90000)),\n\n  detector_version:   env.DETECTOR_VERSION   || '2.0.0',\n  classifier_version: env.CLASSIFIER_VERSION || '2.0.0',\n  threshold_version:  env.THRESHOLD_VERSION  || '2.0.0'\n};\n\n// The two lane weights must sum to 1.0. Leftover values from the old\n// three-component ensemble (statistics 0.60 + primary 0.25 + secondary 0.15)\n// sum to 0.40 and would silently deflate every probability by 60%, so\n// renormalise and flag it rather than trusting the raw numbers.\nconst weightSum = cfg.primary_weight + cfg.secondary_weight;\nif (weightSum > 0) {\n  cfg.weights_renormalized = Math.abs(weightSum - 1) > 0.001;\n  cfg.primary_weight = cfg.primary_weight / weightSum;\n  cfg.secondary_weight = cfg.secondary_weight / weightSum;\n} else {\n  cfg.primary_weight = 0.9;\n  cfg.secondary_weight = 0.1;\n  cfg.weights_renormalized = true;\n}\n\nconst fail = (message, hint) => [{ json: {\n  valid: false,\n  error_message: message,\n  error_hint: hint || null\n} }];\n\nif (!payload || typeof payload !== 'object') {\n  return fail('Request body must be a JSON object.', 'POST {\"text\": \"...\"} with Content-Type: application/json');\n}\nif (typeof payload.text !== 'string' || payload.text.trim() === '') {\n  return fail(\"Field 'text' is required and must be a non-empty string.\");\n}\n\nconst text = payload.text.trim();\nif (text.length < cfg.min_text_length) {\n  return fail(`Text too short: ${text.length} characters (minimum ${cfg.min_text_length}).`);\n}\nif (text.length > cfg.max_text_length) {\n  return fail(`Text too long: ${text.length} characters (maximum ${cfg.max_text_length}).`);\n}\nif (!cfg.primary_api_key) {\n  return fail('PRIMARY_API_KEY is not set.', 'n8n must run with N8N_BLOCK_ENV_ACCESS_IN_NODE=false and PRIMARY_API_KEY exported.');\n}\n\n// FNV-1a derived fingerprint. Non-cryptographic: used only to correlate logs,\n// never as a security boundary or a cache key against adversarial input.\nconst normalized = text.replace(/\\s+/g, ' ').trim();\nlet h1 = 0x811c9dc5 >>> 0;\nlet h2 = 0x9e3779b9 >>> 0;\nfor (let i = 0; i < normalized.length; i++) {\n  const c = normalized.charCodeAt(i);\n  h1 = ((h1 ^ c) * 0x01000193) >>> 0;\n  h2 = ((h2 + c + i) * 0x85ebca6b) >>> 0;\n}\nconst text_fingerprint = h1.toString(16).padStart(8, '0') + h2.toString(16).padStart(8, '0');\n\nconst document_id = (typeof payload.document_id === 'string' && payload.document_id.trim())\n  ? payload.document_id.trim().slice(0, 200)\n  : `doc_${Date.now()}_${Math.random().toString(36).slice(2, 10)}`;\n\nreturn [{ json: {\n  valid: true,\n  document_id,\n  text,\n  text_length: text.length,\n  text_fingerprint,\n  source_url: typeof payload.source_url === 'string' ? payload.source_url.slice(0, 2000) : null,\n  content_type: typeof payload.content_type === 'string' ? payload.content_type.slice(0, 200) : null,\n  metadata: (payload.metadata && typeof payload.metadata === 'object') ? payload.metadata : {},\n  requested_by: typeof payload.requested_by === 'string' ? payload.requested_by.slice(0, 200) : null,\n  timestamp: new Date().toISOString(),\n  config: cfg\n} }];",
+        "mode": "runOnceForAllItems"
+      },
+      "id": "normalize-ai-input",
+      "name": "Normalize Input",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -180,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "if-valid-input-cond",
+              "leftValue": "={{ $json.valid }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "if-valid-input",
+      "name": "Valid Input?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        40,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const rejected = $input.first().json;\nconst body = {\n  classification: 'DETECTION_UNAVAILABLE',\n  error: rejected.error_message,\n  review_required: false,\n  method: 'INPUT_REJECTED'\n};\nif (rejected.error_hint) body.hint = rejected.error_hint;\nreturn [{ json: body }];",
+        "mode": "runOnceForAllItems"
+      },
+      "id": "respond-invalid-body",
+      "name": "Build Invalid Response",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        260,
+        220
+      ]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ JSON.stringify($json) }}",
+        "options": {
+          "responseCode": 400
+        }
+      },
+      "id": "respond-invalid",
+      "name": "Respond 400",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [
+        480,
+        220
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const input = $('Normalize Input').first().json;\nconst cfg = input.config;\n\n// response_format / json_object is deliberately NOT sent: on free-tier upstreams it\n// provably triggered 400s, reasoning preambles and duplicated-key garbage. A strict\n// prompt plus tolerant parsing on the far side is more reliable.\nconst SYSTEM_PROMPT = 'You are an AI text detection classifier. Return ONLY a compact JSON object. No markdown, no code fences, no commentary, no reasoning text. Schema: {\"ai_probability\": number between 0 and 1, \"confidence\": number between 0 and 1, \"signals\": up to 3 objects of {\"name\": string, \"direction\": \"AI\" or \"HUMAN\", \"strength\": number between 0 and 1}}. ai_probability means the probability the text was generated by an AI rather than written by a human. Keep the whole response under 180 tokens.';\n\nconst body = {\n  model: cfg.primary_model,\n  messages: [\n    { role: 'system', content: SYSTEM_PROMPT },\n    { role: 'user', content: 'Was the following text likely written by an AI? Judge the text itself.\\n\\n\\\"\\\"\\\"\\n' + input.text + '\\n\\\"\\\"\\\"\\n\\nReturn ONLY the JSON object.' }\n  ],\n  temperature: 0.1,\n  top_p: 0.9,\n  max_tokens: 700,\n  stream: false\n};\n\nreturn [{ json: {\n  lane: 'primary',\n  model: cfg.primary_model,\n  base_url: cfg.primary_base_url,\n  api_key_present: !!cfg.primary_api_key,\n  body_json: JSON.stringify(body)\n} }];",
+        "mode": "runOnceForAllItems"
+      },
+      "id": "build-primary-request",
+      "name": "Build Primary Request",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        260,
+        -100
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $('Normalize Input').first().json.config.primary_base_url }}/chat/completions",
+        "authentication": "none",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "=Bearer {{ $('Normalize Input').first().json.config.primary_api_key }}"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            },
+            {
+              "name": "Accept",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ $('Build Primary Request').first().json.body_json }}",
+        "options": {
+          "timeout": 90000,
+          "response": {
+            "response": {
+              "neverError": true
+            }
+          }
+        }
+      },
+      "id": "primary-call",
+      "name": "Primary Call",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        480,
+        -100
+      ],
+      "retryOnFail": true,
+      "maxTries": 4,
+      "waitBetweenTries": 3000,
+      "onError": "continueRegularOutput",
+      "alwaysOutputData": true,
+      "notesInFlow": false
+    },
+    {
+      "parameters": {
+        "jsCode": "const raw = $input.first().json;\nconst cfg = $('Normalize Input').first().json.config;\n\nfunction toUnit(v) {\n  const n = typeof v === 'string' ? parseFloat(v) : v;\n  if (typeof n !== 'number' || !isFinite(n)) return null;\n  return Math.min(1, Math.max(0, n));\n}\n\nfunction extract(payload) {\n  if (!payload || typeof payload !== 'object') {\n    return { ok: false, error_code: 'empty_response', error_detail: 'HTTP node produced no object' };\n  }\n  if (payload.error) {\n    const e = payload.error;\n    return {\n      ok: false,\n      error_code: String(e.code || e.status || 'provider_error'),\n      error_detail: String(e.message || JSON.stringify(e)).slice(0, 300)\n    };\n  }\n\n  const choice = (Array.isArray(payload.choices) && payload.choices[0]) || null;\n  if (!choice) {\n    return { ok: false, error_code: 'no_choices', error_detail: JSON.stringify(payload).slice(0, 300) };\n  }\n\n  const msg = choice.message || {};\n  let content = msg.content;\n  if (content === null || content === undefined || content === '') content = msg.reasoning || '';\n  if (typeof content !== 'string') {\n    try { content = JSON.stringify(content); } catch (e) { content = ''; }\n  }\n  if (!content) {\n    return { ok: false, error_code: 'null_content', error_detail: 'message keys: ' + Object.keys(msg).join(',') };\n  }\n\n  const finish = choice.finish_reason || null;\n  const stripped = content.replace(/```json/gi, '```').replace(/```/g, '').trim();\n  const start = stripped.indexOf('{');\n  if (start === -1) {\n    return { ok: false, error_code: 'no_json_object', error_detail: stripped.slice(0, 200), finish_reason: finish };\n  }\n\n  // Scan for the first balanced object, honouring string escapes.\n  let depth = 0, end = -1, inStr = false, esc = false;\n  for (let i = start; i < stripped.length; i++) {\n    const ch = stripped[i];\n    if (inStr) {\n      if (esc) esc = false;\n      else if (ch === '\\\\') esc = true;\n      else if (ch === '\"') inStr = false;\n      continue;\n    }\n    if (ch === '\"') { inStr = true; continue; }\n    if (ch === '{') depth++;\n    else if (ch === '}') { depth--; if (depth === 0) { end = i; break; } }\n  }\n  const candidate = end > start ? stripped.slice(start, end + 1) : stripped.slice(start);\n\n  let parsed = null;\n  let salvaged = false;\n  try {\n    parsed = JSON.parse(candidate);\n  } catch (e) {\n    // Truncated output (finish_reason=length) still usually carries the two numbers.\n    const ap = candidate.match(/\"ai_probability\"\\s*:\\s*(-?\\d*\\.?\\d+(?:[eE][-+]?\\d+)?)/);\n    const cf = candidate.match(/\"confidence\"\\s*:\\s*(-?\\d*\\.?\\d+(?:[eE][-+]?\\d+)?)/);\n    if (ap || cf) {\n      parsed = {\n        ai_probability: ap ? parseFloat(ap[1]) : null,\n        confidence: cf ? parseFloat(cf[1]) : null,\n        signals: []\n      };\n      salvaged = true;\n    }\n  }\n  if (!parsed || typeof parsed !== 'object') {\n    return { ok: false, error_code: 'json_parse_failed', error_detail: candidate.slice(0, 200), finish_reason: finish };\n  }\n\n  const ai_probability = toUnit(parsed.ai_probability);\n  if (ai_probability === null) {\n    return { ok: false, error_code: 'missing_ai_probability', error_detail: candidate.slice(0, 200) };\n  }\n  const confidenceRaw = toUnit(parsed.confidence);\n\n  const signals = Array.isArray(parsed.signals)\n    ? parsed.signals.slice(0, 5).map(function (s) {\n        s = s || {};\n        const st = toUnit(s.strength);\n        return {\n          name: String(s.name || 'unknown').slice(0, 80),\n          direction: String(s.direction || '').toUpperCase() === 'HUMAN' ? 'HUMAN' : 'AI',\n          strength: st === null ? 0.5 : st\n        };\n      })\n    : [];\n\n  return {\n    ok: true,\n    salvaged: salvaged,\n    truncated: finish === 'length',\n    result: {\n      ai_probability: ai_probability,\n      confidence: confidenceRaw === null ? 0.5 : confidenceRaw,\n      signals: signals\n    }\n  };\n}\n\nconst out = extract(raw);\nout.lane = 'primary';\nout.model = cfg.primary_model;\nout.at = new Date().toISOString();\n\n// A verdict of exactly 0 must NOT be treated as a failure; only ok=false is.\nif (out.ok) {\n  const p = out.result.ai_probability;\n  const c = out.result.confidence;\n  out.need_secondary = (p >= cfg.gray_low && p <= cfg.gray_high) || c < 0.5 || out.salvaged;\n} else {\n  out.need_secondary = true;\n}\n\nreturn [{ json: out }];",
+        "mode": "runOnceForAllItems"
+      },
+      "id": "parse-primary",
+      "name": "Parse Primary",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        700,
+        -100
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "if-need-secondary-cond",
+              "leftValue": "={{ $json.need_secondary }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "if-need-secondary",
+      "name": "Need Secondary?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        920,
+        -100
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const input = $('Normalize Input').first().json;\nconst cfg = input.config;\n\n// response_format / json_object is deliberately NOT sent: on free-tier upstreams it\n// provably triggered 400s, reasoning preambles and duplicated-key garbage. A strict\n// prompt plus tolerant parsing on the far side is more reliable.\nconst SYSTEM_PROMPT = 'You are an AI text detection classifier. Return ONLY a compact JSON object. No markdown, no code fences, no commentary, no reasoning text. Schema: {\"ai_probability\": number between 0 and 1, \"confidence\": number between 0 and 1, \"signals\": up to 3 objects of {\"name\": string, \"direction\": \"AI\" or \"HUMAN\", \"strength\": number between 0 and 1}}. ai_probability means the probability the text was generated by an AI rather than written by a human. Keep the whole response under 180 tokens.';\n\nconst body = {\n  model: cfg.secondary_model,\n  messages: [\n    { role: 'system', content: SYSTEM_PROMPT },\n    { role: 'user', content: 'Was the following text likely written by an AI? Judge the text itself.\\n\\n\\\"\\\"\\\"\\n' + input.text + '\\n\\\"\\\"\\\"\\n\\nReturn ONLY the JSON object.' }\n  ],\n  temperature: 0.1,\n  top_p: 0.9,\n  max_tokens: 700,\n  stream: false\n};\n\nreturn [{ json: {\n  lane: 'secondary',\n  model: cfg.secondary_model,\n  base_url: cfg.secondary_base_url,\n  api_key_present: !!cfg.secondary_api_key,\n  body_json: JSON.stringify(body)\n} }];",
+        "mode": "runOnceForAllItems"
+      },
+      "id": "build-secondary-request",
+      "name": "Build Secondary Request",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1140,
+        80
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $('Normalize Input').first().json.config.secondary_base_url }}/chat/completions",
+        "authentication": "none",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "=Bearer {{ $('Normalize Input').first().json.config.secondary_api_key }}"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            },
+            {
+              "name": "Accept",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ $('Build Secondary Request').first().json.body_json }}",
+        "options": {
+          "timeout": 90000,
+          "response": {
+            "response": {
+              "neverError": true
+            }
+          }
+        }
+      },
+      "id": "secondary-call",
+      "name": "Secondary Call",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1360,
+        80
+      ],
+      "retryOnFail": true,
+      "maxTries": 4,
+      "waitBetweenTries": 3000,
+      "onError": "continueRegularOutput",
+      "alwaysOutputData": true,
+      "notesInFlow": false
+    },
+    {
+      "parameters": {
+        "jsCode": "const raw = $input.first().json;\nconst cfg = $('Normalize Input').first().json.config;\n\nfunction toUnit(v) {\n  const n = typeof v === 'string' ? parseFloat(v) : v;\n  if (typeof n !== 'number' || !isFinite(n)) return null;\n  return Math.min(1, Math.max(0, n));\n}\n\nfunction extract(payload) {\n  if (!payload || typeof payload !== 'object') {\n    return { ok: false, error_code: 'empty_response', error_detail: 'HTTP node produced no object' };\n  }\n  if (payload.error) {\n    const e = payload.error;\n    return {\n      ok: false,\n      error_code: String(e.code || e.status || 'provider_error'),\n      error_detail: String(e.message || JSON.stringify(e)).slice(0, 300)\n    };\n  }\n\n  const choice = (Array.isArray(payload.choices) && payload.choices[0]) || null;\n  if (!choice) {\n    return { ok: false, error_code: 'no_choices', error_detail: JSON.stringify(payload).slice(0, 300) };\n  }\n\n  const msg = choice.message || {};\n  let content = msg.content;\n  if (content === null || content === undefined || content === '') content = msg.reasoning || '';\n  if (typeof content !== 'string') {\n    try { content = JSON.stringify(content); } catch (e) { content = ''; }\n  }\n  if (!content) {\n    return { ok: false, error_code: 'null_content', error_detail: 'message keys: ' + Object.keys(msg).join(',') };\n  }\n\n  const finish = choice.finish_reason || null;\n  const stripped = content.replace(/```json/gi, '```').replace(/```/g, '').trim();\n  const start = stripped.indexOf('{');\n  if (start === -1) {\n    return { ok: false, error_code: 'no_json_object', error_detail: stripped.slice(0, 200), finish_reason: finish };\n  }\n\n  // Scan for the first balanced object, honouring string escapes.\n  let depth = 0, end = -1, inStr = false, esc = false;\n  for (let i = start; i < stripped.length; i++) {\n    const ch = stripped[i];\n    if (inStr) {\n      if (esc) esc = false;\n      else if (ch === '\\\\') esc = true;\n      else if (ch === '\"') inStr = false;\n      continue;\n    }\n    if (ch === '\"') { inStr = true; continue; }\n    if (ch === '{') depth++;\n    else if (ch === '}') { depth--; if (depth === 0) { end = i; break; } }\n  }\n  const candidate = end > start ? stripped.slice(start, end + 1) : stripped.slice(start);\n\n  let parsed = null;\n  let salvaged = false;\n  try {\n    parsed = JSON.parse(candidate);\n  } catch (e) {\n    // Truncated output (finish_reason=length) still usually carries the two numbers.\n    const ap = candidate.match(/\"ai_probability\"\\s*:\\s*(-?\\d*\\.?\\d+(?:[eE][-+]?\\d+)?)/);\n    const cf = candidate.match(/\"confidence\"\\s*:\\s*(-?\\d*\\.?\\d+(?:[eE][-+]?\\d+)?)/);\n    if (ap || cf) {\n      parsed = {\n        ai_probability: ap ? parseFloat(ap[1]) : null,\n        confidence: cf ? parseFloat(cf[1]) : null,\n        signals: []\n      };\n      salvaged = true;\n    }\n  }\n  if (!parsed || typeof parsed !== 'object') {\n    return { ok: false, error_code: 'json_parse_failed', error_detail: candidate.slice(0, 200), finish_reason: finish };\n  }\n\n  const ai_probability = toUnit(parsed.ai_probability);\n  if (ai_probability === null) {\n    return { ok: false, error_code: 'missing_ai_probability', error_detail: candidate.slice(0, 200) };\n  }\n  const confidenceRaw = toUnit(parsed.confidence);\n\n  const signals = Array.isArray(parsed.signals)\n    ? parsed.signals.slice(0, 5).map(function (s) {\n        s = s || {};\n        const st = toUnit(s.strength);\n        return {\n          name: String(s.name || 'unknown').slice(0, 80),\n          direction: String(s.direction || '').toUpperCase() === 'HUMAN' ? 'HUMAN' : 'AI',\n          strength: st === null ? 0.5 : st\n        };\n      })\n    : [];\n\n  return {\n    ok: true,\n    salvaged: salvaged,\n    truncated: finish === 'length',\n    result: {\n      ai_probability: ai_probability,\n      confidence: confidenceRaw === null ? 0.5 : confidenceRaw,\n      signals: signals\n    }\n  };\n}\n\nconst out = extract(raw);\nout.lane = 'secondary';\nout.model = cfg.secondary_model;\nout.at = new Date().toISOString();\n\n// A verdict of exactly 0 must NOT be treated as a failure; only ok=false is.\nif (out.ok) {\n  const p = out.result.ai_probability;\n  const c = out.result.confidence;\n  out.need_secondary = (p >= cfg.gray_low && p <= cfg.gray_high) || c < 0.5 || out.salvaged;\n} else {\n  out.need_secondary = true;\n}\n\nreturn [{ json: out }];",
+        "mode": "runOnceForAllItems"
+      },
+      "id": "parse-secondary",
+      "name": "Parse Secondary",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1580,
+        80
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const input = $('Normalize Input').first().json;\nconst cfg = input.config;\nconst primary = $('Parse Primary').first().json;\n\n// The secondary lane only runs on the gray-zone branch, so its node may not exist\n// in this execution. Absence means \"not called\", not \"failed\".\nlet secondary = { ok: false, skipped: true, error_code: 'not_called', lane: 'secondary', model: cfg.secondary_model };\ntry {\n  const s = $('Parse Secondary').first();\n  if (s && s.json) secondary = s.json;\n} catch (e) { /* secondary branch was not taken */ }\n\nconst round = (n) => Math.round(n * 10000) / 10000;\nconst pOK = !!(primary && primary.ok);\nconst sOK = !!(secondary && secondary.ok);\n\nconst attempt = (a) => ({\n  lane: a.lane,\n  model: a.model || null,\n  ok: !!a.ok,\n  skipped: !!a.skipped,\n  error_code: a.error_code || null,\n  error_detail: a.error_detail || null,\n  salvaged: !!a.salvaged,\n  truncated: !!a.truncated,\n  result: a.ok ? a.result : null\n});\n\nconst models = [attempt(primary)];\nif (secondary && !secondary.skipped) models.push(attempt(secondary));\n\nlet ai_probability = null;\nlet confidence = null;\nlet disagreement = null;\nlet classification, method;\nlet review_required = false;\nconst warnings = [];\n\nif (cfg.weights_renormalized) {\n  warnings.push('PRIMARY_MODEL_WEIGHT + SECONDARY_MODEL_WEIGHT did not sum to 1.0; renormalised to '\n    + cfg.primary_weight.toFixed(3) + '/' + cfg.secondary_weight.toFixed(3)\n    + '. Fix the .env to remove this warning.');\n}\n\nif (pOK && sOK) {\n  const p = primary.result.ai_probability;\n  const s = secondary.result.ai_probability;\n  ai_probability = cfg.primary_weight * p + cfg.secondary_weight * s;\n  confidence = (primary.result.confidence + secondary.result.confidence) / 2;\n  disagreement = Math.abs(p - s);\n\n  if (ai_probability >= cfg.ai_prob_threshold && confidence >= cfg.ai_conf_threshold && disagreement <= cfg.max_disagreement) {\n    classification = 'AI_GENERATED'; method = 'ENSEMBLE_HIGH_CONFIDENCE';\n  } else if (ai_probability <= cfg.human_prob_threshold && confidence >= cfg.human_conf_threshold && disagreement <= cfg.max_disagreement) {\n    classification = 'HUMAN_LIKELY'; method = 'ENSEMBLE_LOW_AI_SIGNAL';\n  } else if (disagreement > cfg.max_disagreement) {\n    classification = 'REVIEW_REQUIRED'; method = 'HIGH_MODEL_DISAGREEMENT'; review_required = true;\n  } else if (confidence < 0.5) {\n    classification = 'REVIEW_REQUIRED'; method = 'LOW_CONFIDENCE'; review_required = true;\n  } else {\n    classification = 'REVIEW_REQUIRED'; method = 'UNCERTAIN_GRAY_ZONE'; review_required = true;\n  }\n} else if (pOK || sOK) {\n  const solo = pOK ? primary.result : secondary.result;\n  ai_probability = solo.ai_probability;\n  confidence = solo.confidence * cfg.single_model_penalty;\n  method = pOK ? 'SINGLE_MODEL_PRIMARY' : 'SINGLE_MODEL_SECONDARY';\n  if (cfg.single_model_penalty !== 1) {\n    warnings.push('Only one model returned a usable verdict; confidence scaled by ' + cfg.single_model_penalty + '.');\n  } else {\n    warnings.push('Only one model returned a usable verdict.');\n  }\n  if (!pOK) warnings.push('The primary model failed; this verdict comes from the fallback model.');\n\n  if (ai_probability >= cfg.ai_prob_threshold && confidence >= cfg.ai_conf_threshold) {\n    classification = 'AI_GENERATED'; method += '_HIGH_CONFIDENCE';\n  } else if (ai_probability <= cfg.human_prob_threshold && confidence >= cfg.human_conf_threshold) {\n    classification = 'HUMAN_LIKELY'; method += '_LOW_AI_SIGNAL';\n  } else {\n    classification = 'REVIEW_REQUIRED'; method += '_UNCERTAIN'; review_required = true;\n  }\n} else {\n  classification = 'DETECTION_UNAVAILABLE';\n  method = 'ALL_MODELS_FAILED';\n  review_required = true;\n  warnings.push('Every configured model failed. See evidence.models for per-lane reasons.');\n}\n\nconst out = {\n  document_id: input.document_id,\n  classification: classification,\n  ai_probability: ai_probability === null ? null : round(ai_probability),\n  confidence: confidence === null ? null : round(confidence),\n  method: method,\n  review_required: review_required,\n  evidence: {\n    provenance: { checked: false, reason: 'unavailable in ai-only mode' },\n    watermark: { checked: false, reason: 'unavailable in ai-only mode' },\n    statistics: { checked: false, reason: 'unavailable in ai-only mode' },\n    models: models\n  },\n  component_scores: {\n    primary_probability: pOK ? round(primary.result.ai_probability) : null,\n    primary_confidence: pOK ? round(primary.result.confidence) : null,\n    secondary_probability: sOK ? round(secondary.result.ai_probability) : null,\n    secondary_confidence: sOK ? round(secondary.result.confidence) : null,\n    model_disagreement: disagreement === null ? null : round(disagreement),\n    secondary_called: !!(secondary && !secondary.skipped),\n    weights_used: { primary: cfg.primary_weight, secondary: cfg.secondary_weight }\n  },\n  warning: 'Human-likely means no strong AI-generation signal was detected; it does not prove human authorship.',\n  versions: {\n    detector: cfg.detector_version,\n    classifier: cfg.classifier_version,\n    thresholds: cfg.threshold_version,\n    mode: 'ai-only'\n  },\n  _internal: {\n    text_fingerprint: input.text_fingerprint,\n    text_length: input.text_length,\n    received_at: input.timestamp,\n    completed_at: new Date().toISOString()\n  }\n};\n\nif (warnings.length) out.warnings = warnings;\nif (classification === 'DETECTION_UNAVAILABLE') {\n  out.error = 'All configured models failed to return a usable verdict.';\n}\n\nreturn [{ json: out }];",
+        "mode": "runOnceForAllItems"
+      },
+      "id": "ensemble-result",
+      "name": "Ensemble & Build Result",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1800,
+        -100
+      ]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ JSON.stringify($json) }}",
+        "options": {
+          "responseCode": 200
+        }
+      },
+      "id": "respond-ai-webhook",
+      "name": "Respond to Webhook",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [
+        2020,
+        -100
+      ]
+    }
+  ],
+  "connections": {
+    "Webhook Input": {
+      "main": [
+        [
+          {
+            "node": "Normalize Input",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Normalize Input": {
+      "main": [
+        [
+          {
+            "node": "Valid Input?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Valid Input?": {
+      "main": [
+        [
+          {
+            "node": "Build Primary Request",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Build Invalid Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Build Invalid Response": {
+      "main": [
+        [
+          {
+            "node": "Respond 400",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Build Primary Request": {
+      "main": [
+        [
+          {
+            "node": "Primary Call",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Primary Call": {
+      "main": [
+        [
+          {
+            "node": "Parse Primary",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Parse Primary": {
+      "main": [
+        [
+          {
+            "node": "Need Secondary?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Need Secondary?": {
+      "main": [
+        [
+          {
+            "node": "Build Secondary Request",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Ensemble & Build Result",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Build Secondary Request": {
+      "main": [
+        [
+          {
+            "node": "Secondary Call",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Secondary Call": {
+      "main": [
+        [
+          {
+            "node": "Parse Secondary",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Parse Secondary": {
+      "main": [
+        [
+          {
+            "node": "Ensemble & Build Result",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Ensemble & Build Result": {
+      "main": [
+        [
+          {
+            "node": "Respond to Webhook",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "saveExecutionProgress": true
+  },
+  "staticData": null,
+  "tags": [],
+  "pinData": {},
+  "id": "ai-detection-ai-only",
+  "active": false,
+  "versionId": "2",
+  "updatedAt": "2026-09-28T00:00:00.000Z"
+}
