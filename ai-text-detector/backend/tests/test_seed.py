@@ -432,6 +432,28 @@ def test_seeding_from_the_template_gives_the_shipped_operating_point(conn):
     assert secondary["enabled"] == 0
 
 
+
+def test_the_shipped_key_guides_are_links_a_logged_out_user_can_follow():
+    """These three cards are the whole "help me get an API key" affordance on the ranking page,
+    and they are the links a confused user follows when a lane 401s -- so a placeholder host, a
+    plain-http hop, or a deep path that only exists once authenticated silently strands them.
+    Fetched 2026-10-16: build.nvidia.com resolves, openrouter.ai/settings/keys answers its Sign
+    In shell to a logged-out GET, aistudio.google.com/apikey 302s to accounts.google.com, and
+    build.nvidia.com/settings/api-keys answers 404 to a logged-out GET even though it is the real
+    page. Every one of them therefore has to say in the steps that signing in comes first; that
+    sentence is not decoration, it is the difference between a guide and a dead end.
+    """
+    import urllib.parse
+    placeholder = ("example.com", "example.org", "zenodo.org", "localhost", "127.0.0.1",
+                   "your-omniroute-instance")
+    assert len(seed.DEFAULT_API_KEY_GUIDES) >= 3
+    for g in seed.DEFAULT_API_KEY_GUIDES:
+        assert {"provider", "url", "steps"} <= set(g), g
+        u = urllib.parse.urlsplit(g["url"])
+        assert u.scheme == "https", g["url"]
+        assert u.hostname and not any(h in u.hostname for h in placeholder), g["url"]
+        assert re.search(r"sign in|Sign in|signed in", g["steps"]),             f"{g['provider']} guide never tells the user to sign in first"
+
 def test_a_global_env_cut_rebands_every_lane(conn):
     """The negative path, so the rule above is a measurement and not a superstition. One line
     applies to both lanes and env is consulted first, so a deploy that sets the primary's own

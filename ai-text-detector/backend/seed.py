@@ -49,19 +49,30 @@ PROVIDERS = [
 # Short, self-serve "how to get a key" cards for the ranking page. Fields match the
 # frontend KeyGuide shape ({provider, url, steps, title?}). The urls are the real
 # free-tier key pages; omniroute is omitted because it is self-hosted, not sign-up.
+#
+# Each url was fetched on 2026-10-16 and every one of them is a page behind a sign-in wall, so
+# the steps say what a logged-out visitor actually sees and where to click afterwards. This
+# matters because these are the three links a confused user follows when a lane 401s: a bare
+# deep path that resolves only once authenticated reads as a dead link, and `openrouter.ai`
+# answers an unauthenticated GET of /settings/keys with its Sign In shell while NVIDIA's
+# /settings/api-keys answers 404 for a logged-out GET despite being the real page. Neither host
+# is a placeholder and neither is allowed to become one: see the shape guard in test_seed.py.
 DEFAULT_API_KEY_GUIDES = [
     {"provider": "nvidia", "title": "NVIDIA NIM (free)",
      "url": "https://build.nvidia.com",
      "steps": "Sign in with a free account, open any model, and click 'Get API key' "
-              "to mint an nvapi- key. Free tier shares a worker pool, so busy models 429/503."},
+              "to mint an nvapi- key (the same list lives at build.nvidia.com/settings/api-keys "
+              "once you are signed in; it 404s for a logged-out link). Free tier shares a worker "
+              "pool, so busy models 429/503."},
     {"provider": "openrouter", "title": "OpenRouter (free)",
      "url": "https://openrouter.ai/settings/keys",
-     "steps": "Sign in, create a key, and use models with the ':free' suffix. "
-              "Free lanes rate-limit from the shared upstream pool; retries usually clear it."},
+     "steps": "Sign in first -- the link lands on the Sign In page when you are logged out -- "
+              "then create a key and use models with the ':free' suffix. Free lanes rate-limit "
+              "from the shared upstream pool; retries usually clear it."},
     {"provider": "gemini", "title": "Google AI Studio (free)",
      "url": "https://aistudio.google.com/apikey",
-     "steps": "Sign in with a Google account and click 'Create API key'. "
-              "Uses the OpenAI-compatible endpoint listed above."},
+     "steps": "Sign in with a Google account (this link redirects to accounts.google.com first) "
+              "and click 'Create API key'. Uses the OpenAI-compatible endpoint listed above."},
 ]
 
 

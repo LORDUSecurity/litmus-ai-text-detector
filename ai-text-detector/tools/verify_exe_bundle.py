@@ -289,6 +289,15 @@ def fresh_install() -> None:
             "FROM models WHERE lane IS NOT NULL")}
         n_primary = con.execute("SELECT COUNT(*) FROM models WHERE lane = 'primary'").fetchone()[0]
         version = con.execute("SELECT value FROM settings WHERE key = 'lane_defaults_version'").fetchone()
+        # The API-key guides and the paper link are what a first-time user reads on the Ranking
+        # page, and a real install has no .env, so the frozen seed's defaults are the whole story.
+        # Read from the seeded file rather than over HTTP on purpose: /config is authenticated and
+        # the packaged app answers the bare path with the SPA index (measured 2026-10-16: a raw
+        # GET /config on a virgin boot returned 200 text/html, /api/config returned 401
+        # AUTH_REQUIRED), so an unprefixed fetch proves nothing about what was seeded.
+        seeded = {r["key"]: r["value"] for r in
+                  con.execute("SELECT key, value FROM settings WHERE key IN "
+                              "('api_key_guides', 'paper_url')")}
         con.close()
         want = seed_mod.DEFAULT_LANES["primary"][0]
         band = seed_mod.LANE_BANDS.get(want, {})
@@ -312,6 +321,36 @@ def fresh_install() -> None:
               f"secondary={dict(sec) if sec else None} "
               f"lane_defaults_version={version[0] if version else None} "
               f"(expect {seed_mod.LANE_DEFAULTS_VERSION})")
+
+        # Each card's wording is the part a stale bundle hides: the 2026-10-16 fetches showed
+        # build.nvidia.com/settings/api-keys answering 404 to a logged-out GET, openrouter.ai/
+        # settings/keys serving its own Sign In shell, and aistudio.google.com/apikey 302-ing to
+        # accounts.google.com. A card that links straight in without saying "sign in first" reads
+        # to the user as a broken link, so the shipped copy has to carry that wording.
+        try:
+            guides = json.loads(seeded.get("api_key_guides") or "[]")
+        except Exception:  # noqa: BLE001
+            guides = []
+        check(len(guides) == len(seed_mod.DEFAULT_API_KEY_GUIDES)
+              and [g.get("url") for g in guides]
+              == [g["url"] for g in seed_mod.DEFAULT_API_KEY_GUIDES],
+              "…seeds every provider's key guide, on the URLs the dev tree ships",
+              f"{len(guides)} card(s) {[g.get('url') for g in guides]}")
+        dead = [g.get("url") for g in guides
+                if not str(g.get("url", "")).startswith("https://")
+                or re.search(r"example\.(com|org)|localhost|127\.0\.0\.1|your-|\bTBD\b|\byour-domain\b",
+                             str(g.get("url", "")))]
+        check(not dead, "…no guide links a placeholder host", f"{dead}")
+        no_signin = [g.get("provider") for g in guides
+                     if not re.search(r"sign in|signed in|log ?in", str(g.get("steps", "")), re.I)]
+        check(not no_signin, "…each card tells the user signing in comes first",
+              f"{no_signin or 'ok'}")
+        # paper_url is deliberately NOT defaulted (seed.py:621): a placeholder DOI would be a dead
+        # citation on a page that tells people which model to trust. Absent or empty means the UI
+        # renders no link, which is the honest state until the author sets the real one.
+        check(seeded.get("paper_url") in (None, ""),
+              "…and ships no fake paper link",
+              f"paper_url={seeded.get('paper_url')!r} (seed.py:621 leaves it to the author)")
     except Exception as exc:  # noqa: BLE001
         check(False, "…and the boot seeds the shipped lane defaults", repr(exc))
     finally:

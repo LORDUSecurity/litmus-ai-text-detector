@@ -188,6 +188,12 @@ Run it from the repo root. Two traps, both hit in the round that found the compi
 Compiled clean on 2026-10-16 in 18.2 s with no warnings: `installer\Output\AI-Text-Detector-Setup-1.0.0.exe`,
 44,641,939 bytes carrying the 43,226,239-byte onefile exe. Rebuilt the same evening after the tie-break
 lane started shipping off: 27.06 s, no warnings, 44,655,417 bytes around the 43,238,512-byte onefile.
+And again at 23:41 after `DEFAULT_API_KEY_GUIDES` was rewritten with the sign-in-first wording: 11.4 s,
+no warnings, 44,659,459 bytes around the 43,242,453-byte onefile.
+
+**Why the guide wording had to reach a build at all:** the cards are backend-seeded text, so the only
+copy a local-app user ever reads is the one frozen inside the exe. Editing `backend/seed.py` changes
+the dev tree and nothing else until steps 1-3 run again — which is the same trap as step 0 for the UI.
 
 Output: `installer\Output\AI-Text-Detector-Setup-1.0.0.exe`.
 
@@ -204,6 +210,14 @@ It boots the packaged exe on its own port against a throwaway copy of the dev da
 that the served `index.html` names the same `main-*.js` as `frontend/dist`, that the bytes hash to
 the same digest, and that a string from the change under test is actually in the downloaded file
 (pass argument 2 to check a different string).
+
+**Read backend-seeded text from the database file, not from HTTP.** The clean-install phase asserts the
+shipped API-key guides and the absent `paper_url` by opening the virgin `detector.sqlite3`, because a
+GET `/config` on the packaged app returns the SPA `index.html` with status 200 (the API lives under
+`/api/`, and `/api/config` answers 401 `AUTH_REQUIRED` until you log in). Measured 2026-10-16: the
+first version of that check parsed the served HTML as JSON and so reported 0 guides and a `None` paper
+link — a green-looking run that had checked nothing, caught only because the counts refused to match.
+Reading the seeded row is what proves the frozen `seed.py` carries the sign-in-first wording.
 
 Then it asserts the two things no hash can show, because a copy of a developer's database is not a
 new install. The stand-in engine now keeps the JSON body the packaged backend sent, so the run proves
