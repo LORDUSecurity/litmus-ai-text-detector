@@ -1,0 +1,38 @@
+===== SCREEN deepseek-ai/deepseek-v4.1-flash =====
+usable=12/12 salvaged=0 truncated=0 errors=none
+latency ms p50/p90/max: 83764/106665/120521
+wall clock: 1003.0s
+===== SCREEN moonshotai/kimi-k3 =====
+  [ 1/12] ai-000 AI    open_qa     -> ERR:400 (3773ms)
+  [ 2/12] ai-004 AI    wiki_csai   -> ERR:400 (2920ms)
+  [ 3/12] ai-008 AI    medicine    -> ERR:400 (4422ms)
+  [ 4/12] ai-012 AI    finance     -> ERR:400 (2841ms)
+  [ 5/12] ai-016 AI    reddit_eli5 -> ERR:400 (1998ms)
+  [ 6/12] ai-020 AI    open_qa     -> ERR:400 (584ms)
+  [ 7/12] hu-000 HUMAN open_qa     -> ERR:400 (1000ms)
+  [ 8/12] hu-004 HUMAN wiki_csai   -> ERR:400 (1621ms)
+  [ 9/12] hu-008 HUMAN medicine    -> ERR:400 (2042ms)
+  [10/12] hu-012 HUMAN finance     -> ERR:400 (1229ms, try2)
+  [11/12] hu-016 HUMAN reddit_eli5 -> ERR:400 (793ms)
+  [12/12] hu-020 HUMAN open_qa     -> ERR:400 (200ms)
+usable=0/12 salvaged=0 truncated=0 errors={"400":12}
+wall clock: 43.5s
+===== SCREEN google/gemma-4-31b-it =====
+  [ 2/12] ai-004 AI    wiki_csai   -> ERR:exception (150009ms, try3)
+  [ 3/12] ai-008 AI    medicine    -> ERR:exception (150009ms, try3)
+  [ 4/12] ai-012 AI    finance     -> ERR:exception (150011ms, try3)
+  [ 5/12] ai-016 AI    reddit_eli5 -> ERR:exception (150001ms, try3)
+  [ 6/12] ai-020 AI    open_qa     -> ERR:exception (150013ms, try3)
+  [ 7/12] hu-000 HUMAN open_qa     -> ERR:exception (150008ms, try3)
+  [ 9/12] hu-008 HUMAN medicine    -> ERR:exception (150006ms, try3)
+  [10/12] hu-012 HUMAN finance     -> ERR:exception (150005ms, try3)
+  [11/12] hu-016 HUMAN reddit_eli5 -> ERR:exception (150004ms, try3)
+  [12/12] hu-020 HUMAN open_qa     -> ERR:exception (150013ms, try3)
+usable=2/12 salvaged=0 truncated=0 errors={"exception":10}
+latency ms p50/p90/max: 54352/54352/54352
+wall clock: 5721.7s
+===== SCREEN z-ai/glm-5.3-flash =====
+usable=12/12 salvaged=0 truncated=0 errors=none
+latency ms p50/p90/max: 7766/10035/34696
+wall clock: 111.3s
+EXIT=0

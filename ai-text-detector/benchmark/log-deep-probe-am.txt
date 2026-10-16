@@ -1,0 +1,9 @@
+tag=probe-deepseek-am model=deepseek-ai/deepseek-v4.1-flash prompt=direct temp=0.1 top_p=0.9 max_tokens=1400 timeout_s=240 n=2 concurrency=1
+base_url=https://integrate.api.nvidia.com/v1 keys=1
+  [ 1/2] ai-000 AI    open_qa     -> ERR:exception (240027ms)
+  [ 2/2] hu-000 HUMAN open_qa     -> ERR:exception (240008ms)
+
+wrote C:\Users\adam\Desktop\humanizer ultra\ai-text-detector\benchmark\results-probe-deepseek-am.jsonl
+params: {"tag":"probe-deepseek-am","model":"deepseek-ai/deepseek-v4.1-flash","prompt":"direct","temperature":0.1,"top_p":0.9,"max_tokens":1400,"tries":1,"wait_ms":3000,"timeout_s":240,"concurrency":1,"base_url":"https://integrate.api.nvidia.com/v1","corpus":"corpus-probe2.json","rows":2,"usable":0}
+usable=0/2 salvaged=0 truncated=0 errors={"exception":2}
+wall clock: 480.1s

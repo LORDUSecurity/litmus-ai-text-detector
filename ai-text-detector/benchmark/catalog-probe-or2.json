@@ -1,0 +1,36 @@
+[
+ {
+  "model": "google/gemma-4-31b-it:free",
+  "http": 429,
+  "ms": 324,
+  "verdict": "PROVIDER_ERROR",
+  "detail": "google/gemma-4-31b-it:free is temporarily rate-limited upstream. Please retry shortly, or add your own key to accumulate your rate limits: https://openrouter.ai",
+  "limit_source": "upstream_provider_shared_pool",
+  "provider": "Google AI Studio"
+ },
+ {
+  "model": "poolside/laguna-s-2.1:free",
+  "http": 429,
+  "ms": 487,
+  "verdict": "PROVIDER_ERROR",
+  "detail": "poolside/laguna-s-2.1:free is temporarily rate-limited upstream. Please retry shortly, or add your own key to accumulate your rate limits: https://openrouter.ai",
+  "limit_source": "upstream_provider_shared_pool",
+  "provider": "Poolside"
+ },
+ {
+  "model": "poolside/laguna-xs-2.1:free",
+  "http": 200,
+  "ms": 24350,
+  "verdict": "SCORED",
+  "detail": "p=0.85 finish=stop"
+ },
+ {
+  "model": "thinkingmachines/inkling:free",
+  "http": 403,
+  "ms": 68,
+  "verdict": "PROVIDER_ERROR",
+  "detail": "thinkingmachines/inkling:free is only available on agentic harnesses. Try plugging it into a coding agent or productivity app listed on https://openrouter.ai/ap",
+  "limit_source": null,
+  "provider": null
+ }
+]

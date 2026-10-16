@@ -1,0 +1,38 @@
+[
+ {
+  "id": "short-hu",
+  "label": "HUMAN",
+  "config": "finance",
+  "text": "My guess would be for small merchants there could be a small difference. For large merchants, the cash is also at a cost equivalent to the card fees. Check for my other answer at  How do credit card companies make profit?",
+  "band": "short",
+  "orig_id": "hu-000",
+  "provenance": "corpus-short hu-000"
+ },
+ {
+  "id": "med-ai",
+  "label": "AI",
+  "config": "open_qa",
+  "text": "Osaka is a city located in the Kansai region of Japan. It is the capital of Osaka Prefecture and the third-largest city in Japan, with a population of over 19 million people in its metropolitan area. Osaka is located on the island of Honshu, about 350 kilometers (217 miles) west of Tokyo. It is a major economic hub in Japan, known for its port, trade, and industry. Osaka is also a popular tourist destination, known for its food, culture, and landmarks such as Osaka Castle and Universal Studios Japan.",
+  "band": "medium",
+  "orig_id": "ai-000",
+  "provenance": "corpus ai-000"
+ },
+ {
+  "id": "long-hu",
+  "label": "HUMAN",
+  "config": "finance",
+  "text": "Immediately move your Roth IRA out of Edward Jones and into a discount broker like Scottrade, Ameritrade, Fidelity, Vanguard, Schwab, or E-Trade.  Edward Jones will be charging you a large fraction of your money (probably at least 1% explicitly and maybe another 1% in hidden-ish fees like the 12b-1).  Don't give away several percent of your savings every year when you can have an account for free.  Places like Edward Jones are appropriate only for people who are unwilling to learn about personal finance and happy to pay dearly as a result.  Move your money by contacting the new broker, then requesting that they get your money out of Edward Jones.  They will be happy to do so the right way.  Don't try and get the money out yourself. Continue to contribute to your Roth as long as your tax bracket is low.  Saving on taxes is a critically important part of being financially wise.  You can spend your contributions (not gains) out of your Roth for any reason without penalty if you want/need to.  When your tax bracket is higher, look at traditional IRA's instead to minimize your current tax burden.  For more accessible ways of saving, open a regular (non-tax-advantaged) brokerage account. Invest in diversified and low-cost funds.  Look at the expense ratios and minimize your portfolio's total expense.  Higher fee funds generally do not earn the money they take from you. Avoid all funds that have a nonzero 12b-1 fee. Generally speaking your best bet is buying index funds from Fidelity, Vanguard, Schwab, or their close competitors.  Or buying cheap ETF's.   Any discount brokerage will allow you to do this in both your Roth and regular accounts.  Remember, the reason you buy funds is to get instant diversification, not because you are willing to gamble that your mutual funds will outperform the market.  Head to the bogleheads forum for more specific advice about 3 fund portfolios and similar suggested investment strategies like the lazy portfolios.  The folks in the forums there like to give specific advice that's not appropriate here. If you use a non-tax-advantaged account for investing, buy and sell in a tax-smart way.  At the end of the year, sell your poor performing stocks or funds and use the loss as a tax write-off.  Then rebalance back to a good portfolio.  Or if your tax bracket is very low, sell the winners and lock in the gains at low tax rates.  Try to hold things more than a year so you are taxed at the long-term capital gains rate, rather than the short-term. Only when you have several million dollars, then look at making individual investments, rather than funds.  In a non-tax-advantaged account owning the assets directly will help you write off losses against your taxes.  But either way, it takes several million dollars to make the transactions costs of maintaining a portfolio lower than the fees a cheap mutual/index fund will charge.",
+  "band": "long",
+  "orig_id": "hu-000",
+  "provenance": "corpus-long hu-000"
+ },
+ {
+  "id": "defer-ai",
+  "label": "AI",
+  "config": "finance",
+  "text": "!Only one message at a time. Please allow any other responses to complete before sending another message, or wait one minute.There was an error generating a response",
+  "band": "short",
+  "orig_id": "ai-000",
+  "provenance": "corpus-short ai-000"
+ }
+]

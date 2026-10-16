@@ -1,0 +1,67 @@
+tag=oosstress-nemotron-ultra model=nvidia/nemotron-3-ultra-550b-a55b prompt=direct temp=0.1 top_p=0.9 max_tokens=1400 timeout_s=300 n=42 concurrency=2
+base_url=https://integrate.api.nvidia.com/v1 keys=1
+  [ 1/42] stress-001 HUMAN published_book -> 0.02 conf=0.98 (16538ms, try2)
+  [ 2/42] stress-000 HUMAN published_book -> 0.01 conf=0.99 (22510ms)
+  [ 3/42] stress-003 HUMAN published_book -> 0.02 conf=0.95 (11758ms)
+  [ 4/42] stress-004 HUMAN published_book -> 0.02 conf=0.98 (17633ms, try2)
+  [ 5/42] stress-002 HUMAN published_book -> 0.02 conf=0.98 (37427ms)
+  [ 6/42] stress-005 HUMAN published_book -> 0.02 conf=0.98 (19871ms, try2)
+  [ 7/42] stress-006 HUMAN published_book -> 0.02 conf=0.95 (21993ms, try2)
+  [ 8/42] stress-008 HUMAN published_book -> 0.05 conf=0.95 (16133ms, try2)
+  [ 9/42] stress-007 HUMAN published_book -> 0.02 conf=0.95 (20371ms, try2)
+  [10/42] stress-009 HUMAN published_book -> 0.02 conf=0.95 (21460ms, try2)
+  [11/42] stress-010 HUMAN published_book -> 0.02 conf=0.95 (29947ms)
+  [12/42] stress-011 HUMAN published_book -> 0.02 conf=0.95 (13778ms)
+  [13/42] stress-012 HUMAN published_book -> 0.01 conf=0.99 (12044ms)
+  [14/42] stress-013 HUMAN published_book -> ERR:http_503 (328ms, try2)
+  [15/42] stress-014 HUMAN published_book -> ERR:http_503 (319ms, try2)
+  [16/42] stress-015 HUMAN published_book -> ERR:http_503 (355ms, try2)
+  [17/42] stress-017 HUMAN published_book -> 0.02 conf=0.98 (7709ms)
+  [18/42] stress-018 HUMAN published_book -> 0.02 conf=0.98 (9261ms, try2)
+  [19/42] stress-016 HUMAN published_book -> 0.02 conf=0.99 (21814ms, try2)
+  [20/42] stress-020 HUMAN published_book -> 0.05 conf=0.95 (12357ms, try2)
+  [21/42] stress-021 HUMAN published_book -> ERR:http_503 (336ms, try2)
+  [22/42] stress-019 HUMAN published_book -> 0.02 conf=0.98 (32797ms)
+  [23/42] stress-022 HUMAN published_book -> 0.02 conf=0.95 (52712ms)
+  [24/42] stress-024 HUMAN published_book -> 0.02 conf=0.95 (11393ms)
+  [25/42] stress-025 HUMAN published_book -> 0.02 conf=0.98 (11224ms)
+  [26/42] stress-023 HUMAN published_book -> 0.02 conf=0.95 (66792ms)
+  [27/42] stress-026 HUMAN published_book -> 0.02 conf=0.98 (8134ms)
+  [28/42] stress-027 HUMAN published_book -> 0.01 conf=0.98 (9987ms)
+  [29/42] stress-028 HUMAN published_book -> 0.02 conf=0.95 (6291ms)
+  [30/42] stress-030 HUMAN published_book -> ERR:http_503 (333ms, try2)
+  [31/42] stress-029 HUMAN published_book -> 0.02 conf=0.95 (14955ms)
+  [32/42] stress-032 HUMAN published_book -> ERR:http_503 (473ms, try2)
+  [33/42] stress-031 HUMAN published_book -> 0.05 conf=0.90 (12265ms)
+  [34/42] stress-ai-000 AI    google/gemma-4-31b-it -> 0.60 conf=0.70 (9636ms, try2)
+  [35/42] stress-ai-002 AI    nvidia/nemotron-3.5-lightning-30b-a3b -> ERR:http_503 (332ms, try2)
+  [36/42] stress-ai-001 AI    google/gemma-4-31b-it -> 0.15 conf=0.85 (20279ms)
+  [37/42] stress-ai-004 AI    nvidia/nemotron-3.5-lightning-30b-a3b -> ERR:http_503 (315ms, try2)
+  [38/42] stress-ai-003 AI    google/gemma-4-31b-it -> 0.68 conf=0.72 (24383ms)
+  [39/42] stress-ai-005 AI    nvidia/nemotron-3.5-lightning-30b-a3b -> 0.25 conf=0.75 (12635ms, try2)
+  [40/42] stress-ai-006 AI    google/gemma-4-31b-it -> 0.30 conf=0.75 (21524ms, try2)
+  [41/42] stress-ai-008 AI    google/gemma-4-31b-it -> 0.85 conf=0.80 (17048ms)
+  [42/42] stress-ai-007 AI    google/gemma-4-31b-it -> 0.18 conf=0.88 (66881ms, try2)
+
+wrote C:\Users\adam\Desktop\humanizer ultra\ai-text-detector\benchmark\results-oosstress-nemotron-ultra.jsonl
+params: {"tag":"oosstress-nemotron-ultra","model":"nvidia/nemotron-3-ultra-550b-a55b","prompt":"direct","temperature":0.1,"top_p":0.9,"max_tokens":1400,"tries":2,"wait_ms":3000,"timeout_s":300,"concurrency":2,"base_url":"https://integrate.api.nvidia.com/v1","corpus":"corpus-stress.json","rows":42,"usable":34}
+usable=34/42 salvaged=0 truncated=0 errors={"http_503":8}
+latency ms p50/p90/max: 17048/37427/66881
+wall clock: 409.2s
+resume: keeping 34 scored row(s), calling 8
+tag=oosstress-nemotron-ultra model=nvidia/nemotron-3-ultra-550b-a55b prompt=direct temp=0.1 top_p=0.9 max_tokens=1400 timeout_s=300 n=8 concurrency=1
+base_url=https://integrate.api.nvidia.com/v1 keys=1
+  [ 1/8] stress-013 HUMAN published_book -> 0.02 conf=0.98 (10047ms, try2)
+  [ 2/8] stress-014 HUMAN published_book -> 0.02 conf=0.95 (16091ms, try3)
+  [ 3/8] stress-015 HUMAN published_book -> 0.02 conf=0.95 (5838ms)
+  [ 4/8] stress-021 HUMAN published_book -> 0.01 conf=0.99 (13076ms)
+  [ 5/8] stress-030 HUMAN published_book -> 0.05 conf=0.95 (24178ms, try3)
+  [ 6/8] stress-032 HUMAN published_book -> 0.05 conf=0.90 (17045ms)
+  [ 7/8] stress-ai-002 AI    nvidia/nemotron-3.5-lightning-30b-a3b -> 0.15 conf=0.85 (14345ms)
+  [ 8/8] stress-ai-004 AI    nvidia/nemotron-3.5-lightning-30b-a3b -> ERR:http_503 (471ms, try3)
+
+wrote C:\Users\adam\Desktop\humanizer ultra\ai-text-detector\benchmark\results-oosstress-nemotron-ultra.jsonl
+params: {"tag":"oosstress-nemotron-ultra","model":"nvidia/nemotron-3-ultra-550b-a55b","prompt":"direct","temperature":0.1,"top_p":0.9,"max_tokens":1400,"tries":3,"wait_ms":10000,"timeout_s":300,"concurrency":1,"base_url":"https://integrate.api.nvidia.com/v1","corpus":"corpus-stress.json","rows":42,"usable":41}
+usable=41/42 salvaged=0 truncated=0 errors={"http_503":1}
+latency ms p50/p90/max: 16133/32797/66881
+wall clock: 204.3s

@@ -1,0 +1,41 @@
+tag=oosstress-omkiro-sonnet-4-5 model=kiro/claude-sonnet-4.5 prompt=direct temp=0.1 top_p=0.9 max_tokens=1400 timeout_s=120 n=33 concurrency=2
+base_url=http://localhost:20128/v1 keys=1
+  [ 1/33] stress-000 HUMAN published_book -> 0.05 conf=0.92 (3289ms)
+  [ 2/33] stress-001 HUMAN published_book -> 0.05 conf=0.92 (3567ms)
+  [ 3/33] stress-002 HUMAN published_book -> 0.05 conf=0.92 (3675ms)
+  [ 4/33] stress-003 HUMAN published_book -> 0.05 conf=0.95 (3443ms)
+  [ 5/33] stress-005 HUMAN published_book -> 0.02 conf=0.95 (3282ms)
+  [ 6/33] stress-004 HUMAN published_book -> 0.02 conf=0.95 (3439ms)
+  [ 7/33] stress-007 HUMAN published_book -> 0.05 conf=0.95 (3554ms)
+  [ 8/33] stress-006 HUMAN published_book -> 0.05 conf=0.92 (4108ms)
+  [ 9/33] stress-008 HUMAN published_book -> 0.15 conf=0.82 (3146ms)
+  [10/33] stress-009 HUMAN published_book -> 0.15 conf=0.85 (3402ms)
+  [11/33] stress-011 HUMAN published_book -> 0.05 conf=0.92 (3219ms)
+  [12/33] stress-010 HUMAN published_book -> 0.05 conf=0.92 (5037ms)
+  [13/33] stress-012 HUMAN published_book -> 0.02 conf=0.95 (3212ms)
+  [14/33] stress-013 HUMAN published_book -> 0.05 conf=0.95 (3297ms)
+  [15/33] stress-014 HUMAN published_book -> 0.02 conf=0.95 (3099ms)
+  [16/33] stress-015 HUMAN published_book -> 0.05 conf=0.92 (3138ms)
+  [17/33] stress-016 HUMAN published_book -> 0.02 conf=0.95 (3261ms)
+  [18/33] stress-017 HUMAN published_book -> 0.02 conf=0.95 (3197ms)
+  [19/33] stress-018 HUMAN published_book -> 0.05 conf=0.95 (3761ms)
+  [20/33] stress-019 HUMAN published_book -> 0.05 conf=0.95 (2935ms)
+  [21/33] stress-020 HUMAN published_book -> 0.02 conf=0.95 (3410ms)
+  [22/33] stress-021 HUMAN published_book -> 0.05 conf=0.95 (4631ms)
+  [23/33] stress-023 HUMAN published_book -> 0.05 conf=0.92 (3449ms)
+  [24/33] stress-022 HUMAN published_book -> 0.05 conf=0.92 (5109ms)
+  [25/33] stress-025 HUMAN published_book -> 0.02 conf=0.95 (4327ms)
+  [26/33] stress-024 HUMAN published_book -> 0.05 conf=0.92 (4598ms)
+  [27/33] stress-026 HUMAN published_book -> 0.05 conf=0.92 (2990ms)
+  [28/33] stress-027 HUMAN published_book -> 0.02 conf=0.95 (3031ms)
+  [29/33] stress-028 HUMAN published_book -> 0.02 conf=0.95 (3279ms)
+  [30/33] stress-029 HUMAN published_book -> 0.15 conf=0.85 (3472ms)
+  [31/33] stress-030 HUMAN published_book -> 0.15 conf=0.78 (3458ms)
+  [32/33] stress-031 HUMAN published_book -> 0.15 conf=0.75 (3763ms)
+  [33/33] stress-032 HUMAN published_book -> 0.15 conf=0.82 (3129ms)
+
+wrote C:\Users\adam\Desktop\humanizer ultra\ai-text-detector\benchmark\results-oosstress-omkiro-sonnet-4-5.jsonl
+params: {"tag":"oosstress-omkiro-sonnet-4-5","model":"kiro/claude-sonnet-4.5","prompt":"direct","temperature":0.1,"top_p":0.9,"max_tokens":1400,"tries":3,"wait_ms":3000,"timeout_s":120,"concurrency":2,"base_url":"http://localhost:20128/v1","corpus":"corpus-stress-human.json","rows":33,"usable":33}
+usable=33/33 salvaged=0 truncated=0 errors=none
+latency ms p50/p90/max: 3410/4598/5109
+wall clock: 60.1s

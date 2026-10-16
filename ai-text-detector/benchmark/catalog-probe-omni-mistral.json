@@ -1,0 +1,86 @@
+[
+ {
+  "model": "mistral/devstral-latest",
+  "http": 400,
+  "ms": 66,
+  "verdict": "PROVIDER_ERROR",
+  "detail": "Model 'devstral-latest' is not available in the active live catalog for provider 'mistral'.",
+  "limit_source": null,
+  "provider": null
+ },
+ {
+  "model": "mistral/labs-leanstral-1-5",
+  "http": 403,
+  "ms": 24972,
+  "verdict": "PROVIDER_ERROR",
+  "detail": "[mistral/labs-leanstral-1-5] [403]: Model labs-leanstral-1-5 is a Labs model. To use Labs models, an admin must enable them in your organization settings at htt",
+  "limit_source": null,
+  "provider": null
+ },
+ {
+  "model": "mistral/magistral-medium-latest",
+  "http": 429,
+  "ms": 27659,
+  "verdict": "PROVIDER_ERROR",
+  "detail": "[mistral/magistral-medium-latest] [429]: Rate limit exceeded (reset after 1s)",
+  "limit_source": null,
+  "provider": null
+ },
+ {
+  "model": "mistral/ministral-14b-latest",
+  "http": 200,
+  "ms": 4279,
+  "verdict": "SCORED",
+  "detail": "p=0.0 finish=stop"
+ },
+ {
+  "model": "mistral/ministral-3b-latest",
+  "http": 200,
+  "ms": 1643,
+  "verdict": "SCORED",
+  "detail": "p=0.99 finish=stop"
+ },
+ {
+  "model": "mistral/ministral-8b-latest",
+  "http": 200,
+  "ms": 1002,
+  "verdict": "SCORED",
+  "detail": "p=0.01 finish=stop"
+ },
+ {
+  "model": "mistral/mistral-large-latest",
+  "http": 400,
+  "ms": 34,
+  "verdict": "PROVIDER_ERROR",
+  "detail": "Model 'mistral-large-latest' is not available in the active live catalog for provider 'mistral'.",
+  "limit_source": null,
+  "provider": null
+ },
+ {
+  "model": "mistral/mistral-medium-latest",
+  "http": 429,
+  "ms": 30367,
+  "verdict": "PROVIDER_ERROR",
+  "detail": "[mistral/mistral-medium-latest] [429]: Rate limit exceeded (reset after 3s)",
+  "limit_source": null,
+  "provider": null
+ },
+ {
+  "model": "mistral/mistral-small-2603",
+  "http": 429,
+  "ms": 30000,
+  "verdict": "PROVIDER_ERROR",
+  "detail": "[mistral/mistral-small-2603] [429]: Rate limit exceeded (reset after 3s)",
+  "limit_source": null,
+  "provider": null
+ },
+ {
+  "model": "mistral/mistral-small-latest",
+  "http": 429,
+  "ms": 24445,
+  "verdict": "PROVIDER_ERROR",
+  "detail": "[mistral/mistral-small-latest] [429]: Rate limit exceeded (reset after 3s)",
+  "limit_source": null,
+  "provider": null
+ }
+]

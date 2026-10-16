@@ -1,0 +1,33 @@
+[detect ] nvidia/nemotron-3-ultra-550b-a55b short-hu -> 12569ms HUMAN_LIKELY
+[webhook] nvidia/nemotron-3-ultra-550b-a55b short-hu -> 16770ms HUMAN_LIKELY
+[detect ] nvidia/nemotron-3-ultra-550b-a55b med-ai -> 18586ms AI_GENERATED
+[webhook] nvidia/nemotron-3-ultra-550b-a55b med-ai -> 8112ms REVIEW_REQUIRED
+[detect ] nvidia/nemotron-3-ultra-550b-a55b long-hu -> 271ms 
+[webhook] nvidia/nemotron-3-ultra-550b-a55b long-hu -> 8ms 
+[detect ] nvidia/nemotron-3-ultra-550b-a55b defer-ai(tie-break armed) -> 4955ms 
+[webhook] nvidia/nemotron-3-ultra-550b-a55b defer-ai -> 39ms 
+[detect ] z-ai/glm-5.3-flash short-hu -> 4159ms 
+[webhook] z-ai/glm-5.3-flash short-hu -> 3ms 
+[detect ] z-ai/glm-5.3-flash med-ai -> 4105ms 
+[webhook] z-ai/glm-5.3-flash med-ai -> 12ms 
+[detect ] z-ai/glm-5.3-flash long-hu -> 4402ms 
+[webhook] z-ai/glm-5.3-flash long-hu -> 7ms 
+[detect ] z-ai/glm-5.3-flash defer-ai(tie-break armed) -> 4155ms 
+[webhook] z-ai/glm-5.3-flash defer-ai -> 8ms 
+[detect ] google/gemma-4-31b-it short-hu -> 4115ms 
+[webhook] google/gemma-4-31b-it short-hu -> 5ms 
+[detect ] google/gemma-4-31b-it med-ai -> 4218ms 
+[webhook] google/gemma-4-31b-it med-ai -> 2ms 
+[detect ] google/gemma-4-31b-it long-hu -> 4112ms 
+[webhook] google/gemma-4-31b-it long-hu -> 3ms 
+[detect ] google/gemma-4-31b-it defer-ai(tie-break armed) -> 4160ms 
+[webhook] google/gemma-4-31b-it defer-ai -> 3ms 
+[detect ] deepseek-ai/deepseek-v4.1-flash short-hu -> 4120ms 
+[webhook] deepseek-ai/deepseek-v4.1-flash short-hu -> 5ms 
+[detect ] deepseek-ai/deepseek-v4.1-flash med-ai -> 4148ms 
+[webhook] deepseek-ai/deepseek-v4.1-flash med-ai -> 15ms 
+[detect ] deepseek-ai/deepseek-v4.1-flash long-hu -> 4151ms 
+[webhook] deepseek-ai/deepseek-v4.1-flash long-hu -> 5ms 
+[detect ] deepseek-ai/deepseek-v4.1-flash defer-ai(tie-break armed) -> 4147ms 
+[webhook] deepseek-ai/deepseek-v4.1-flash defer-ai -> 5ms 
+done -> C:\Users\adam\Desktop\humanizer ultra\ai-text-detector\benchmark\results-appbench.jsonl

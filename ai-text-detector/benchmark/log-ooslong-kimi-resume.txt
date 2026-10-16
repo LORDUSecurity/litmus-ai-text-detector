@@ -1,0 +1,18 @@
+resume: keeping 39 scored row(s), calling 9
+tag=ooslong-kimi-k3 model=moonshotai/kimi-k3 prompt=direct temp=0.1 top_p=0.95 max_tokens=1400 timeout_s=260 n=9 concurrency=1
+base_url=https://integrate.api.nvidia.com/v1 keys=1
+  [ 1/9] ai-000 AI    finance     -> ERR:no_choices (1533ms)
+  [ 2/9] hu-000 HUMAN finance     -> ERR:no_choices (188ms)
+  [ 3/9] hu-001 HUMAN medicine    -> ERR:no_choices (79ms)
+  [ 4/9] hu-003 HUMAN wiki_csai   -> ERR:no_choices (96ms)
+  [ 5/9] ai-005 AI    finance     -> ERR:no_choices (86ms)
+  [ 6/9] ai-022 AI    open_qa     -> ERR:no_choices (77ms)
+  [ 7/9] hu-022 HUMAN finance     -> ERR:no_choices (86ms)
+  [ 8/9] ai-023 AI    reddit_eli5 -> ERR:no_choices (86ms)
+  [ 9/9] hu-023 HUMAN reddit_eli5 -> ERR:no_choices (80ms)
+
+wrote C:\Users\adam\Desktop\humanizer ultra\ai-text-detector\benchmark\results-ooslong-kimi-k3.jsonl
+params: {"tag":"ooslong-kimi-k3","model":"moonshotai/kimi-k3","prompt":"direct","temperature":0.1,"top_p":0.95,"max_tokens":1400,"tries":4,"wait_ms":3000,"timeout_s":260,"concurrency":1,"base_url":"https://integrate.api.nvidia.com/v1","corpus":"corpus-long.json","rows":48,"usable":39}
+usable=39/48 salvaged=0 truncated=0 errors={"no_choices":9}
+latency ms p50/p90/max: 245750/256196/258570
+wall clock: 2.3s

@@ -1,0 +1,53 @@
+resume: keeping 4 scored row(s), calling 44
+tag=gemfull-3-flash-preview model=gemini-3-flash-preview prompt=direct temp=0.1 top_p=0.9 max_tokens=1400 timeout_s=120 n=44 concurrency=1
+base_url=https://generativelanguage.googleapis.com/v1beta/openai keys=1
+  [ 1/44] ai-001 AI    reddit_eli5 -> 0.94 conf=0.96 (6923ms)
+  [ 2/44] ai-002 AI    finance     -> 0.98 conf=0.95 (4058ms)
+  [ 3/44] hu-002 HUMAN finance     -> 0.15 conf=0.90 (4502ms)
+  [ 4/44] ai-003 AI    medicine    -> 0.98 conf=0.95 (6255ms)
+  [ 5/44] hu-003 HUMAN medicine    -> ERR:http_503 (3239ms)
+  [ 6/44] ai-004 AI    wiki_csai   -> 0.98 conf=0.95 (3889ms)
+  [ 7/44] hu-004 HUMAN wiki_csai   -> ERR:http_429 (184ms)
+  [ 8/44] ai-005 AI    open_qa     -> ERR:http_429 (215ms)
+  [ 9/44] hu-005 HUMAN open_qa     -> ERR:http_429 (232ms)
+  [10/44] ai-006 AI    reddit_eli5 -> ERR:http_429 (201ms)
+  [11/44] hu-006 HUMAN reddit_eli5 -> ERR:http_429 (209ms)
+  [12/44] ai-007 AI    finance     -> ERR:http_429 (229ms)
+  [13/44] hu-007 HUMAN finance     -> ERR:http_429 (233ms)
+  [14/44] ai-008 AI    medicine    -> ERR:http_429 (216ms)
+  [15/44] hu-008 HUMAN medicine    -> ERR:http_429 (212ms)
+  [16/44] ai-009 AI    wiki_csai   -> ERR:http_429 (228ms)
+  [17/44] hu-009 HUMAN wiki_csai   -> ERR:http_429 (226ms)
+  [18/44] ai-010 AI    open_qa     -> ERR:http_429 (210ms)
+  [19/44] hu-010 HUMAN open_qa     -> ERR:http_429 (145ms)
+  [20/44] ai-011 AI    reddit_eli5 -> ERR:http_429 (221ms)
+  [21/44] hu-011 HUMAN reddit_eli5 -> ERR:http_429 (228ms)
+  [22/44] ai-012 AI    finance     -> ERR:http_429 (206ms)
+  [23/44] hu-012 HUMAN finance     -> ERR:http_429 (162ms)
+  [24/44] ai-013 AI    medicine    -> ERR:http_429 (147ms)
+  [25/44] hu-013 HUMAN medicine    -> ERR:http_429 (218ms)
+  [26/44] ai-014 AI    wiki_csai   -> ERR:http_429 (209ms)
+  [27/44] hu-014 HUMAN wiki_csai   -> ERR:http_429 (153ms)
+  [28/44] ai-015 AI    open_qa     -> ERR:http_429 (233ms)
+  [29/44] hu-015 HUMAN open_qa     -> ERR:http_429 (200ms)
+  [30/44] ai-016 AI    reddit_eli5 -> ERR:http_429 (160ms)
+  [31/44] hu-016 HUMAN reddit_eli5 -> ERR:http_429 (151ms)
+  [32/44] ai-017 AI    finance     -> ERR:http_429 (201ms)
+  [33/44] hu-017 HUMAN finance     -> ERR:http_429 (159ms)
+  [34/44] ai-018 AI    medicine    -> ERR:http_429 (216ms)
+  [35/44] ai-019 AI    wiki_csai   -> ERR:http_429 (148ms)
+  [36/44] hu-019 HUMAN wiki_csai   -> ERR:http_429 (157ms)
+  [37/44] ai-020 AI    open_qa     -> ERR:http_429 (152ms)
+  [38/44] hu-020 HUMAN open_qa     -> ERR:http_429 (152ms)
+  [39/44] ai-021 AI    reddit_eli5 -> ERR:http_429 (143ms)
+  [40/44] hu-021 HUMAN reddit_eli5 -> ERR:http_429 (225ms)
+  [41/44] ai-022 AI    finance     -> ERR:http_429 (227ms)
+  [42/44] hu-022 HUMAN finance     -> ERR:http_429 (216ms)
+  [43/44] ai-023 AI    medicine    -> ERR:http_429 (224ms)
+  [44/44] hu-023 HUMAN medicine    -> ERR:http_429 (219ms)
+
+wrote C:\Users\adam\Desktop\humanizer ultra\ai-text-detector\benchmark\results-gemfull-3-flash-preview.jsonl
+params: {"tag":"gemfull-3-flash-preview","model":"gemini-3-flash-preview","prompt":"direct","temperature":0.1,"top_p":0.9,"max_tokens":1400,"tries":1,"wait_ms":3000,"timeout_s":120,"concurrency":1,"base_url":"https://generativelanguage.googleapis.com/v1beta/openai","corpus":"corpus.json","rows":48,"usable":9}
+usable=9/48 salvaged=0 truncated=0 errors={"http_503":1,"http_429":38}
+latency ms p50/p90/max: 4837/12237/12237
+wall clock: 36.4s

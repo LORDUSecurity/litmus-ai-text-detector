@@ -1,0 +1,86 @@
+[
+ {
+  "id": "ai-000",
+  "text": "Osaka is a city located in the Kansai region of Japan. It is the capital of Osaka Prefecture and the third-largest city in Japan, with a population of over 19 million people in its metropolitan area. Osaka is located on the island of Honshu, about 350 kilometers (217 miles) west of Tokyo. It is a major economic hub in Japan, known for its port, trade, and industry. Osaka is also a popular tourist destination, known for its food, culture, and landmarks such as Osaka Castle and Universal Studios Japan.",
+  "label": "AI",
+  "config": "open_qa",
+  "question": "where is osaka japan"
+ },
+ {
+  "id": "ai-004",
+  "text": "Rodney Brooks is a roboticist and entrepreneur who has made significant contributions to the field of robotics. He is best known for his work on intelligent robots and his co-founding of several successful robotics companies, including iRobot and Rethink Robotics.\n\n\n\nBrooks received his Ph.D. in computer science from Stanford University in 1981 and later joined the faculty at the Massachusetts Institute of Technology (MIT). While at MIT, he co-founded the MIT Artificial Intelligence Laboratory and played a key role in the development of the field of robotics.\n\n\n\nIn addition to his work on intelligent robots, Brooks is also known for his contributions to the development of artificial intelligence and machine learning. He has written several books on these topics, including \"Flesh and Machines\" and \"Cambrian Intelligence.\"\n\n\n\nOverall, Rodney Brooks is a highly influential figure in the field of robotics and artificial intelligence, and his work has had a significant impact on the development and evolution of these technologies.",
+  "label": "AI",
+  "config": "wiki_csai",
+  "question": "Please explain what is \"Rodney Brooks\""
+ },
+ {
+  "id": "ai-008",
+  "text": "Sore throat, stuffy nose, and cough are common symptoms of a viral infection, such as the common cold or flu. Allergies can also cause these symptoms, as well as irritation from exposure to irritants such as tobacco smoke or air pollution.\n\nThe crusting of the eyes that you describe could be caused by a condition called conjunctivitis, which is an inflammation of the thin, clear tissue that lines the inside of the eyelid and covers the white part of the eye. Conjunctivitis can be caused by a viral or bacterial infection, allergies, or exposure to irritants. It can also be a symptom of another underlying condition, such as dry eye or blepharitis (inflammation of the eyelid).\n\nIt's important to see a healthcare provider if you are experiencing persistent or severe symptoms, or if you have any concerns about your health. They can help determine the cause of your symptoms and recommend appropriate treatment.",
+  "label": "AI",
+  "config": "medicine",
+  "question": "What causes sore throat, stuffy noise and cough?Hi ive been currently sick, probably from allergies. Symptoms were sorethroat, stuffy noise and occational coughin. Question i am interested in, durring the late phases of being sick ive noticed my eyes crusting up and i can barely open them when i wake up, sometimes happends alittle durring the day also. Curious"
+ },
+ {
+  "id": "ai-012",
+  "text": "In the state of Michigan, there are no specific laws regarding the payment of interest on security deposits paid to landlords. However, it is important for landlords to properly handle and account for the security deposit paid by a tenant.Under Michigan law, a landlord must provide the tenant with a written receipt for any security deposit received, and must also provide the tenant with a written statement of the condition of the rental unit within 14 days after the tenant moves in. If the landlord fails to do so, the tenant may be entitled to damages in an amount equal to twice the security deposit.If the tenant moves out and the landlord wishes to keep all or part of the security deposit, the landlord must provide the tenant with a written statement itemizing any damages and the cost of repairs within 30 days after the tenant vacates the rental unit. If the landlord fails to do so, the tenant may be entitled to the return of the full security deposit.It is also important for landlords to properly handle and account for security deposits, as they are considered the property of the tenant and must be kept separate from the landlord's own funds. Landlords are required to return the security deposit, or any remaining balance after deducting for damages, to the tenant within 30 days of the tenant vacating the rental unit.If you have further questions about security deposits in Michigan, you may want to consult a local attorney or contact the Michigan Department of Licensing and Regulatory Affairs.",
+  "label": "AI",
+  "config": "finance",
+  "question": "Interest on security deposits paid to landlords, in Michigan?"
+ },
+ {
+  "id": "ai-016",
+  "text": "It's important to remember that Japan is a country with a rich and diverse culture, and like any other country, it has a range of cultural practices and expressions. While it is true that Japan has a reputation for being a more traditional and conservative culture, it is also home to a vibrant and creative media industry. \nThe Japanese media industry is known for producing a wide variety of content, including video games, TV shows, and music, that often incorporates elements of Japanese culture and history. This can include things like traditional Japanese instruments and themes, as well as more modern and unconventional elements. \nIt's also worth noting that different parts of Japanese culture can have different levels of conservatism. For example, some aspects of Japanese culture, such as traditional family structure or gender roles, may be more conservative, while other parts of Japanese culture, such as the media industry, may be more open to experimentation and innovation. \nOverall, it's important to remember that Japan is a complex and multifaceted culture, and it's not fair to generalize or stereotype all aspects of Japanese culture based on a few specific examples.",
+  "label": "AI",
+  "config": "reddit_eli5",
+  "question": "Why do the Japanese , who are known for having a conservative culture , seem to have such outlandish media ? Video games , T.V. shows , music , etc . Please explain like I'm five."
+ },
+ {
+  "id": "ai-020",
+  "text": "\"Girls Just Want to Have Fun\" is a song by American singer Cyndi Lauper. It was released in 1983 as the lead single from her debut studio album, She's So Unusual (1983). The song was written by Robert Hazard, who wrote the original version of the song in 1979. The song became a hit, reaching the top five of the Billboard Hot 100 chart and becoming Lauper's first top-five single. It also reached the top ten in several other countries and has since become a classic of 1980s popular culture.",
+  "label": "AI",
+  "config": "open_qa",
+  "question": "what year was girls just want to have fun release"
+ },
+ {
+  "id": "hu-000",
+  "text": "One is \"US Government Standard Bathroom Malodor\"; a mixture of eight chemicals with a stench resembling human feces, only much stronger, designed to test the efficacy of deodorizers and air fresheners .Another one, \" Who me? \", is a mixture of five sulfur-containing chemicals and smells like rotting food and carcasses.",
+  "label": "HUMAN",
+  "config": "open_qa",
+  "question": "what are stink bombs made of"
+ },
+ {
+  "id": "hu-004",
+  "text": "Human intelligence is the intellectual capability of humans, which is marked by complex cognitive feats and high levels of motivation and self-awareness. High intelligence is associated with better outcomes in life.\nThrough intelligence, humans possess the cognitive abilities to learn, form concepts, understand, apply logic and reason, including the capacities to recognize patterns, plan, innovate, solve problems, make decisions, retain information, and use language to communicate. There are conflicting ideas about how intelligence is measured, ranging from the idea that intelligence is fixed upon birth, or that it is malleable and can change depending on an individual's mindset and efforts. Several subcategories of intelligence, such as emotional intelligence or social intelligence, are heavily debated as to whether they are traditional forms of intelligence. They are generally thought to be distinct processes that occur, though there is speculation that they tie into traditional intelligence more than previously suspected.",
+  "label": "HUMAN",
+  "config": "wiki_csai",
+  "question": "Please explain what is \"Human intelligence\""
+ },
+ {
+  "id": "hu-008",
+  "text": "Hello, I have studied your case.You may need to do MRI spine again to see for nerve compression If your new MRI shows disc bulge with nerve compression then surgery may help.Due to compression of this nerve root there  pain associated with it.For these symptoms analgesic and neurotropic medication can be started.Till time, avoid lifting weights, Sit with support to back. You can consult physiotherapist for help.Physiotherapy like ultrasound and TENS therapy will helpIf nerve compression becomes severe later on then surgical decompression will give better relief.Hope this answers your query. If you have additional questions or follow up queries then please do not hesitate in writing to us. I will be happy to answer your queries. Wishing you good health.Take care.",
+  "label": "HUMAN",
+  "config": "medicine",
+  "question": "Have severe pain in the lower pain even after medicationi have chronic pain and have had one surgery on neck fusion c5c6c7 four yrs ago and microdiscectomy on lower back still have alot of pain current pain control doctor has me on heavy pain meds and have tried everything under the sun i afraid they r missing somethin"
+ },
+ {
+  "id": "hu-012",
+  "text": "fennec has a very good answer but i feel it provides too much information. So i'll just try to explain what that sentence says. Put option is the right to sell a stock. \"16 puts on Cisco at 71 cents\", means John comes to Jim and says, i'll give you 71 cent now, if you allow me to sell one share of Cisco to you at $16 at some point in the future ( on expiration date).  NYT quote says 1000 puts that means 1000 contracts - he bought a right to sell 100,000 shares of Cisco on some day at $16/share. Call option - same idea: right to buy a stock.",
+  "label": "HUMAN",
+  "config": "finance",
+  "question": "What does this statement regarding put options mean?"
+ },
+ {
+  "id": "hu-016",
+  "text": "It becomes recognized whenever other countries recognize it . That 's not a satisfying answer , but it 's the truth . Just ask Palestine . There are only two things stopping you from finding an island and starting the People 's Democratic Free Opensource Republic of Doge : ( 1 ) finding an unclaimed island or ( 2 ) convincing a country to relinquish its claim on an island / convincing other countries to recognize your claim as superior to the existing country 's claim . If you can get over either of those two things , please let me know and I will be your first Vice Dictator . You may want to check out seasteading if this interests you . The idea there is to build an island - ship you can float out to international waters and then declare it as your own country . Defense against other countries and bandits is an issue , but people have put a lot of thought into it .",
+  "label": "HUMAN",
+  "config": "reddit_eli5",
+  "question": "Why ca n't I start my own nation ? What is stopping me from finding a island and starting the country of Doge ? How does a nation become recognized as a country ? Please explain like I'm five."
+ },
+ {
+  "id": "hu-020",
+  "text": "Sri ( Devanagari : श्री, IAST ; Śrī), also transliterated as Sree or Shri or Shree is a word of Sanskrit origin, used in the Indian subcontinent as polite form of address equivalent to the English \"Mr.\" in written and spoken language, or as a title of veneration for deities (usually translated as \"Holy\").",
+  "label": "HUMAN",
+  "config": "open_qa",
+  "question": "what is sanskrit shri"
+ }
+]

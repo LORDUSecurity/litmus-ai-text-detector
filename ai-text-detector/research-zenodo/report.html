@@ -1,0 +1,205 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Free-Tier LLM Gateways as AI-Text Detectors: A Dated Benchmark of Models, Quotas and Out-of-Sample Stability</title>
+<style>
+  body { font-family: Georgia, 'Times New Roman', serif; max-width: 820px; margin: 40px auto; padding: 0 24px 60px; color: #1a1a1a; line-height: 1.55; font-size: 12pt; }
+  h1 { font-size: 19pt; line-height: 1.25; margin-bottom: 4px; }
+  .subtitle { font-size: 12.5pt; color: #444; margin-bottom: 24px; }
+  h2 { font-size: 14.5pt; margin-top: 34px; border-bottom: 1px solid #999; padding-bottom: 4px; }
+  h3 { font-size: 12.5pt; margin-top: 24px; }
+  .meta { font-size: 10.5pt; color: #333; border: 1px solid #ccc; padding: 10px 14px; margin-bottom: 28px; background: #fafafa; }
+  table { border-collapse: collapse; width: 100%; margin: 14px 0 20px; font-size: 10pt; }
+  th, td { border: 1px solid #999; padding: 5px 8px; text-align: left; vertical-align: top; }
+  th { background: #efefef; }
+  code { font-family: 'Consolas', 'Menlo', monospace; font-size: 9.5pt; background: #f3f3f3; padding: 1px 4px; }
+  .abstract { border-left: 3px solid #666; padding: 4px 16px; margin: 18px 0 26px; background: #fcfcfc; }
+  .small { font-size: 10pt; color: #333; }
+  ol.refs li { margin-bottom: 6px; font-size: 10.5pt; }
+  .footnote { font-size: 10pt; color: #444; }
+  @media print { body { margin: 12mm; max-width: none; font-size: 10.5pt; } .meta { background: #fff; } }
+</style>
+</head>
+<body>
+
+<h1>Free-Tier LLM Gateways as AI-Text Detectors</h1>
+<div class="subtitle">A dated benchmark of model accuracy, quota regimes and out-of-sample stability across four providers, with a band-scoring protocol for production use</div>
+
+<div class="meta">
+  <strong>Preprint / technical report</strong> — not peer reviewed.<br>
+  Measurement window: 2026-09-28 to 2026-10-13. All availability and quota claims are time-bound to this window.<br>
+  License: CC BY 4.0 (text). Model names and trademarks belong to their providers. Corpus content is third-party data and is not redistributed here (see §8, Data availability).
+</div>
+
+<div class="abstract">
+<strong>Abstract.</strong> General-purpose LLMs asked to output a structured AI-ness verdict can serve as text detectors at near-zero cost, and their availability is governed less by model quality than by the free-tier policies of the gateways that serve them. This report benchmarks 20+ models across four gateways (OpenRouter free pool, NVIDIA NIM free tier, Google AI Studio free tier, and a local multi-account router) on a 48-text in-sample corpus and a 48-text disjoint holdout drawn from HC3, all scored through the same strict-JSON prompt, a fixed decision band (AI ≥ 0.69, HUMAN ≤ 0.40) and a confidence gate (≥ 0.60). Three findings stand out. First, <em>model choice dominates tuning</em>: identical prompts and parsers span 0.31 to 1.00 corpus accuracy, and one free model (<code>moonshotai/kimi-k3</code>) was the only configuration measured with zero wrong decisions on both corpora, reproduced in a same-day repeat run (AUC 1.000 both captures; McNemar vs. incumbent lanes p = 1.0000). Second, each gateway enforces a materially different regime — OpenRouter has two 429 classes that require opposite remedies, Google's per-model daily quota (nominally 20) <em>delivers</em> a volume that is per model <em>and</em> per project (5–46 requests in one window observed) and stacks linearly with extra project keys, and NVIDIA free serving windows open and close within hours — so a free model's measured accuracy and its usability as a live lane are separate, per-gateway questions. Third, in-sample perfection does not transfer: a lane that erred zero times on the corpus its band was fitted on produced a false negative out of sample, while the one lane that reproduced zero-wrong out of sample deferred 2–3 of 48 texts per run. A practitioner's decision table and an explicit limitations section accompany the results.
+</div>
+
+<h2>1. Introduction</h2>
+<p>Commercial AI-text detectors are calibrated to the models that existed when they were trained, and they are expensive per request. An alternative used here: ask a general-purpose LLM, through a plain chat API, to score a text and emit a structured verdict, then apply fixed decision thresholds. Because the cheapest LLM access today is free-tier gateway capacity, the practical question for anyone building a low-cost verifier splits in two: <em>which models score well</em>, and <em>which serving channels stay reachable</em>. This report measures both halves on the same protocol, dated, with every availability claim tied to the gateway and window where it was observed.</p>
+<p>The work was performed as engineering validation of a web verification app, and this report is written to be usable as its published evidence base: §2 defines the protocol, §3–§5 give results, §6 is a decision table for choosing a free detector model, §7 states the limitations without softening them.</p>
+
+<h2>2. Method</h2>
+
+<h3>2.1 Corpora</h3>
+<p>Both corpora are drawn from the Human-vs-AI Generated Comparison corpus (HC3) [1], which pairs real user posts with ChatGPT-3.5-era answers across six domains (medical Q&A, Reddit ELI5, open QA, wikiCSAI, finance, law).</p>
+<ul>
+  <li><strong>In-sample corpus</strong> — 48 texts (24 AI / 24 HUMAN), ~85-word human median.</li>
+  <li><strong>Holdout corpus</strong> — a disjoint 48-text two-sided set (24 AI / 24 HUMAN) taken from a non-overlapping offset window of the same source; disjointness was verified by normalized text overlap and by question overlap (0 of 48 shared), and independently re-checked against the source with a negative control planted on a tampered copy.</li>
+</ul>
+<p>A third control corpus of 46 real book excerpts (Project Gutenberg, all-human) was used to test false-positive behaviour and is reported only as a caution: it is one-sided and saturated every model at specificity 1.000, so it cannot rank detectors (see §7).</p>
+
+<h3>2.2 Scoring protocol</h3>
+<p>Every model received the same single-turn prompt requesting a strict JSON object with <code>ai_probability</code> (0–1), <code>confidence</code> (0–1) and short signals, at temperature 0.1. Notable protocol choices, each learned from failure:</p>
+<ul>
+  <li><strong>No <code>response_format</code>.</strong> On free tiers, JSON-mode requests caused HTTP 400s, reasoning preamble leakage and malformed output; it was removed and replaced by a defensive parser (markdown-fence strip → balanced-brace scan → regex salvage). Salvaged rows are always flagged and excluded from headline numbers.</li>
+  <li><strong>Transport failures are separated from model failures.</strong> Each capture records no-answer vs bad-JSON vs HTTP-error vs timeout per row; a coverage gap attributable to a gateway is never quoted as model evidence without its <em>n</em>.</li>
+  <li><strong>Every "unreachable" finding names the gateway and date.</strong> The same weights proved reachable on one provider and permanently dead on another (§5).</li>
+</ul>
+
+<h3>2.3 Decision band and metrics</h3>
+<p>Verdicts follow a fixed band: <strong>AI if p ≥ 0.69</strong>, <strong>HUMAN if p ≤ 0.40</strong>, otherwise deferred (review); a deferral also results when the lane reports confidence &lt; 0.60. Metrics:</p>
+<ul>
+  <li><code>acc/corpus</code> = correct ÷ texts given (deferral costs accuracy) — the deployment-relevant column;</li>
+  <li><code>acc/answered</code> = correct ÷ texts the model actually decided — the judgement-quality column;</li>
+  <li>AUC via Mann-Whitney over answered rows (ties 0.5) — ranking quality, threshold-free;</li>
+  <li>Paired significance via exact McNemar on decisive-vs-decisive disagreements [2], joining the two captures by text id and applying one rule to both sides.</li>
+</ul>
+<p>The band was calibrated on the in-sample corpus, which makes the holdout runs the only unbiased numbers in this report; per-model bands (fitted cuts, two-fold) were also computed for several lanes and are reported where they change the story.</p>
+
+<h3>2.4 Gateways under test</h3>
+<table>
+  <tr><th>Gateway</th><th>Access path</th><th>Class</th></tr>
+  <tr><td>OpenRouter</td><td>15 <code>:free</code> model ids; up to 6 free accounts (class-(b) headroom stacks linearly across accounts)</td><td>Free</td></tr>
+  <tr><td>NVIDIA NIM</td><td>free-tier endpoints; 80-model catalogue, ~20 genuinely servable on one account</td><td>Free</td></tr>
+  <tr><td>Google AI Studio</td><td>2 working free accounts + 1 rejected at auth (per-model buckets are per project, so each working account adds capacity), ~62 model ids</td><td>Free</td></tr>
+  <tr><td>Local multi-account router</td><td>a self-hosted OpenAI-compatible router holding OAuth and key-based upstream accounts</td><td>Free + paid</td></tr>
+  <tr><td>Paid reference pair</td><td><code>nemotron-3-ultra-550b</code> primary + <code>diffusiongemma-26b</code> tie-break</td><td>Paid baseline</td></tr>
+</table>
+
+<h2>3. In-sample results (48-text corpus)</h2>
+<p>All rows answered 48/48 unless <em>n</em> says otherwise; band as in §2.3. Two accuracy columns are given because they answer different questions (see §2.3); only <code>acc/corpus</code> is comparable across coverage.</p>
+
+<table>
+  <tr><th>Model</th><th>Gateway</th><th>n</th><th>AUC</th><th>wrong</th><th>deferred</th><th>acc/corpus</th><th>med AI</th><th>med HUMAN</th></tr>
+  <tr><td>kimi-k3</td><td>NVIDIA free</td><td>48</td><td>1.000</td><td>0</td><td>3</td><td>0.938</td><td>0.860</td><td>0.220</td></tr>
+  <tr><td>glm-5.3</td><td>NVIDIA free</td><td>48</td><td>1.000</td><td>0</td><td>3</td><td>0.938</td><td>0.930</td><td>0.135</td></tr>
+  <tr><td>glm-5.3-flash</td><td>NVIDIA free</td><td>48</td><td>1.000</td><td>1</td><td>2</td><td>0.938</td><td>0.930</td><td>0.210</td></tr>
+  <tr><td>claude-sonnet-4.5 (router/OAuth)</td><td>router</td><td>48</td><td>0.988</td><td>2</td><td>0</td><td>0.958</td><td>0.850</td><td>0.150</td></tr>
+  <tr><td>claude-sonnet-4.5 no-think (router)</td><td>router</td><td>48</td><td>0.986</td><td>2</td><td>0</td><td>0.958</td><td>0.850</td><td>0.150</td></tr>
+  <tr><td>ling-3.1-flash</td><td>OpenRouter free</td><td>48</td><td>0.986</td><td>1</td><td>12</td><td>0.729</td><td>0.850</td><td>0.325</td></tr>
+  <tr><td>gemini-3.1-flash-lite</td><td>AI Studio free</td><td>46</td><td>0.955</td><td>13</td><td>0</td><td>0.688</td><td>0.920</td><td>0.835</td></tr>
+  <tr><td>gemma-4-31b-it</td><td>NVIDIA free</td><td>48</td><td>0.945</td><td>7</td><td>0</td><td>0.854</td><td>0.980</td><td>0.150</td></tr>
+  <tr><td>paid 2-model pair (tie-break replay)</td><td>NVIDIA paid</td><td>48</td><td>—</td><td>3</td><td>0</td><td>0.938</td><td>—</td><td>—</td></tr>
+  <tr><td>nemotron-3-ultra-550b (paid primary alone)</td><td>NVIDIA paid</td><td>48</td><td>—</td><td>2</td><td>10</td><td>0.750</td><td>0.815</td><td>0.250</td></tr>
+  <tr><td>openrouter/free (router model)</td><td>OpenRouter free</td><td>33</td><td>0.743</td><td>7</td><td>7</td><td>0.396</td><td>0.850</td><td>0.680</td></tr>
+  <tr><td>lfm-2.5-2.6b:free</td><td>OpenRouter free</td><td>47</td><td>0.480</td><td>16</td><td>16</td><td>0.313</td><td>0.665</td><td>0.650</td></tr>
+  <tr><td>llama-3.2-11b-vision-instruct</td><td>NVIDIA free</td><td>48</td><td>≈0.0</td><td>32</td><td>0</td><td>0.333</td><td>0.200</td><td>0.700</td></tr>
+</table>
+
+<p>Observations that survived the whole measurement window:</p>
+<ul>
+  <li><strong>Model choice dominates tuning.</strong> The same prompt and parser span 0.313 → 0.938 acc/corpus; temperature/top_p sweeps move a model far less than switching models does.</li>
+  <li><strong>AUC cannot see a band problem.</strong> Several lanes ranked classes perfectly while flagging most humans as AI under the shipped cuts (a router route at AUC 1.000 with human median 0.72; a Google lite lane at AUC 0.955 with human median 0.835 and 13 of 24 humans misclassified, §5.2). Only band-scoring exposes this; ranking alone is not evidence of deployability.</li>
+  <li><strong>Detectors can be inverted.</strong> A free vision model scored human text as <em>more</em> AI-like than AI text (separation −0.500). Any unmeasured model is a liability; this is the case for labelling every detector choice out of sample.</li>
+  <li><strong>Run-to-run jitter is a pipeline property.</strong> Three runs of one identical model scored 0.458 / 0.404 / 0.378 on the same corpus; on a borderline screen subset, 8 of 12 texts flipped verdicts between identical reruns. Single-text or single-run judgements are meaningless; aggregates and paired tests are the only reliable comparisons.</li>
+</ul>
+
+<h2>4. Out-of-sample results (disjoint 48-text holdout)</h2>
+
+<table>
+  <tr><th>Lane</th><th>Gateway</th><th>n</th><th>AUC</th><th>wrong</th><th>deferred</th><th>acc/corpus</th><th>decisive miss</th></tr>
+  <tr><td>kimi-k3 (run 1)</td><td>NVIDIA free</td><td>48</td><td>1.000</td><td>0</td><td>2</td><td>0.958</td><td>none</td></tr>
+  <tr><td>kimi-k3 (run 2, same night)</td><td>NVIDIA free</td><td>48</td><td>1.000</td><td>0</td><td>3</td><td>0.938</td><td>none</td></tr>
+  <tr><td>claude-sonnet-4.5</td><td>router/OAuth</td><td>48</td><td>—</td><td>1</td><td>0</td><td>0.979</td><td>hu-007 → AI (p 0.72)</td></tr>
+  <tr><td>glm-5.3</td><td>NVIDIA free</td><td>48</td><td>—</td><td>1</td><td>2</td><td>0.938</td><td>ai-012 → HUMAN (p 0.35)</td></tr>
+</table>
+
+<ul>
+  <li><strong>In-sample perfection transferred for one lane and failed for another.</strong> <code>glm-5.3</code> had erred zero times in sample with every AI text above 0.72; on the holdout its AI floor collapsed to 0.35 — the celebrated 0-wrong property was a fact about those 48 texts. <code>kimi-k3</code> kept zero wrong on the holdout <em>and</em> reproduced it in an independent same-night rerun.</li>
+  <li><strong>The recurring adversarial text.</strong> One holdout AI text (<code>ai-012</code>) defeated every other configuration that met it (glm-5.3: 0.35; the paid ensemble on cleaned text: an AI→HUMAN miss at 0.38). kimi-k3 decided it correctly as AI in both runs (0.78 / 0.74, confidence ≥ 0.6 both). One text is not proof, but it is the second occurrence of the same failure class — false negatives concentrate, and measuring them needs a two-sided holdout, not a bigger pile of human text.</li>
+  <li><strong>Jitter direction on kimi-k3 was benign.</strong> Between the two identical-parameter runs, 33 of 48 scores drifted (±0.04–0.10 typical) and exactly 3 verdicts moved — one defer became a correct AI call, two correct HUMAN calls became defers — <em>none moved into a wrong decision</em>. On this lane, jitter buys review volume, not error.</li>
+  <li><strong>Pairs differ by too little to claim.</strong> McNemar exact tests on all 48 shared texts: kimi vs sonnet, one discordant pair (kimi right); kimi vs glm-5.3, one discordant pair (kimi right); both p = 1.0000. At n = 48 a one-error advantage is not statistically separable — the defensible claim is structural (the only zero-wrong-on-both-corpora, reproduced), not statistical dominance.</li>
+</ul>
+
+<h2>5. Gateway regimes: availability is per-provider, dated, and decisive</h2>
+
+<h3>5.1 OpenRouter free pool — two 429 classes with opposite remedies</h3>
+<ul>
+  <li><em>Class (a), upstream per-model shared pool</em>: transient, can last indefinitely, <strong>unfixable by adding accounts</strong> — one model returned 429 on all 6 accounts × all retries in three independent confirmations spanning hours (0/12, 72 requests, nothing recovered).</li>
+  <li><em>Class (b), per-account daily cap</em>: printed inside the 429 body (visible only on failure; successful responses carry no rate headers); <strong>stacks linearly across accounts</strong> — a 6-account rotation recovered 32 missing capture rows across two quota windows with zero harness-side failures. The visible cap number varies by account history (50/day measured on no-credit accounts, up to 200/day where credits exist).</li>
+  <li>A <strong>404 is terminal</strong>: once a free id is delisted its lane freezes permanently at whatever coverage it had; AUC must always be quoted with <em>n</em>.</li>
+  <li>Gateway errors also arrive <em>inside</em> HTTP 200 bodies; harnesses that only retry on transport status misattribute these as model failures and understate the model.</li>
+</ul>
+
+<h3>5.2 Google AI Studio free tier — per-model buckets whose delivered volume is per-lane and per-project</h3>
+<ul>
+  <li>Quota metric is <em>per project, per model, per day</em>, stated at 20 requests; actual <strong>delivered</strong> volume varied enormously by lane and project: preview-family lanes delivered ~5–6 rows/day on project 1 and 16 rows in one window on project 2, while a lite-family lane delivered <strong>46 of 48 rows in a single window</strong>. Sleeping past the server's own <code>retryDelay</code> bought exactly one row, not a bucket — the printed delay is not a refill signal. Preview model names bill into the base model's bucket; <code>-latest</code> aliases into another.</li>
+  <li>Because the bucket is per project, <strong>additional project keys stack capacity linearly</strong> — the same property OpenRouter's account rotation shows — and each key must still be probed per model: a third key that Google rejects with <code>400 Invalid Auth key</code> contributes nothing.</li>
+  <li>Two independent limiters: a per-model bucket can be exhausted while the model still returns "high demand" 503s (these <em>are</em> transient), so capacity noise and quota starvation coexist.</li>
+  <li>Consequence for throughput planning: <strong>delivered requests/day/model is a measured per-lane fact, not a gateway constant</strong> — any production detector on this tier must quota-probe its own exact model on its own project before sizing. On this gateway quota, not accuracy, was the binding constraint even though its best screen (a flash-family model) was the strongest measured anywhere: AUC 1.000, 0 wrong, human median 0.06 on 12 texts; its 21-row partial capture at window close still reported AUC 1.000 with 0 wrong.</li>
+  <li>Consequence for validation, from the high-throughput lite lane: it delivered a <em>full corpus in one window</em> and was still band-dead — AUC 0.955 with <strong>13 wrong calls, every one a human text read as AI</strong> (human class bimodal, median 0.835, upper mode overlapping the AI class). High free throughput is a reason to <em>measure</em> a lane faster, never evidence that the lane is a detector.</li>
+</ul>
+
+<h3>5.3 NVIDIA NIM free tier — serving eras, not service levels</h3>
+<ul>
+  <li>The catalogue endpoint lists 80 models; 55 return "function not found" on real calls. <em>/v1/models is a promise list, not an entitlement list.</em></li>
+  <li>Models <em>revive and die in hours</em>: one opened a ~12-hour serving era (12/12 screen, AUC 1.000, the lowest human median ever measured at 0.075), collapsed to 2/48 overnight and answered nothing the next morning — an era boundary, not a time-of-day effect. Probe before spending a capture; a 2-text gate costs almost nothing.</li>
+  <li>Latency is pool load, never a model property: p50 for the same lane moved 13.6 s → 96 s between windows on the same day; a full corpus took 144 s once and 5183 s another time, both with zero failures.</li>
+  <li>Hard parameter constraints exist and are discoverable only in the 400 body (e.g. one model fixes top_p at 0.95 and rejects any override). <em>A validation 400 is a harness constraint, not a model verdict.</em></li>
+</ul>
+
+<h3>5.4 Local multi-account router</h3>
+<ul>
+  <li>Aggregating many upstream accounts (OAuth and keys) behind one OpenAI-compatible endpoint proved the <strong>most reliable capture channel measured</strong>: two full-corpus runs, 48/48 both, zero salvage/truncation/errors.</li>
+  <li>Its virtual "auto" routes rank well but band badly (§3) — a router's routing objective is not a detector's decision objective.</li>
+  <li>Free OAuth tiers behind such routers carry provider-side risk (session expiry, policy change) that a direct key does not; treat them as convenience channels, not SLOs.</li>
+</ul>
+
+<h2>6. Which free model to use today (decision table)</h2>
+<p class="small">Conditions of use: October 2026, short-form English prose (~85–200 words), a strict-JSON single-prompt protocol, and the band in §2.3. Re-measure before deploying: every row here is a dated measurement, not a subscription.</p>
+
+<table>
+  <tr><th>Rank</th><th>Lane</th><th>Gateway</th><th>acc/corpus in-sample</th><th>acc/corpus holdout</th><th>approx. median latency (s)</th><th>main constraint</th></tr>
+  <tr><td>1</td><td>kimi-k3</td><td>NVIDIA free</td><td>0.938</td><td>0.958 (reproduced)</td><td>14</td><td>top_p must be 0.95; serving eras can end</td></tr>
+  <tr><td>2</td><td>claude-sonnet-4.5 via OAuth router</td><td>router</td><td>0.958</td><td>0.979</td><td>3</td><td>OAuth session, not a key; 2 wrong (both human text)</td></tr>
+  <tr><td>3</td><td>glm-5.3</td><td>NVIDIA free</td><td>0.938</td><td>0.938</td><td>22</td><td>one AI→HUMAN miss on holdout; pool intermittently silent</td></tr>
+  <tr><td>4</td><td>ling-3.1-flash</td><td>OpenRouter free</td><td>0.729</td><td>not yet measured</td><td>—</td><td>12/48 deferred; best free-OR rank (AUC 0.986)</td></tr>
+  <tr><td>5</td><td>glm-5.3-flash</td><td>NVIDIA free</td><td>0.938</td><td>not yet measured</td><td>8</td><td>fastest strong lane; holdout pending</td></tr>
+  <tr><td>—</td><td>Google flash-family (3.8-flash)</td><td>AI Studio free</td><td>partial: 21/48, AUC 1.000, 0 wrong</td><td>—</td><td>18</td><td>delivered volume is per model <em>and</em> per project; stack project keys, quota-probe before sizing</td></tr>
+</table>
+
+<ul>
+  <li><strong>kimi-k3's holdout row above is its first run.</strong> The same-night rerun also had 0 wrong but deferred 3 texts instead of 2 (acc/corpus 0.938): what reproduces exactly is the absence of errors; the deferral count is what jitter moves.</li>
+  <li>No free lane here has been verified end-to-end through a live webhook at time of writing; the paid two-model pair is the only configuration ever checked through production plumbing, and its live score (41/48) was <em>below</em> its offline replay (45/48) — a structural gap, because a secondary calibrated on one primary run is untested against a drifting primary run. Deploy-time evidence must be collected through the real stack.</li>
+  <li>Ranking two lanes is free-tier-fragile by nature. A resilient low-cost setup runs the best lane as primary with a <em>different gateway</em>'s second-best as fallback, because cross-provider failure modes are independent while same-provider ones correlate.</li>
+</ul>
+
+<h2>7. Limitations</h2>
+<ul>
+  <li><strong>Small, single-source corpora.</strong> 48 + 48 texts, both from HC3. The AI class is ChatGPT-3.5-era; transfer to modern frontier-model output is untested here and is the biggest open risk.</li>
+  <li><strong>Verdicts are style proxies, not truth.</strong> An independent commercial detector (GPTZero) run on the same corpora flagged de-formatted <em>fresh</em> AI text at 100% while reading genuine ChatGPT-era HC3 answers as 96% human — both instruments key on surface style and era-calibrated signal, not on origin. Absolute verdicts on out-of-era text from any detector here, LLM-based included, should be treated as probabilistic.</li>
+  <li><strong>Length confound.</strong> AI texts average ~2× the words of human texts in both corpora; models may exploit length rather than style. A length-matched rerun is designed but not yet executed. Likewise the band was fitted on ~85-word text; its behaviour on 500-word documents is unmeasured.</li>
+  <li><strong>Band transfer risk.</strong> The 0.69/0.40 cuts were fitted in sample; several lanes have measurably different optimal cuts, and applying one band across models biases weaker-but-calibrated rows. Per-model bands were stored for a subset; comparisons in §4 deliberately used one rule for both sides.</li>
+  <li><strong>All availability, quota and latency claims are dated.</strong> Free tiers change without notice; the catalogue itself lies in both directions (listed models dead; unlisted weights served). Every number here says which gateway and which window it came from, and none of it should be quoted as a property of a model alone.</li>
+  <li><strong>Not peer reviewed.</strong> Single-lab (single-engineer) measurements, no held-out implementation verification by a third party.</li>
+</ul>
+
+<h2>8. Reproducibility and data availability</h2>
+<ul>
+  <li>Corpora are rebuildable from the public HC3 dataset with the recorded offset windows [1]; per-document provenance (url, retrieved date, char offsets, sha256) is kept for every row. Raw text is not redistributed.</li>
+  <li>Every capture is stored as append-only per-row JSONL (id, label, p, confidence, signals, latency, error class, attempt) with a run manifest recording every parameter of the command that produced it. The scoring and paired-test code (band scorer, Mann-Whitney, exact McNemar, corpus disjointness verifier with negative control) are plain JS, &lt;200 lines each.</li>
+  <li>The prompt, parser rules and band constants are exactly those listed in §2; a per-model reproduction checklist is available on request to the submitting author.</li>
+</ul>
+
+<h2>References</h2>
+<ol class="refs">
+  <li>[1] Cheng et al., "How Close is ChatGPT to Human Experts? Comparison Corpus, Evaluation and Detection," arXiv:2301.07597 (2022) — the HC3 corpus (six domains of real user answers paired with ChatGPT-3.5 answers).</li>
+  <li>[2] "A Semantic-Invariant Human ChatGPT Comparison Corpus and Its Website," arXiv:2309.02731 (2023) — extended HC3 release used as the datasets server source for row-level provenance checks.</li>
+  <li>[3] McNemar, Q., "Note on the Sampling Error of the Difference Between Correlated Proportions or Percentages," Psychological Methods, vol. 2, 1942. (Exact two-sided binomial form used here.)</li>
+  <li>[4] Mann, H.B., Whitney, D.R., "On a Test of Whether one of Two Random Variables is Stochastically Larger than the Other," Annals of Mathematical Statistics, 1947. (AUC computation: ties at 0.5.)</li>
+</ol>
+
+</body>
+</html>

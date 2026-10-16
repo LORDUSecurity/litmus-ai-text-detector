@@ -1,0 +1,67 @@
+# Build-context filter for every image in this stack.
+#
+# Two rules drive this file:
+#   1. Nothing secret or host-local is ever baked into an image layer. The backend
+#      receives .env at RUNTIME via a bind mount, and the SQLite DB + Fernet master
+#      key live in named volumes -- so all of them are excluded from the context.
+#   2. Keep the context small so builds are fast: drop caches, the legacy detector/
+#      Postgres service, frontend node_modules, and the 17 MB of benchmark book text.
+
+# --- VCS / editor / OS -----------------------------------------------------
+.git
+.gitignore
+.dockerignore
+.vscode
+.idea
+**/.DS_Store
+
+# --- secrets & host-local state (NEVER in a layer) -------------------------
+.env
+.env.*
+docker/.env
+backend/data/
+backend/detector.db
+detector.db
+**/*.key
+**/*.pem
+
+# --- Python caches and tests ----------------------------------------------
+**/__pycache__/
+**/*.pyc
+**/*.pyo
+.pytest_cache/
+**/.pytest_cache/
+backend/tests/
+
+# --- benchmark: keep the DATA seed.py imports, drop bulk and run logs -------
+# seed.py reads results-*.jsonl, runs-manifest.log, catalog-probe-*.json and
+# corpus*.json -- all kept. The per-run run-*.log files print a masked
+# "api_key=nvapi-...(len N)" hint line; harmless, but excluded so no key-shaped
+# string can reach a layer. With a run log absent, seed.py falls back to the
+# manifest/default params for that legacy tag (graceful, no crash).
+benchmark/run-*.log
+benchmark/book-sources/
+benchmark/node_modules/
+benchmark/*.js
+benchmark/_catalog_dump.txt
+
+# --- frontend build artefacts (rebuilt inside the web image) ---------------
+frontend/node_modules/
+frontend/dist/
+frontend/.angular/
+
+# --- legacy / unused services and heavy docs -------------------------------
+detector/
+database/
+examples/
+tests/
+tools/
+docs/
+research-zenodo/
+n8n/main-workflow.json
+n8n/nodes-update.json
+n8n/review-workflow.json
+n8n/*.log
+wf_dump.txt
+fix_workflow.py
+quickstart.sh

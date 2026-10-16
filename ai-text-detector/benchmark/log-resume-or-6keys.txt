@@ -1,0 +1,193 @@
+resume-lanes — 8 incomplete lane(s) [GO]
+
+or-google-gemma-4-26b-a4b-it-free  google/gemma-4-26b-a4b-it:free  usable=0/12  missing=12
+clean-orfull-openrouter-free  openrouter/free  usable=22/48  missing=26
+orfull-inclusionai-ling-3-0-flash-sante-free  inclusionai/ling-3.0-flash-sante:free  usable=31/48  missing=17
+  WARN: file older than 2026-10-07 parser fix — ok rows kept may carry pre-fix salvage
+orfull-openrouter-free  openrouter/free  usable=33/48  missing=15
+clean-orfull-ling-3-1-flash  inclusionai/ling-3.1-flash  usable=38/48  missing=10
+orfull-ling-3-1-flash  inclusionai/ling-3.1-flash  usable=46/48  missing=2
+orfull-lfm-2-5-2-6b-free  liquid/lfm-2.5-2.6b:free  usable=47/48  missing=1
+clean-orfull-lfm-2-5  liquid/lfm-2.5-2.6b:free  usable=47/48  missing=1
+
+skipped (not resumable):
+  rl-429check — base_url http://127.0.0.1:8799/v1 not in .env
+
+===== resume or-google-gemma-4-26b-a4b-it-free =====
+tag=or-google-gemma-4-26b-a4b-it-free model=google/gemma-4-26b-a4b-it:free prompt=direct temp=0.1 top_p=0.9 max_tokens=700 timeout_s=120 n=12 concurrency=1
+base_url=https://openrouter.ai/api/v1 keys=6
+  [ 1/12] ai-000 AI    open_qa     -> ERR:http_429 (509ms, try6)
+  [ 2/12] ai-004 AI    wiki_csai   -> ERR:http_429 (417ms, try6)
+  [ 3/12] ai-008 AI    medicine    -> ERR:http_429 (465ms, try6)
+  [ 4/12] ai-012 AI    finance     -> ERR:http_429 (487ms, try6)
+  [ 5/12] ai-016 AI    reddit_eli5 -> ERR:http_429 (384ms, try6)
+  [ 6/12] ai-020 AI    open_qa     -> ERR:http_429 (592ms, try6)
+  [ 7/12] hu-000 HUMAN open_qa     -> ERR:http_429 (445ms, try6)
+  [ 8/12] hu-004 HUMAN wiki_csai   -> ERR:http_429 (372ms, try6)
+  [ 9/12] hu-008 HUMAN medicine    -> ERR:http_429 (472ms, try6)
+  [10/12] hu-012 HUMAN finance     -> ERR:http_429 (417ms, try6)
+  [11/12] hu-016 HUMAN reddit_eli5 -> ERR:http_429 (499ms, try6)
+  [12/12] hu-020 HUMAN open_qa     -> ERR:http_429 (422ms, try6)
+
+wrote C:\Users\adam\Desktop\humanizer ultra\ai-text-detector\benchmark\results-or-google-gemma-4-26b-a4b-it-free.jsonl
+params: {"tag":"or-google-gemma-4-26b-a4b-it-free","model":"google/gemma-4-26b-a4b-it:free","prompt":"direct","temperature":0.1,"top_p":0.9,"max_tokens":700,"tries":6,"wait_ms":15000,"timeout_s":120,"concurrency":1,"base_url":"https://openrouter.ai/api/v1","corpus":"corpus-screen12.json","rows":12,"usable":0}
+usable=0/12 salvaged=0 truncated=0 errors={"http_429":12}
+wall clock: 2732.9s
+===== or-google-gemma-4-26b-a4b-it-free exit=0 =====
+
+===== resume clean-orfull-openrouter-free =====
+resume: keeping 22 scored row(s), calling 26
+tag=clean-orfull-openrouter-free model=openrouter/free prompt=direct temp=0.1 top_p=0.9 max_tokens=1400 timeout_s=120 n=26 concurrency=1
+base_url=https://openrouter.ai/api/v1 keys=6
+  [ 1/26] ai-001 AI    reddit_eli5 -> ERR:no_json_object (20295ms, try4)
+  [ 2/26] ai-002 AI    finance     -> 0.87 conf=0.92 (1664ms, try4)
+  [ 3/26] ai-003 AI    medicine    -> 0.86 conf=0.92 (3811ms, try4)
+  [ 4/26] hu-004 HUMAN wiki_csai   -> 0.55 conf=0.70 (7046ms, try4)
+  [ 5/26] hu-007 HUMAN finance     -> 0.05 conf=0.92 (5500ms, try4)
+  [ 6/26] hu-011 HUMAN reddit_eli5 -> ERR:no_json_object (3668ms, try4)
+  [ 7/26] hu-013 HUMAN medicine    -> 0.78 conf=0.85 (4121ms, try4)
+  [ 8/26] hu-014 HUMAN wiki_csai   -> ERR:no_json_object (18536ms, try4)
+  [ 9/26] ai-015 AI    open_qa     -> 0.15 conf=0.90 (2575ms, try4)
+  [10/26] hu-015 HUMAN open_qa     -> 0.62 conf=0.71 (2104ms, try4)
+  [11/26] ai-016 AI    reddit_eli5 -> 0.81 conf=0.88 (2266ms, try4)
+  [12/26] hu-016 HUMAN reddit_eli5 -> 0.18 conf=0.88 (9365ms, try4)
+  [13/26] ai-017 AI    finance     -> 0.88 conf=0.93 (2383ms, try4)
+  [14/26] hu-017 HUMAN finance     -> 0.20 conf=0.75 (4626ms, try4)
+  [15/26] ai-018 AI    medicine    -> 0.78 conf=0.85 (2404ms, try4)
+  [16/26] hu-018 HUMAN medicine    -> 0.65 conf=0.85 (3057ms, try4)
+  [17/26] ai-019 AI    wiki_csai   -> 0.85 conf=0.90 (4402ms, try4)
+  [18/26] hu-019 HUMAN wiki_csai   -> 0.60 conf=0.85 (3400ms, try4)
+  [19/26] ai-020 AI    open_qa     -> 0.60 conf=0.50 (5279ms, try4)
+  [20/26] hu-020 HUMAN open_qa     -> 0.75 conf=0.85 (2594ms, try4)
+  [21/26] ai-021 AI    reddit_eli5 -> 0.82 conf=0.88 (1952ms, try4)
+  [22/26] hu-021 HUMAN reddit_eli5 -> ERR:json_parse_failed (15814ms, try4)
+  [23/26] ai-022 AI    finance     -> 0.18 conf=0.88 (9639ms, try4)
+  [24/26] hu-022 HUMAN finance     -> ERR:no_json_object (3029ms, try4)
+  [25/26] ai-023 AI    medicine    -> 0.70 conf=0.70 (28971ms, try4)
+  [26/26] hu-023 HUMAN medicine    -> 0.75 conf=0.85 (5029ms, try4)
+
+wrote C:\Users\adam\Desktop\humanizer ultra\ai-text-detector\benchmark\results-clean-orfull-openrouter-free.jsonl
+params: {"tag":"clean-orfull-openrouter-free","model":"openrouter/free","prompt":"direct","temperature":0.1,"top_p":0.9,"max_tokens":1400,"tries":4,"wait_ms":3000,"timeout_s":120,"concurrency":1,"base_url":"https://openrouter.ai/api/v1","corpus":"corpus-clean.json","rows":48,"usable":43}
+usable=43/48 salvaged=1 truncated=1 errors={"no_json_object":4,"json_parse_failed":1}
+latency ms p50/p90/max: 4581/13754/28971
+wall clock: 654.4s
+===== clean-orfull-openrouter-free exit=0 =====
+
+===== resume orfull-inclusionai-ling-3-0-flash-sante-free =====
+resume: keeping 31 scored row(s), calling 17
+tag=orfull-inclusionai-ling-3-0-flash-sante-free model=inclusionai/ling-3.0-flash-sante:free prompt=direct temp=0.1 top_p=0.9 max_tokens=700 timeout_s=120 n=17 concurrency=2
+base_url=https://openrouter.ai/api/v1 keys=6
+  [ 1/17] hu-000 HUMAN open_qa     -> ERR:404 (362ms)
+  [ 2/17] ai-001 AI    reddit_eli5 -> ERR:404 (334ms)
+  [ 3/17] hu-001 HUMAN reddit_eli5 -> ERR:404 (49ms)
+  [ 4/17] hu-002 HUMAN finance     -> ERR:404 (60ms)
+  [ 5/17] ai-004 AI    wiki_csai   -> ERR:404 (49ms)
+  [ 6/17] hu-007 HUMAN finance     -> ERR:404 (49ms)
+  [ 7/17] hu-005 HUMAN open_qa     -> ERR:404 (76ms)
+  [ 8/17] hu-011 HUMAN reddit_eli5 -> ERR:404 (54ms)
+  [ 9/17] hu-013 HUMAN medicine    -> ERR:404 (77ms)
+  [10/17] hu-014 HUMAN wiki_csai   -> ERR:404 (56ms)
+  [11/17] ai-015 AI    open_qa     -> ERR:404 (61ms)
+  [12/17] hu-015 HUMAN open_qa     -> ERR:404 (53ms)
+  [13/17] hu-018 HUMAN medicine    -> ERR:404 (58ms)
+  [14/17] hu-016 HUMAN reddit_eli5 -> ERR:404 (81ms)
+  [15/17] hu-019 HUMAN wiki_csai   -> ERR:404 (47ms)
+  [16/17] ai-020 AI    open_qa     -> ERR:404 (73ms)
+  [17/17] hu-021 HUMAN reddit_eli5 -> ERR:404 (57ms)
+
+wrote C:\Users\adam\Desktop\humanizer ultra\ai-text-detector\benchmark\results-orfull-inclusionai-ling-3-0-flash-sante-free.jsonl
+params: {"tag":"orfull-inclusionai-ling-3-0-flash-sante-free","model":"inclusionai/ling-3.0-flash-sante:free","prompt":"direct","temperature":0.1,"top_p":0.9,"max_tokens":700,"tries":5,"wait_ms":10000,"timeout_s":120,"concurrency":2,"base_url":"https://openrouter.ai/api/v1","corpus":"corpus.json","rows":48,"usable":31}
+usable=31/48 salvaged=9 truncated=11 errors={"404":17}
+latency ms p50/p90/max: 3883/4717/11015
+wall clock: 0.8s
+===== orfull-inclusionai-ling-3-0-flash-sante-free exit=0 =====
+
+===== resume orfull-openrouter-free =====
+resume: keeping 33 scored row(s), calling 15
+tag=orfull-openrouter-free model=openrouter/free prompt=direct temp=0.1 top_p=0.9 max_tokens=1400 timeout_s=120 n=15 concurrency=2
+base_url=https://openrouter.ai/api/v1 keys=6
+  [ 1/15] ai-000 AI    open_qa     -> ERR:http_429 (284ms, try3)
+  [ 2/15] ai-006 AI    reddit_eli5 -> ERR:http_429 (245ms, try3)
+  [ 3/15] hu-009 HUMAN wiki_csai   -> ERR:http_429 (144ms, try3)
+  [ 4/15] ai-008 AI    medicine    -> ERR:http_429 (152ms, try3)
+  [ 5/15] hu-011 HUMAN reddit_eli5 -> ERR:http_429 (209ms, try3)
+  [ 6/15] ai-011 AI    reddit_eli5 -> ERR:http_429 (315ms, try3)
+  [ 7/15] hu-014 HUMAN wiki_csai   -> ERR:http_429 (159ms, try3)
+  [ 8/15] ai-013 AI    medicine    -> ERR:http_429 (234ms, try3)
+  [ 9/15] hu-016 HUMAN reddit_eli5 -> ERR:http_429 (227ms, try3)
+  [10/15] ai-016 AI    reddit_eli5 -> ERR:http_429 (301ms, try3)
+  [11/15] hu-020 HUMAN open_qa     -> ERR:http_429 (150ms, try3)
+  [12/15] hu-019 HUMAN wiki_csai   -> ERR:http_429 (158ms, try3)
+  [13/15] ai-023 AI    medicine    -> ERR:http_429 (186ms, try3)
+  [14/15] hu-021 HUMAN reddit_eli5 -> ERR:http_429 (188ms, try3)
+  [15/15] hu-023 HUMAN medicine    -> ERR:http_429 (169ms, try3)
+
+wrote C:\Users\adam\Desktop\humanizer ultra\ai-text-detector\benchmark\results-orfull-openrouter-free.jsonl
+params: {"tag":"orfull-openrouter-free","model":"openrouter/free","prompt":"direct","temperature":0.1,"top_p":0.9,"max_tokens":1400,"tries":3,"wait_ms":10000,"timeout_s":120,"concurrency":2,"base_url":"https://openrouter.ai/api/v1","corpus":"corpus.json","rows":48,"usable":33}
+usable=33/48 salvaged=0 truncated=0 errors={"http_429":15}
+latency ms p50/p90/max: 6217/12610/29591
+wall clock: 244.9s
+===== orfull-openrouter-free exit=0 =====
+
+===== resume clean-orfull-ling-3-1-flash =====
+resume: keeping 38 scored row(s), calling 10
+tag=clean-orfull-ling-3-1-flash model=inclusionai/ling-3.1-flash prompt=direct temp=0.1 top_p=0.9 max_tokens=1400 timeout_s=120 n=10 concurrency=1
+base_url=https://openrouter.ai/api/v1 keys=6
+  [ 1/10] ai-003 AI    medicine    -> 0.92 conf=0.90 (3292ms, try3)
+  [ 2/10] hu-005 HUMAN open_qa     -> 0.30 conf=0.60 (4573ms)
+  [ 3/10] hu-007 HUMAN finance     -> 0.15 conf=0.80 (5193ms)
+  [ 4/10] ai-009 AI    wiki_csai   -> 0.72 conf=0.62 (3597ms)
+  [ 5/10] ai-012 AI    finance     -> 0.78 conf=0.68 (15159ms)
+  [ 6/10] ai-014 AI    wiki_csai   -> 0.85 conf=0.78 (5883ms)
+  [ 7/10] ai-016 AI    reddit_eli5 -> ERR:402 (304ms, try4)
+  [ 8/10] ai-018 AI    medicine    -> 0.87 conf=0.78 (11109ms)
+  [ 9/10] ai-020 AI    open_qa     -> 0.62 conf=0.55 (8583ms)
+  [10/10] ai-022 AI    finance     -> 0.87 conf=0.80 (34623ms)
+
+wrote C:\Users\adam\Desktop\humanizer ultra\ai-text-detector\benchmark\results-clean-orfull-ling-3-1-flash.jsonl
+params: {"tag":"clean-orfull-ling-3-1-flash","model":"inclusionai/ling-3.1-flash","prompt":"direct","temperature":0.1,"top_p":0.9,"max_tokens":1400,"tries":4,"wait_ms":3000,"timeout_s":120,"concurrency":1,"base_url":"https://openrouter.ai/api/v1","corpus":"corpus-clean.json","rows":48,"usable":47}
+usable=47/48 salvaged=0 truncated=0 errors={"402":1}
+latency ms p50/p90/max: 6113/11109/34623
+wall clock: 121.6s
+===== clean-orfull-ling-3-1-flash exit=0 =====
+
+===== resume orfull-ling-3-1-flash =====
+resume: keeping 46 scored row(s), calling 2
+tag=orfull-ling-3-1-flash model=inclusionai/ling-3.1-flash prompt=direct temp=0.1 top_p=0.9 max_tokens=1400 timeout_s=120 n=2 concurrency=2
+base_url=https://openrouter.ai/api/v1 keys=6
+  [ 1/2] hu-010 HUMAN open_qa     -> 0.45 conf=0.60 (6301ms, try2)
+  [ 2/2] ai-010 AI    open_qa     -> 0.85 conf=0.80 (9997ms, try2)
+
+wrote C:\Users\adam\Desktop\humanizer ultra\ai-text-detector\benchmark\results-orfull-ling-3-1-flash.jsonl
+params: {"tag":"orfull-ling-3-1-flash","model":"inclusionai/ling-3.1-flash","prompt":"direct","temperature":0.1,"top_p":0.9,"max_tokens":1400,"tries":3,"wait_ms":10000,"timeout_s":120,"concurrency":2,"base_url":"https://openrouter.ai/api/v1","corpus":"corpus.json","rows":48,"usable":48}
+usable=48/48 salvaged=0 truncated=0 errors=none
+latency ms p50/p90/max: 4194/6737/9997
+wall clock: 20.7s
+===== orfull-ling-3-1-flash exit=0 =====
+
+===== resume orfull-lfm-2-5-2-6b-free =====
+resume: keeping 47 scored row(s), calling 1
+tag=orfull-lfm-2-5-2-6b-free model=liquid/lfm-2.5-2.6b:free prompt=direct temp=0.1 top_p=0.9 max_tokens=1400 timeout_s=120 n=1 concurrency=2
+base_url=https://openrouter.ai/api/v1 keys=6
+  [ 1/1] hu-019 HUMAN wiki_csai   -> ERR:http_429 (281ms, try3)
+
+wrote C:\Users\adam\Desktop\humanizer ultra\ai-text-detector\benchmark\results-orfull-lfm-2-5-2-6b-free.jsonl
+params: {"tag":"orfull-lfm-2-5-2-6b-free","model":"liquid/lfm-2.5-2.6b:free","prompt":"direct","temperature":0.1,"top_p":0.9,"max_tokens":1400,"tries":3,"wait_ms":10000,"timeout_s":120,"concurrency":2,"base_url":"https://openrouter.ai/api/v1","corpus":"corpus.json","rows":48,"usable":47}
+usable=47/48 salvaged=2 truncated=3 errors={"http_429":1}
+latency ms p50/p90/max: 2510/4269/6490
+wall clock: 30.7s
+===== orfull-lfm-2-5-2-6b-free exit=0 =====
+
+===== resume clean-orfull-lfm-2-5 =====
+resume: keeping 47 scored row(s), calling 1
+tag=clean-orfull-lfm-2-5 model=liquid/lfm-2.5-2.6b:free prompt=direct temp=0.1 top_p=0.9 max_tokens=1400 timeout_s=120 n=1 concurrency=1
+base_url=https://openrouter.ai/api/v1 keys=6
+  [ 1/1] ai-016 AI    reddit_eli5 -> ERR:400 (390ms, try4)
+
+wrote C:\Users\adam\Desktop\humanizer ultra\ai-text-detector\benchmark\results-clean-orfull-lfm-2-5.jsonl
+params: {"tag":"clean-orfull-lfm-2-5","model":"liquid/lfm-2.5-2.6b:free","prompt":"direct","temperature":0.1,"top_p":0.9,"max_tokens":1400,"tries":4,"wait_ms":3000,"timeout_s":120,"concurrency":1,"base_url":"https://openrouter.ai/api/v1","corpus":"corpus-clean.json","rows":48,"usable":47}
+usable=47/48 salvaged=1 truncated=1 errors={"400":1}
+latency ms p50/p90/max: 4135/8351/10248
+wall clock: 19.0s
+===== clean-orfull-lfm-2-5 exit=0 =====
+EXIT=0

@@ -1,0 +1,8 @@
+tag=clean-nvfull-glm-5-3 model=z-ai/glm-5.3 prompt=direct temp=0.1 top_p=0.9 max_tokens=1400 n=48 concurrency=2
+base_url=https://integrate.api.nvidia.com/v1 keys=1
+  [ 1/48] ai-000 AI    open_qa     -> ERR:exception (90003ms, try4)
+  [ 2/48] hu-000 HUMAN open_qa     -> ERR:exception (90004ms, try4)
+  [ 3/48] ai-001 AI    reddit_eli5 -> ERR:exception (90018ms, try4)
+  [ 4/48] hu-001 HUMAN reddit_eli5 -> ERR:exception (90015ms, try4)
+  [ 5/48] ai-002 AI    finance     -> ERR:exception (90002ms, try4)
+  [ 6/48] hu-002 HUMAN finance     -> ERR:exception (90002ms, try4)

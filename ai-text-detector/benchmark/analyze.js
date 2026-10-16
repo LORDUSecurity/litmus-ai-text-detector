@@ -4,6 +4,9 @@
 const fs = require('fs');
 const path = require('path');
 
+// The policy that shipped before the 2026-09-29 calibration. Its confusion rows are kept
+// as the failure evidence, not as the current settings. For the policy that ships now,
+// run: node ../n8n/test-ensemble.js replay <primary.jsonl> <secondary.jsonl>
 const AI_PROB_T = 0.85, HUMAN_PROB_T = 0.20, CONF_T = 0.70, SOLO_PENALTY = 0.85;
 
 function load(f) {
@@ -17,7 +20,11 @@ function stats(xs) {
   const mean = xs.reduce((a, b) => a + b, 0) / xs.length;
   const sd = Math.sqrt(xs.reduce((a, b) => a + (b - mean) ** 2, 0) / xs.length);
   const q = (p) => s[Math.min(s.length - 1, Math.floor(p * s.length))];
-  return { n: xs.length, mean: +mean.toFixed(3), sd: +sd.toFixed(3), min: s[0], p25: q(0.25), median: q(0.5), p75: q(0.75), max: s[s.length - 1] };
+  // q(0.5) is the nearest-rank element, which for an even list is the UPPER of the middle
+  // pair -- it disagreed with the backend panel on the same file (0.850 vs 0.815 for
+  // ultra550). median() is the pair mean, the definition every other tool here now uses.
+  const med = () => (s.length % 2 ? s[s.length >> 1] : (s[s.length / 2 - 1] + s[s.length / 2]) / 2);
+  return { n: xs.length, mean: +mean.toFixed(3), sd: +sd.toFixed(3), min: s[0], p25: q(0.25), median: +med().toFixed(3), p75: q(0.75), max: s[s.length - 1] };
 }
 
 // Rank-based AUC with tie correction.
@@ -137,7 +144,7 @@ for (const f of files) {
 
   console.log('\nthree-way confusion (workflow single-model logic):');
   const cur = confusion3(rows, AI_PROB_T, HUMAN_PROB_T, CONF_T, SOLO_PENALTY);
-  console.log('  CURRENT (ai>=0.85, human<=0.20, conf>=0.70, penalty 0.85):');
+  console.log('  PRE-CALIBRATION policy (ai>=0.85, human<=0.20, conf>=0.70, penalty 0.85):');
   console.log('    ' + JSON.stringify(cur.matrix));
   console.log('    accuracy=' + cur.accuracy + ' correct_of_decided=' + cur.correct_of_decided + ' review_rate=' + cur.review_rate);
 

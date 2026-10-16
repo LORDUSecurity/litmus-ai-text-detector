@@ -1,0 +1,306 @@
+catalogue total=1589, in scope=206, prefixes=5, per prefix=80, concurrency=2, timeout=120s
+  no-think      no-think/kr/claude-sonnet-5                   PROVIDER_ERROR      400  3.7s  [400]: Invalid model. Please select a different model to continue.
+  no-think      no-think/kiro/claude-sonnet-5                 PROVIDER_ERROR      400  3.8s  [400]: Invalid model. Please select a different model to continue.
+  no-think      no-think/kiro/claude-sonnet-4.5               SCORED              200  2.6s  p=0.85
+  no-think      no-think/kr/claude-sonnet-4.5                 SCORED              200  2.6s  p=0.85
+  no-think      no-think/kr/claude-haiku-4.5                  SCORED              200  1.2s  p=0.85
+  no-think      no-think/kiro/claude-haiku-4.5                NO_JSON             200  2.4s  I appreciate you testing me, but I need to clarify: I'm Kiro, an AI de
+  no-think      no-think/devin-cli/claude-opus-5-max          PROVIDER_ERROR      502  17.2s  [devin-cli/claude-opus-5-max] Devin CLI exited with code 1 (reset after 5s)
+  no-think      no-think/dv/claude-opus-5-max                 PROVIDER_ERROR      502  18.4s  [devin-cli/claude-opus-5-max] Devin CLI exited with code 1 (reset after 5s)
+  no-think      no-think/dv/claude-opus-4-8-max               PROVIDER_ERROR      502  18.3s  [devin-cli/claude-opus-4-8-max] Devin CLI exited with code 1 (reset after 5s)
+  no-think      no-think/devin-cli/claude-opus-4-8-max        PROVIDER_ERROR      502  18.3s  [devin-cli/claude-opus-4-8-max] Devin CLI exited with code 1 (reset after 5s)
+  no-think      no-think/dv/claude-opus-4-7-max               PROVIDER_ERROR      502  17.9s  [devin-cli/claude-opus-4-7-max] Devin CLI exited with code 1 (reset after 5s)
+  no-think      no-think/devin-cli/claude-opus-4-7-max        PROVIDER_ERROR      502  17.9s  [devin-cli/claude-opus-4-7-max] Devin CLI exited with code 1 (reset after 5s)
+  no-think      no-think/dv/claude-opus-4-6-thinking-1m       PROVIDER_ERROR      502  18.2s  [devin-cli/claude-opus-4-6-thinking-1m] Devin CLI exited with code 1 (reset after 5s)
+  no-think      no-think/devin-cli/claude-opus-4-6-thinking-1mPROVIDER_ERROR      502  18.2s  [devin-cli/claude-opus-4-6-thinking-1m] Devin CLI exited with code 1 (reset after 5s)
+  no-think      no-think/devin-cli/claude-opus-4-6-thinking   PROVIDER_ERROR      502  18.3s  [devin-cli/claude-opus-4-6-thinking] Devin CLI exited with code 1 (reset after 5s)
+  no-think      no-think/dv/claude-opus-4-6-thinking          PROVIDER_ERROR      502  18.3s  [devin-cli/claude-opus-4-6-thinking] Devin CLI exited with code 1 (reset after 5s)
+  no-think      no-think/devin-cli/claude-opus-4-6-1m         PROVIDER_ERROR      502  18.0s  [devin-cli/claude-opus-4-6-1m] Devin CLI exited with code 1 (reset after 5s)
+  no-think      no-think/dv/claude-opus-4-6-1m                PROVIDER_ERROR      502  18.0s  [devin-cli/claude-opus-4-6-1m] Devin CLI exited with code 1 (reset after 5s)
+  no-think      no-think/dv/claude-opus-4-6                   PROVIDER_ERROR      502  17.8s  [devin-cli/claude-opus-4-6] Devin CLI exited with code 1 (reset after 5s)
+  no-think      no-think/devin-cli/claude-opus-4-6            PROVIDER_ERROR      502  17.8s  [devin-cli/claude-opus-4-6] Devin CLI exited with code 1 (reset after 5s)
+  no-think      no-think/devin-cli/claude-sonnet-5-max        PROVIDER_ERROR      502  18.0s  [devin-cli/claude-sonnet-5-max] Devin CLI exited with code 1 (reset after 5s)
+  no-think      no-think/dv/claude-sonnet-5-max               PROVIDER_ERROR      502  18.0s  [devin-cli/claude-sonnet-5-max] Devin CLI exited with code 1 (reset after 5s)
+  no-think      no-think/devin-cli/claude-sonnet-4-6-thinking-1mPROVIDER_ERROR      502  17.5s  [devin-cli/claude-sonnet-4-6-thinking-1m] Devin CLI exited with code 1 (reset after 5s)
+  no-think      no-think/dv/claude-sonnet-4-6-thinking-1m     PROVIDER_ERROR      502  17.5s  [devin-cli/claude-sonnet-4-6-thinking-1m] Devin CLI exited with code 1 (reset after 5s)
+  no-think      no-think/devin-cli/claude-sonnet-4-6-thinking PROVIDER_ERROR      502  18.4s  [devin-cli/claude-sonnet-4-6-thinking] Devin CLI exited with code 1 (reset after 5s)
+  no-think      no-think/dv/claude-sonnet-4-6-thinking        PROVIDER_ERROR      502  18.4s  [devin-cli/claude-sonnet-4-6-thinking] Devin CLI exited with code 1 (reset after 5s)
+  no-think      no-think/dv/claude-sonnet-4-6-1m              PROVIDER_ERROR      502  18.4s  [devin-cli/claude-sonnet-4-6-1m] Devin CLI exited with code 1 (reset after 5s)
+  no-think      no-think/devin-cli/claude-sonnet-4-6-1m       PROVIDER_ERROR      502  18.4s  [devin-cli/claude-sonnet-4-6-1m] Devin CLI exited with code 1 (reset after 5s)
+  no-think      no-think/devin-cli/claude-sonnet-4-6          PROVIDER_ERROR      502  17.8s  [devin-cli/claude-sonnet-4-6] Devin CLI exited with code 1 (reset after 5s)
+  no-think      no-think/dv/claude-sonnet-4-6                 PROVIDER_ERROR      502  17.8s  [devin-cli/claude-sonnet-4-6] Devin CLI exited with code 1 (reset after 5s)
+  no-think      no-think/dva/claude-opus-5-max                PROVIDER_ERROR      400  0.2s  [400]: Model is not present in the current Devin catalog: claude-opus-5
+  no-think      no-think/dva/claude-opus-4-8-max              PROVIDER_ERROR      400  0.2s  [400]: Model is not present in the current Devin catalog: claude-opus-4-8
+  no-think      no-think/dva/claude-opus-4-7-max              PROVIDER_ERROR      400  0.2s  [400]: Model is not present in the current Devin catalog: claude-opus-4-7
+  no-think      no-think/dva/claude-opus-4-6-thinking-1m      PROVIDER_ERROR      500  0.1s  [500]: DEVIN_AGENTIC_HOME must be an absolute path inside the bridge sandbox
+  no-think      no-think/dva/claude-opus-4-6-thinking         PROVIDER_ERROR      500  0.2s  [500]: DEVIN_AGENTIC_HOME must be an absolute path inside the bridge sandbox
+  no-think      no-think/dva/claude-opus-4-6-1m               PROVIDER_ERROR      500  0.2s  [500]: DEVIN_AGENTIC_HOME must be an absolute path inside the bridge sandbox
+  no-think      no-think/dva/claude-opus-4-6                  PROVIDER_ERROR      500  0.2s  [500]: DEVIN_AGENTIC_HOME must be an absolute path inside the bridge sandbox
+  no-think      no-think/dva/claude-sonnet-5-max              PROVIDER_ERROR      400  0.2s  [400]: Model is not present in the current Devin catalog: claude-sonnet-5
+  no-think      no-think/dva/claude-sonnet-4-6-thinking-1m    PROVIDER_ERROR      500  0.2s  [500]: DEVIN_AGENTIC_HOME must be an absolute path inside the bridge sandbox
+  no-think      no-think/dva/claude-sonnet-4-6-thinking       PROVIDER_ERROR      500  0.2s  [500]: DEVIN_AGENTIC_HOME must be an absolute path inside the bridge sandbox
+  no-think      no-think/dva/claude-sonnet-4-6-1m             PROVIDER_ERROR      500  0.2s  [500]: DEVIN_AGENTIC_HOME must be an absolute path inside the bridge sandbox
+  no-think      no-think/dva/claude-sonnet-4-6                PROVIDER_ERROR      500  0.2s  [500]: DEVIN_AGENTIC_HOME must be an absolute path inside the bridge sandbox
+  no-think      no-think/oc/claude-opus-5                     PROVIDER_ERROR      402  0.2s  [402]: This model requires an opencode API key — add one in Settings → Providers.
+  no-think      no-think/oc/claude-opus-4-8                   PROVIDER_ERROR      402  0.2s  [402]: This model requires an opencode API key — add one in Settings → Providers.
+  no-think      no-think/opencode/claude-opus-5               PROVIDER_ERROR      402  0.4s  [opencode-zen/claude-opus-5] [402]: This model requires an opencode API key — add one in S
+  no-think      no-think/oc/claude-opus-4-7                   PROVIDER_ERROR      402  0.1s  [402]: This model requires an opencode API key — add one in Settings → Providers.
+  no-think      no-think/opencode/claude-opus-4-7             PROVIDER_ERROR      402  0.1s  [402]: This model requires an opencode API key — add one in Settings → Providers.
+  no-think      no-think/oc/claude-opus-4-6                   PROVIDER_ERROR      402  0.1s  [402]: This model requires an opencode API key — add one in Settings → Providers.
+  no-think      no-think/opencode/claude-opus-4-6             PROVIDER_ERROR      402  0.1s  [402]: This model requires an opencode API key — add one in Settings → Providers.
+  no-think      no-think/opencode/claude-opus-4-8             PROVIDER_ERROR      402  0.5s  [opencode-zen/claude-opus-4-8] [402]: This model requires an opencode API key — add one in
+  no-think      no-think/oc/claude-opus-4-5                   PROVIDER_ERROR      402  0.1s  [402]: This model requires an opencode API key — add one in Settings → Providers.
+  no-think      no-think/opencode/claude-opus-4-5             PROVIDER_ERROR      402  0.2s  [402]: This model requires an opencode API key — add one in Settings → Providers.
+  no-think      no-think/oc/claude-sonnet-5                   PROVIDER_ERROR      402  0.2s  [402]: This model requires an opencode API key — add one in Settings → Providers.
+  no-think      no-think/opencode/claude-sonnet-5             PROVIDER_ERROR      402  0.2s  [402]: This model requires an opencode API key — add one in Settings → Providers.
+  no-think      no-think/oc/claude-sonnet-4-6                 PROVIDER_ERROR      402  0.2s  [402]: This model requires an opencode API key — add one in Settings → Providers.
+  no-think      no-think/opencode/claude-sonnet-4-6           PROVIDER_ERROR      402  0.2s  [402]: This model requires an opencode API key — add one in Settings → Providers.
+  no-think      no-think/oc/claude-sonnet-4-5                 PROVIDER_ERROR      402  0.2s  [402]: This model requires an opencode API key — add one in Settings → Providers.
+  no-think      no-think/opencode/claude-sonnet-4-5           PROVIDER_ERROR      402  0.2s  [402]: This model requires an opencode API key — add one in Settings → Providers.
+  no-think      no-think/bm/claude-sonnet-4-5                 PROVIDER_ERROR      400  0.2s  Model 'claude-sonnet-4-5' is not available in the active live catalog for provider 'bluesm
+  no-think      no-think/bluesminds/claude-sonnet-4-5         PROVIDER_ERROR      400  0.1s  Model 'claude-sonnet-4-5' is not available in the active live catalog for provider 'bluesm
+  no-think      no-think/bm/claude-opus-4-5                   PROVIDER_ERROR      400  0.1s  Model 'claude-opus-4-5' is not available in the active live catalog for provider 'bluesmin
+  no-think      no-think/bluesminds/claude-opus-4-5           PROVIDER_ERROR      400  0.1s  Model 'claude-opus-4-5' is not available in the active live catalog for provider 'bluesmin
+  no-think      no-think/vertex/claude-opus-5                 PROVIDER_ERROR      429  0.2s  [vertex/claude-opus-5] All vertex accounts have exhausted their quota (reset after 5m)
+  no-think      no-think/vertex/claude-sonnet-5               PROVIDER_ERROR      429  0.2s  [vertex/claude-sonnet-5] All vertex accounts have exhausted their quota (reset after 5m)
+  no-think      no-think/vertex/claude-opus-4-8               PROVIDER_ERROR      429  0.1s  [vertex/claude-opus-4-8] All vertex accounts have exhausted their quota (reset after 5m)
+  no-think      no-think/vertex/claude-opus-4-7               PROVIDER_ERROR      429  0.1s  [vertex/claude-opus-4-7] All vertex accounts have exhausted their quota (reset after 5m)
+  no-think      no-think/vertex/claude-opus-4-6               PROVIDER_ERROR      429  0.1s  [vertex/claude-opus-4-6] All vertex accounts have exhausted their quota (reset after 5m)
+  no-think      no-think/vertex/claude-sonnet-4-6             PROVIDER_ERROR      429  0.1s  [vertex/claude-sonnet-4-6] All vertex accounts have exhausted their quota (reset after 5m)
+  no-think      no-think/vertex/claude-sonnet-4-5-v2          PROVIDER_ERROR      429  0.1s  [vertex/claude-sonnet-4-5-v2] All vertex accounts have exhausted their quota (reset after 
+  no-think      no-think/vertex/claude-sonnet-4-5             PROVIDER_ERROR      429  0.1s  [vertex/claude-sonnet-4-5] All vertex accounts have exhausted their quota (reset after 5m)
+  no-think      no-think/vertex/claude-opus-4-5               PROVIDER_ERROR      429  0.1s  [vertex/claude-opus-4-5] All vertex accounts have exhausted their quota (reset after 5m)
+  no-think      no-think/lma/claude-haiku-4-5-20251001        PROVIDER_ERROR      401  4.5s  [401]: User not found
+  no-think      no-think/lmarena/claude-haiku-4-5-20251001    PROVIDER_ERROR      401  4.5s  [401]: User not found
+  no-think      no-think/lmarena/claude-sonnet-5              PROVIDER_ERROR      401  3.5s  [401]: User not found
+  no-think      no-think/lma/claude-sonnet-5                  PROVIDER_ERROR      401  3.9s  [401]: User not found
+  no-think      no-think/lma/claude-sonnet-5-search           PROVIDER_ERROR      401  3.6s  [401]: User not found
+  no-think      no-think/lmarena/claude-sonnet-5-search       PROVIDER_ERROR      401  3.3s  [401]: User not found
+  mistral       mistral/mistral-large-latest                  PROVIDER_ERROR      400  0.1s  Model 'mistral-large-latest' is not available in the active live catalog for provider 'mis
+  mistral       mistral/devstral-latest                       PROVIDER_ERROR      400  0.1s  Model 'devstral-latest' is not available in the active live catalog for provider 'mistral'
+  mistral       mistral/codestral-2508                        SCORED              200  0.9s  p=0.05
+  mistral       mistral/codestral-latest                      SCORED              200  1.0s  p=0.05
+  mistral       mistral/mistral-code-latest                   SCORED              200  0.6s  p=0.05
+  mistral       mistral/mistral-code-fim-latest               SCORED              200  0.7s  p=0.0
+  mistral       mistral/mistral-small-latest                  PROVIDER_ERROR      429  27.9s  [mistral/mistral-small-latest] [429]: Rate limit exceeded (reset after 3s)
+  mistral       mistral/mistral-small-2603                    PROVIDER_ERROR      429  28.7s  [mistral/mistral-small-2603] [429]: Rate limit exceeded (reset after 3s)
+  mistral       mistral/magistral-small-latest                PROVIDER_ERROR      429  22.9s  [mistral/magistral-small-latest] [429]: Rate limit exceeded (reset after 3s)
+  mistral       mistral/mistral-vibe-cli-fast                 PROVIDER_ERROR      429  23.7s  [mistral/mistral-vibe-cli-fast] [429]: Rate limit exceeded (reset after 3s)
+  mistral       mistral/voxtral-small-latest                  SCORED              200  3.1s  p=0.05
+  mistral       mistral/voxtral-small-2507                    SCORED              200  3.9s  p=0.05
+  mistral       mistral/labs-leanstral-1-5                    PROVIDER_ERROR      403  19.1s  [mistral/labs-leanstral-1-5] [403]: Model labs-leanstral-1-5 is a Labs model. To use Labs 
+  mistral       mistral/labs-leanstral-1-5-1                  PROVIDER_ERROR      403  19.9s  [mistral/labs-leanstral-1-5-1] [403]: Model labs-leanstral-1-5-1 is a Labs model. To use L
+  mistral       mistral/ministral-3b-2512                     SCORED              200  3.6s  p=0.99
+  mistral       mistral/ministral-3b-latest                   SCORED              200  4.0s  p=0.99
+  mistral       mistral/ministral-8b-2512                     SCORED              200  0.9s  p=0.01
+  mistral       mistral/ministral-8b-latest                   SCORED              200  0.9s  p=0.01
+  mistral       mistral/ministral-14b-2512                    SCORED              200  0.9s  p=0.0
+  mistral       mistral/ministral-14b-latest                  SCORED              200  0.7s  p=0.0
+  mistral       mistral/mistral-medium                        PROVIDER_ERROR      429  28.1s  [mistral/mistral-medium] [429]: Rate limit exceeded (reset after 3s)
+  mistral       mistral/mistral-medium-latest                 PROVIDER_ERROR      429  29.0s  [mistral/mistral-medium-latest] [429]: Rate limit exceeded (reset after 3s)
+  mistral       mistral/mistral-medium-3.5                    PROVIDER_ERROR      429  22.8s  [mistral/mistral-medium-3.5] [429]: Rate limit exceeded (reset after 3s)
+  mistral       mistral/mistral-medium-3-5                    PROVIDER_ERROR      429  23.6s  [mistral/mistral-medium-3-5] [429]: Rate limit exceeded (reset after 3s)
+  mistral       mistral/mistral-medium-2604                   PROVIDER_ERROR      429  22.8s  [mistral/mistral-medium-2604] [429]: Rate limit exceeded (reset after 3s)
+  mistral       mistral/mistral-medium-3                      PROVIDER_ERROR      429  23.8s  [mistral/mistral-medium-3] [429]: Rate limit exceeded (reset after 3s)
+  mistral       mistral/mistral-vibe-cli-with-tools           PROVIDER_ERROR      429  23.2s  [mistral/mistral-vibe-cli-with-tools] [429]: Rate limit exceeded (reset after 3s)
+  mistral       mistral/mistral-vibe-cli-latest               PROVIDER_ERROR      429  24.0s  [mistral/mistral-vibe-cli-latest] [429]: Rate limit exceeded (reset after 3s)
+  mistral       mistral/mistral-embed-2312                    PROVIDER_ERROR      400  3.1s  [400]: Invalid model: mistral-embed-2312
+  mistral       mistral/mistral-embed                         PROVIDER_ERROR      400  0.7s  [400]: Invalid model: mistral-embed
+  mistral       mistral/codestral-embed                       PROVIDER_ERROR      400  0.4s  [400]: Invalid model: codestral-embed
+  mistral       mistral/codestral-embed-2505                  PROVIDER_ERROR      400  0.3s  [400]: Invalid model: codestral-embed-2505
+  mistral       mistral/mistral-moderation-2603               PROVIDER_ERROR      400  0.3s  [400]: Invalid model: mistral-moderation-2603
+  mistral       mistral/mistral-ocr-2512                      PROVIDER_ERROR      400  0.4s  [400]: Invalid model: mistral-ocr-2512
+  mistral       mistral/mistral-ocr-3-0                       PROVIDER_ERROR      400  0.3s  [400]: Invalid model: mistral-ocr-3-0
+  mistral       mistral/mistral-ocr-3                         PROVIDER_ERROR      400  0.3s  [400]: Invalid model: mistral-ocr-3
+  mistral       mistral/mistral-ocr-4-0                       PROVIDER_ERROR      400  0.3s  [400]: Invalid model: mistral-ocr-4-0
+  mistral       mistral/mistral-ocr-latest                    PROVIDER_ERROR      400  0.4s  [400]: Invalid model: mistral-ocr-latest
+  mistral       mistral/mistral-ocr-4                         PROVIDER_ERROR      400  0.6s  [400]: Invalid model: mistral-ocr-4
+  mistral       mistral/mistral-ocr-4-1                       PROVIDER_ERROR      400  0.4s  [400]: Invalid model: mistral-ocr-4-1
+  mistral       mistral/voxtral-mini-2602                     PROVIDER_ERROR      400  3.5s  [400]: Invalid model: voxtral-mini-2602
+  mistral       mistral/voxtral-mini-latest                   PROVIDER_ERROR      400  0.7s  [400]: Invalid model: voxtral-mini-latest
+  mistral       mistral/voxtral-mini-transcribe-realtime-2602 PROVIDER_ERROR      400  0.3s  [400]: Invalid model: voxtral-mini-transcribe-realtime-2602
+  mistral       mistral/voxtral-mini-realtime-2602            PROVIDER_ERROR      400  0.4s  [400]: Invalid model: voxtral-mini-realtime-2602
+  mistral       mistral/voxtral-mini-realtime-latest          PROVIDER_ERROR      400  0.3s  [400]: Invalid model: voxtral-mini-realtime-latest
+  mistral       mistral/voxtral-mini-tts-2603                 PROVIDER_ERROR      400  0.4s  [400]: Invalid model: voxtral-mini-tts-2603
+  mistral       mistral/voxtral-mini-tts-latest               PROVIDER_ERROR      400  0.4s  [400]: Invalid model: voxtral-mini-tts-latest
+  mistral       mistral/mistral-moderation-latest             PROVIDER_ERROR      400  0.0s  Model 'mistral-moderation-latest' is not available in the active live catalog for provider
+  auto          auto/best-coding                              SCORED              200  9.6s  p=0.98
+  mistral       mistral/magistral-medium-latest               PROVIDER_ERROR      429  25.5s  [mistral/magistral-medium-latest] [429]: Rate limit exceeded (reset after 3s)
+  auto          auto/best-reasoning                           SCORED              200  6.4s  p=0.98
+  auto          auto/best-fast                                SCORED              200  7.9s  p=0.98
+  auto          auto/best-vision                              SCORED              200  6.8s  p=0.98
+  auto          auto/best-chat                                SCORED              200  5.8s  p=0.98
+  auto          auto/best-coding-fast                         SCORED              200  26.6s  p=0.98
+  auto          auto/pro-coding                               SCORED              200  26.6s  p=0.999
+  auto          auto/pro-reasoning                            SCORED              200  7.9s  p=0.98
+  auto          auto/pro-vision                               SCORED              200  59.3s  p=0.98
+  auto          auto/pro-chat                                 SCORED              200  77.6s  p=0.98
+  auto          auto/pro-fast                                 SCORED              200  70.6s  p=0.98
+  auto          auto/coding                                   SCORED              200  91.8s  p=0.98
+  auto          auto/fast                                     NO_JSON             200  64.4s  ai_probability": 0.98, "confidence": 0.95}
+  auto          auto/chat                                     SCORED              200  64.8s  p=0.98
+  auto          auto/cheap                                    SCORED              200  51.8s  p=0.98
+  auto          auto/offline                                  NO_JSON             200  8.8s  ai_probability": 0.98, "confidence": 0.95}
+  auto          auto/claude-opus                              SCORED              200  53.7s  p=0.98
+  auto          auto/smart                                    SCORED              200  58.7s  p=0.98
+  auto          auto/best-free                                SCORED              200  3.1s  p=0.15
+  auto          auto/best-chaos                               HTTP_200            200  1.2s  : chaos 4 fail bluesminds/meta/llama-3.1-8b-instruct
+
+: chaos 2 fail qoder/qwen3.8-max-pre
+  auto          auto/chaos                                    HTTP_200            200  3.1s  : chaos 0 fail lmarena/amazon.nova-pro-v1:0
+
+: chaos 4 fail gemini-web/gemini-3.1-pro
+
+: c
+  auto          auto/claude-sonnet                            SCORED              200  53.3s  p=0.98
+  auto          auto/coding:cheap                             SCORED              200  26.4s  p=0.88
+  auto          auto/coding:fast                              SCORED              200  69.5s  p=0.88
+  auto          auto/coding:free                              SCORED              200  7.5s  p=0.35
+  auto          auto/coding:reliable                          PROVIDER_ERROR      503  46.1s  Maximum combo retry limit reached
+  auto          auto/coding:pro                               SCORED              200  72.9s  p=0.88
+  auto          auto/reasoning                                SCORED              200  66.4s  p=0.88
+  auto          auto/reasoning:pro                            SCORED              200  47.1s  p=0.88
+  auto          auto/multimodal                               SCORED              200  18.8s  p=0.82
+  auto          auto/vision                                   SCORED              200  20.9s  p=0.85
+  auto          auto/minimax                                  NO_JSON             200  7.2s  I'm Kiro, an AI development environment. I'm not an AI text detection 
+  auto          auto/mimo                                     PROVIDER_ERROR      401  4.2s  lmarena/mimo-v2.5: auth — [401]: User not found (HTTP 401); oc/mimo-v2.5-free: auth — [401
+  auto          auto/glm                                      SCORED              200  23.7s  p=0.45
+  auto          auto/zai                                      SCORED              200  25.4s  p=0.9
+  auto          auto/llama                                    SCORED              200  9.3s  p=0.98
+  auto          auto/gemini                                   PROVIDER_ERROR      502  10.4s  lmarena/gemini-2.5-pro-grounding: auth — [401]: User not found (HTTP 401); dva/gemini-3-1-
+  kr            kr/claude-sonnet-5                            PROVIDER_ERROR      400  1.0s  [400]: Invalid model. Please select a different model to continue.
+  kr            kr/claude-sonnet-4.5                          SCORED              200  2.6s  p=0.85
+  kr            kr/claude-haiku-4.5                           SCORED              200  1.1s  p=0.72
+  kr            kr/deepseek-3.2                               SCORED              200  1.3s  p=0.85
+  auto          auto/gemma                                    SCORED              200  41.2s  p=0.1
+  kr            kr/minimax-m2.1                               SCORED              200  2.6s  p=0.02
+  kr            kr/glm-5                                      SCORED              200  1.6s  p=0.65
+  kr            kr/minimax-m2.5                               SCORED              200  4.7s  p=0.78
+  kr            kr/gpt-5.6-sol                                PROVIDER_ERROR      400  0.7s  [400]: Invalid model. Please select a different model to continue.
+  kr            kr/qwen3-coder-next                           SCORED              200  1.1s  p=0.32
+  kr            kr/gpt-5.6-terra                              PROVIDER_ERROR      400  0.6s  [400]: Invalid model. Please select a different model to continue.
+  kr            kr/gpt-5.6-luna                               PROVIDER_ERROR      400  0.7s  [400]: Invalid model. Please select a different model to continue.
+  kr            kr/claude-sonnet-5-low                        PROVIDER_ERROR      400  1.1s  [400]: Invalid model. Please select a different model to continue.
+  kr            kr/claude-sonnet-5-medium                     PROVIDER_ERROR      400  1.0s  [400]: Invalid model. Please select a different model to continue.
+  kr            kr/claude-sonnet-5-high                       PROVIDER_ERROR      400  1.1s  [400]: Invalid model. Please select a different model to continue.
+  kr            kr/claude-sonnet-5-xhigh                      PROVIDER_ERROR      400  1.3s  [400]: Invalid model. Please select a different model to continue.
+  kr            kr/claude-sonnet-4.5-low                      PROVIDER_ERROR      400  0.7s  [400]: Invalid model. Please select a different model to continue.
+  kr            kr/claude-sonnet-4.5-medium                   PROVIDER_ERROR      400  0.6s  [400]: Invalid model. Please select a different model to continue.
+  kr            kr/claude-sonnet-4.5-high                     PROVIDER_ERROR      400  0.6s  [400]: Invalid model. Please select a different model to continue.
+  kr            kr/claude-haiku-4.5-low                       PROVIDER_ERROR      400  0.6s  [400]: Invalid model. Please select a different model to continue.
+  kr            kr/claude-haiku-4.5-medium                    PROVIDER_ERROR      400  0.5s  [400]: Invalid model. Please select a different model to continue.
+  kr            kr/claude-haiku-4.5-high                      PROVIDER_ERROR      400  0.6s  [400]: Invalid model. Please select a different model to continue.
+  kiro          kiro/claude-sonnet-5                          PROVIDER_ERROR      400  1.0s  [400]: Invalid model. Please select a different model to continue.
+  kiro          kiro/claude-haiku-4.5                         SCORED              200  1.3s  p=0.85
+  kiro          kiro/claude-sonnet-4.5                        SCORED              200  3.0s  p=0.85
+  kiro          kiro/deepseek-3.2                             SCORED              200  1.2s  p=0.35
+  kiro          kiro/minimax-m2.1                             SCORED              200  2.4s  p=0.02
+  kiro          kiro/glm-5                                    SCORED              200  1.2s  p=0.85
+  kiro          kiro/qwen3-coder-next                         SCORED              200  1.0s  p=0.12
+  kiro          kiro/gpt-5.6-sol                              PROVIDER_ERROR      400  0.5s  [400]: Invalid model. Please select a different model to continue.
+  kiro          kiro/minimax-m2.5                             SCORED              200  6.1s  p=0.82
+  kiro          kiro/gpt-5.6-terra                            PROVIDER_ERROR      400  0.6s  [400]: Invalid model. Please select a different model to continue.
+  kiro          kiro/gpt-5.6-luna                             PROVIDER_ERROR      400  0.6s  [400]: Invalid model. Please select a different model to continue.
+  kiro          kiro/claude-sonnet-5-low                      PROVIDER_ERROR      400  1.4s  [400]: Invalid model. Please select a different model to continue.
+  kiro          kiro/claude-sonnet-5-medium                   PROVIDER_ERROR      400  1.4s  [400]: Invalid model. Please select a different model to continue.
+  kiro          kiro/claude-sonnet-5-high                     PROVIDER_ERROR      400  1.2s  [400]: Invalid model. Please select a different model to continue.
+  kiro          kiro/claude-sonnet-5-xhigh                    PROVIDER_ERROR      400  1.1s  [400]: Invalid model. Please select a different model to continue.
+  kiro          kiro/claude-sonnet-4.5-low                    PROVIDER_ERROR      400  0.7s  [400]: Invalid model. Please select a different model to continue.
+  kiro          kiro/claude-sonnet-4.5-medium                 PROVIDER_ERROR      400  0.7s  [400]: Invalid model. Please select a different model to continue.
+  kiro          kiro/claude-sonnet-4.5-high                   PROVIDER_ERROR      400  0.7s  [400]: Invalid model. Please select a different model to continue.
+  kiro          kiro/claude-haiku-4.5-low                     PROVIDER_ERROR      400  0.6s  [400]: Invalid model. Please select a different model to continue.
+  kiro          kiro/claude-haiku-4.5-medium                  PROVIDER_ERROR      400  0.6s  [400]: Invalid model. Please select a different model to continue.
+  kiro          kiro/claude-haiku-4.5-high                    PROVIDER_ERROR      400  0.6s  [400]: Invalid model. Please select a different model to continue.
+
+prefix         listed  probed  scored  status        reason
+auto          38      38      30      SERVABLE      
+mistral       49      49      12      SERVABLE      
+kr            21      21      7       SERVABLE      
+kiro          21      21      7       SERVABLE      
+no-think      77      77      3       SERVABLE      
+
+wrote C:\Users\adam\Desktop\humanizer ultra\ai-text-detector\benchmark\omniroute-providers-omni-deep.json
+=== dead-side recheck ===
+catalogue total=1589, in scope=1249, prefixes=26, per prefix=2, concurrency=2, timeout=90s
+  aihorde       aihorde/2DN                                   PROVIDER_ERROR      400  0.0s  Model 'aihorde/2DN' is an image-generation model and cannot be used on /v1/chat/completion
+  aihorde       aihorde/526Mix-Animated                       PROVIDER_ERROR      400  0.0s  Model 'aihorde/526Mix-Animated' is an image-generation model and cannot be used on /v1/cha
+  dv            dv/swe-1-7                                    PROVIDER_ERROR      503  0.1s  Provider devin-cli circuit breaker is open
+  dv            dv/swe-1-7-lightning                          PROVIDER_ERROR      502  17.9s  [devin-cli/swe-1-7-lightning] Devin CLI exited with code 1 (reset after 5s)
+  devin-cli     devin-cli/swe-1-7-lightning                   PROVIDER_ERROR      502  17.8s  [devin-cli/swe-1-7-lightning] Devin CLI exited with code 1 (reset after 5s)
+  dva           dva/swe-1-7-lightning                         PROVIDER_ERROR      500  0.1s  [500]: DEVIN_AGENTIC_HOME must be an absolute path inside the bridge sandbox
+  dva           dva/swe-1-7                                   PROVIDER_ERROR      500  0.0s  [500]: DEVIN_AGENTIC_HOME must be an absolute path inside the bridge sandbox
+  oc            oc/muse-spark-1.2                             PROVIDER_ERROR      400  0.2s  Model 'muse-spark-1.2' is not available in the active live catalog for provider 'opencode'
+  oc            oc/muse-spark-1.2-contributor-free            PROVIDER_ERROR      400  0.1s  Model 'muse-spark-1.2-contributor-free' is not available in the active live catalog for pr
+  opencode      opencode/claude-fable-5                       PROVIDER_ERROR      402  0.1s  [402]: This model requires an opencode API key — add one in Settings → Providers.
+  opencode      opencode/claude-opus-5                        PROVIDER_ERROR      402  0.0s  [402]: This model requires an opencode API key — add one in Settings → Providers.
+  lmarena       lmarena/amazon.nova-pro-v1:0                  PROVIDER_ERROR      401  0.6s  [401]: User not found
+  lmarena       lmarena/claude-haiku-4-5-20251001             PROVIDER_ERROR      401  0.7s  [401]: User not found
+  vertex        vertex/gemini-3.1-pro-preview                 PROVIDER_ERROR      401  0.1s  [vertex] All 1 connection(s) authentication expired — please reconnect in the dashboard
+  vertex        vertex/gemini-3.1-flash-lite                  PROVIDER_ERROR      401  0.1s  [vertex] All 1 connection(s) authentication expired — please reconnect in the dashboard
+  gemini        gemini/gemini-3.7-flash                       PROVIDER_ERROR      400  0.0s  Model 'gemini-3.7-flash' is not available in the active live catalog for provider 'gemini'
+  gemini        gemini/gemini-2.5-flash                       PROVIDER_ERROR      401  3.3s  [401]: Request had invalid authentication credentials. Expected OAuth 2 access token, logi
+  lma           lma/amazon.nova-pro-v1:0                      PROVIDER_ERROR      401  0.6s  [401]: User not found
+  lma           lma/claude-haiku-4-5-20251001                 PROVIDER_ERROR      401  0.6s  [401]: User not found
+  bm            bm/gpt-4o                                     PROVIDER_ERROR      400  0.1s  Model 'gpt-4o' is not available in the active live catalog for provider 'bluesminds'.
+  bm            bm/gpt-4o-mini                                PROVIDER_ERROR      400  0.1s  Model 'gpt-4o-mini' is not available in the active live catalog for provider 'bluesminds'.
+  bluesminds    bluesminds/gpt-4o                             PROVIDER_ERROR      400  0.0s  Model 'gpt-4o' is not available in the active live catalog for provider 'bluesminds'.
+  bluesminds    bluesminds/gpt-4o-mini                        PROVIDER_ERROR      400  0.1s  Model 'gpt-4o-mini' is not available in the active live catalog for provider 'bluesminds'.
+  aug           aug/sonnet4.6                                 PROVIDER_ERROR      502  2.3s  [502]: Auggie CLI exited with code 1: 'auggie' is not recognized as an internal or externa
+  aug           aug/fable-5                                   PROVIDER_ERROR      502  2.4s  [502]: Auggie CLI exited with code 1: 'auggie' is not recognized as an internal or externa
+  tllm          tllm/GPT_5_4                                  PROVIDER_ERROR      403  3.4s  [403]: The Old LLM is blocked by Vercel for this server egress IP. Configure a residential
+  tllm          tllm/GPT_5_3                                  PROVIDER_ERROR      403  3.3s  [403]: The Old LLM is blocked by Vercel for this server egress IP. Configure a residential
+  devin-cli     devin-cli/swe-1-7                             PROVIDER_ERROR      502  18.3s  [devin-cli/swe-1-7] Devin CLI exited with code 1 (reset after 5s)
+  cxa           cxa/gpt-5.6-sol                               PROVIDER_ERROR      503  2.2s  [503]: Codex app-server transport is not configured (missing url or token)
+  cxa           cxa/gpt-5.6-sol-ultra                         PROVIDER_ERROR      503  3.0s  [503]: Codex app-server transport is not configured (missing url or token)
+  cfp           cfp/zai-org/glm-5.2                           PROVIDER_ERROR      502  2.4s  [502]: Cloudflare Playground browser session failed: browserType.launch: Executable doesn'
+  cfp           cfp/moonshotai/kimi-k2.7-code                 PROVIDER_ERROR      502  3.1s  [502]: Cloudflare Playground browser session failed: browserType.launch: Executable doesn'
+  zc            zc/glm-5.3                                    PROVIDER_ERROR      502  2.9s  [502]: spawn zcode ENOENT
+  zc            zc/glm-5.3-max                                PROVIDER_ERROR      502  2.4s  [502]: spawn zcode ENOENT
+  if            if/qwen3.8-max-preview                        PROVIDER_ERROR      502  12.2s  [qoder/qwen3.8-max-preview] [502]: 'qodercli' is not recognized as an internal or external
+  if            if/qwen3.7-max                                PROVIDER_ERROR      502  11.5s  [qoder/qwen3.7-max] [502]: 'qodercli' is not recognized as an internal or external command
+  qoder         qoder/qwen3.7-max                             PROVIDER_ERROR      502  12.2s  [qoder/qwen3.7-max] [502]: 'qodercli' is not recognized as an internal or external command
+  qoder         qoder/qwen3.8-max-preview                     PROVIDER_ERROR      502  13.1s  [qoder/qwen3.8-max-preview] [502]: 'qodercli' is not recognized as an internal or external
+  ddgw          ddgw/gpt-5.4-nano                             PROVIDER_ERROR      400  0.7s  [400]: DuckDuckGo AI Chat error: ERR_BAD_REQUEST
+  ddgw          ddgw/gpt-5.4-mini                             PROVIDER_ERROR      400  1.7s  [400]: DuckDuckGo AI Chat error: ERR_BAD_REQUEST
+  felo          felo/felo-chat                                PROVIDER_ERROR      400  0.6s  [400]: Felo thread creation failed with HTTP 400
+  moonshot      moonshot/kimi-k3                              PROVIDER_ERROR      400  0.1s  Model 'kimi-k3' is not available in the active live catalog for provider 'moonshot'.
+  moonshot      moonshot/kimi-k2.7-code-highspeed             PROVIDER_ERROR      400  0.0s  Model 'kimi-k2.7-code-highspeed' is not available in the active live catalog for provider 
+  felo          felo/felo-search                              PROVIDER_ERROR      400  0.5s  [400]: Felo thread creation failed with HTTP 400
+  gemini-web    gemini-web/gemini-3.7-flash                   PROVIDER_ERROR      503  11.9s  [gemini-web/gemini-3.7-flash] [503]: Gemini Web requires the Playwright Chromium browser, 
+  qwen-web      qwen-web/qwen3.7-max                          PROVIDER_ERROR      400  0.0s  Model 'qwen3.7-max' is not available in the active live catalog for provider 'qwen-web'.
+  qwen-web      qwen-web/qwen3.6-plus                         PROVIDER_ERROR      400  0.0s  Model 'qwen3.6-plus' is not available in the active live catalog for provider 'qwen-web'.
+  gemini-web    gemini-web/gemini-3.1-pro                     PROVIDER_ERROR      503  12.6s  [gemini-web/gemini-3.1-pro] [503]: Gemini Web requires the Playwright Chromium browser, wh
+  gweb          gweb/gemini-3.1-pro                           PROVIDER_ERROR      503  12.3s  [gemini-web/gemini-3.1-pro] [503]: Gemini Web requires the Playwright Chromium browser, wh
+  gweb          gweb/gemini-3.7-flash                         PROVIDER_ERROR      503  12.3s  [gemini-web/gemini-3.7-flash] [503]: Gemini Web requires the Playwright Chromium browser, 
+  pepper        pepper/pepper-1                               PROVIDER_ERROR      502  3.7s  [502]: Amelia init failed: 404
+
+prefix         listed  probed  scored  status        reason
+aihorde       166     2       0       PROVIDER_ERRORModel 'aihorde/2DN' is an image-generation model and cannot be used on /v1/chat/completions. Use POS
+dv            125     2       0       PROVIDER_ERROR[devin-cli/swe-1-7-lightning] Devin CLI exited with code 1 (reset after 5s)
+devin-cli     125     2       0       PROVIDER_ERROR[devin-cli/swe-1-7-lightning] Devin CLI exited with code 1 (reset after 5s)
+dva           125     2       0       PROVIDER_ERROR[500]: DEVIN_AGENTIC_HOME must be an absolute path inside the bridge sandbox
+oc            95      2       0       PROVIDER_ERRORModel 'muse-spark-1.2' is not available in the active live catalog for provider 'opencode'.
+opencode      92      2       0       PROVIDER_ERROR[402]: This model requires an opencode API key — add one in Settings → Providers.
+lmarena       86      2       0       PROVIDER_ERROR[401]: User not found
+vertex        65      2       0       PROVIDER_ERROR[vertex] All 1 connection(s) authentication expired — please reconnect in the dashboard
+gemini        59      2       0       PROVIDER_ERRORModel 'gemini-3.7-flash' is not available in the active live catalog for provider 'gemini'.
+lma           59      2       0       PROVIDER_ERROR[401]: User not found
+bm            47      2       0       PROVIDER_ERRORModel 'gpt-4o' is not available in the active live catalog for provider 'bluesminds'.
+bluesminds    47      2       0       PROVIDER_ERRORModel 'gpt-4o' is not available in the active live catalog for provider 'bluesminds'.
+aug           28      2       0       PROVIDER_ERROR[502]: Auggie CLI exited with code 1: 'auggie' is not recognized as an internal or external command,
+tllm          26      2       0       PROVIDER_ERROR[403]: The Old LLM is blocked by Vercel for this server egress IP. Configure a residential provider 
+cxa           26      2       0       PROVIDER_ERROR[503]: Codex app-server transport is not configured (missing url or token)
+cfp           20      2       0       PROVIDER_ERROR[502]: Cloudflare Playground browser session failed: browserType.launch: Executable doesn't exist at
+zc            13      2       0       PROVIDER_ERROR[502]: spawn zcode ENOENT
+if            9       2       0       PROVIDER_ERROR[qoder/qwen3.8-max-preview] [502]: 'qodercli' is not recognized as an internal or external command,
+qoder         9       2       0       PROVIDER_ERROR[qoder/qwen3.8-max-preview] [502]: 'qodercli' is not recognized as an internal or external command,
+ddgw          6       2       0       PROVIDER_ERROR[400]: DuckDuckGo AI Chat error: ERR_BAD_REQUEST
+felo          5       2       0       PROVIDER_ERROR[400]: Felo thread creation failed with HTTP 400
+moonshot      4       2       0       PROVIDER_ERRORModel 'kimi-k3' is not available in the active live catalog for provider 'moonshot'.
+gemini-web    4       2       0       PROVIDER_ERROR[gemini-web/gemini-3.1-pro] [503]: Gemini Web requires the Playwright Chromium browser, which is not
+qwen-web      4       2       0       PROVIDER_ERRORModel 'qwen3.7-max' is not available in the active live catalog for provider 'qwen-web'.
+gweb          3       2       0       PROVIDER_ERROR[gemini-web/gemini-3.1-pro] [503]: Gemini Web requires the Playwright Chromium browser, which is not
+pepper        1       1       0       PROVIDER_ERROR[502]: Amelia init failed: 404
+
+wrote C:\Users\adam\Desktop\humanizer ultra\ai-text-detector\benchmark\omniroute-providers-omni-recheck.json
+EXIT=0

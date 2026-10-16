@@ -1,0 +1,45 @@
+**Soar** (originally **S**tate, **O**perator, **A**nd **R**esult) is a **general cognitive architecture** designed to create systems that exhibit intelligent behavior. It is one of the oldest, most mature, and most influential architectures in the field of Artificial Intelligence (AI) and Cognitive Science.
+
+Developed initially by **John Laird, Allen Newell, and Paul Rosenbloom** at Carnegie Mellon University in the early 1980s, Soar was built explicitly to test **Newell’s "Unified Theories of Cognition" (UTC)** hypothesis: that a single computational structure can account for the full range of human cognitive capabilities.
+
+---
+
+### 1. Core Philosophy & Goals
+*   **Unified Theory of Cognition:** Soar attempts to integrate distinct cognitive capabilities (reasoning, planning, learning, perception, motor control, language, emotion) into a single architectural framework, rather than building separate modules for each.
+*   **Symbolic + Sub-symbolic:** While historically a **symbolic** (rule-based) architecture, modern Soar (versions 9+) integrates **sub-symbolic** mechanisms (Reinforcement Learning, Semantic/Episodic Memory) to handle tuning, bias, and experience.
+*   **Real-time Performance:** Designed for agents that must react continuously in dynamic environments (robots, game NPCs, simulation entities).
+
+---
+
+### 2. The Fundamental Architecture: "Problem Spaces"
+Soar models cognition as **search through problem spaces**.
+*   **State:** The current representation of the world/agent (Working Memory).
+*   **Operators:** Actions that transform one state into another.
+*   **Goal:** A desired state (or class of states).
+*   **Problem Solving:** Selecting and applying operators to move from the current state to the goal state.
+
+> **Key Insight:** *Everything* in Soar—planning, reasoning, perception, motor control, even meta-cognition—is cast as search in a problem space.
+
+---
+
+### 3. The Decision Cycle (The "Heartbeat")
+Soar operates in a continuous **decision cycle** (typically running at 10–50Hz for real-time agents). Each cycle has distinct phases:
+
+#### Phase A: **Proposal (Parallel Rule Firing)**
+*   **Production Rules (If-Then rules)** match against **Working Memory (WM)**.
+*   *All* matching rules fire **in parallel**.
+*   Rules propose **operators** (e.g., "Propose `move-forward`", "Propose `pick-up-block`").
+*   Rules can also create **preferences** (numerical or symbolic) for operators (e.g., "Prefer `move-forward` > `turn-left`", "Require `check-battery`").
+
+#### Phase B: **Decision Procedure (Serial Selection)**
+*   The architecture examines the preferences for all proposed operators.
+*   It resolves conflicts using a fixed hierarchy of preference types (e.g., `Require` > `Prohibit` > `Best` > `Better` > `Good` > `Indifferent`).
+*   **One operator is selected** (or none, leading to an impasse).
+
+#### Phase C: **Application (Parallel Rule Firing)**
+*   Rules matching the *selected operator* fire in parallel.
+*   They modify Working Memory: changing the state (effectors), creating sub-goals, or retrieving knowledge.
+*   **Output commands** are sent to the environment (motor actions).
+
+#### Phase D: **Input / Perception**
+*   Sensors update Working Memory with new environmental

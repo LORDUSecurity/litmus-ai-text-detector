@@ -1,0 +1,33 @@
+[detect ] nvidia/nemotron-3-ultra-550b-a55b short-hu -> 7814ms HUMAN_LIKELY
+[webhook] nvidia/nemotron-3-ultra-550b-a55b short-hu -> 11753ms HUMAN_LIKELY
+[detect ] nvidia/nemotron-3-ultra-550b-a55b med-ai -> 5291ms AI_GENERATED
+[webhook] nvidia/nemotron-3-ultra-550b-a55b med-ai -> 10561ms REVIEW_REQUIRED
+[detect ] nvidia/nemotron-3-ultra-550b-a55b long-hu -> 17979ms HUMAN_LIKELY
+[webhook] nvidia/nemotron-3-ultra-550b-a55b long-hu -> 29002ms HUMAN_LIKELY
+[detect ] nvidia/nemotron-3-ultra-550b-a55b defer-ai(tie-break armed) -> 38033ms HUMAN_LIKELY
+[webhook] nvidia/nemotron-3-ultra-550b-a55b defer-ai -> 3128ms HUMAN_LIKELY
+[detect ] z-ai/glm-5.3-flash short-hu -> 6370ms HUMAN_LIKELY
+[webhook] z-ai/glm-5.3-flash short-hu -> 4553ms HUMAN_LIKELY
+[detect ] z-ai/glm-5.3-flash med-ai -> 8144ms AI_GENERATED
+[webhook] z-ai/glm-5.3-flash med-ai -> 9870ms AI_GENERATED
+[detect ] z-ai/glm-5.3-flash long-hu -> 11464ms HUMAN_LIKELY
+[webhook] z-ai/glm-5.3-flash long-hu -> 19658ms HUMAN_LIKELY
+[detect ] z-ai/glm-5.3-flash defer-ai(tie-break armed) -> 14358ms AI_GENERATED
+[webhook] z-ai/glm-5.3-flash defer-ai -> 8453ms AI_GENERATED
+[detect ] google/gemma-4-31b-it short-hu -> 290044ms 
+[webhook] google/gemma-4-31b-it short-hu -> 300099ms 
+[detect ] google/gemma-4-31b-it med-ai -> 290060ms 
+[webhook] google/gemma-4-31b-it med-ai -> 300092ms 
+[detect ] google/gemma-4-31b-it long-hu -> 290043ms 
+[webhook] google/gemma-4-31b-it long-hu -> 300044ms 
+[detect ] google/gemma-4-31b-it defer-ai(tie-break armed) -> 290023ms 
+[webhook] google/gemma-4-31b-it defer-ai -> 300038ms 
+[detect ] deepseek-ai/deepseek-v4.1-flash short-hu -> 290036ms 
+[webhook] deepseek-ai/deepseek-v4.1-flash short-hu -> 300057ms 
+[detect ] deepseek-ai/deepseek-v4.1-flash med-ai -> 290022ms 
+[webhook] deepseek-ai/deepseek-v4.1-flash med-ai -> 300059ms 
+[detect ] deepseek-ai/deepseek-v4.1-flash long-hu -> 290056ms 
+[webhook] deepseek-ai/deepseek-v4.1-flash long-hu -> 300051ms 
+[detect ] deepseek-ai/deepseek-v4.1-flash defer-ai(tie-break armed) -> 290032ms 
+[webhook] deepseek-ai/deepseek-v4.1-flash defer-ai -> 300045ms 
+done -> C:\Users\adam\Desktop\humanizer ultra\ai-text-detector\benchmark\results-appbench.jsonl

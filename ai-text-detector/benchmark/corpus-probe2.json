@@ -1,0 +1,16 @@
+[
+  {
+    "id": "ai-000",
+    "text": "Osaka is a city located in the Kansai region of Japan. It is the capital of Osaka Prefecture and the third-largest city in Japan, with a population of over 19 million people in its metropolitan area. Osaka is located on the island of Honshu, about 350 kilometers (217 miles) west of Tokyo. It is a major economic hub in Japan, known for its port, trade, and industry. Osaka is also a popular tourist destination, known for its food, culture, and landmarks such as Osaka Castle and Universal Studios Japan.",
+    "label": "AI",
+    "config": "open_qa",
+    "question": "where is osaka japan"
+  },
+  {
+    "id": "hu-000",
+    "text": "One is \"US Government Standard Bathroom Malodor\"; a mixture of eight chemicals with a stench resembling human feces, only much stronger, designed to test the efficacy of deodorizers and air fresheners .Another one, \" Who me? \", is a mixture of five sulfur-containing chemicals and smells like rotting food and carcasses.",
+    "label": "HUMAN",
+    "config": "open_qa",
+    "question": "what are stink bombs made of"
+  }
+]

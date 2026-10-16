@@ -1,0 +1,13 @@
+Soar is a cognitive architecture, which is a framework for building intelligent systems. It was developed by John Laird, Allan Newell, and Paul Rosenbloom at Carnegie Mellon University in the 1980s and has been further developed and refined since then.
+
+
+
+The main idea behind Soar is to model the way that the human mind works, with the goal of creating intelligent systems that can think and learn in a way that is similar to humans. Soar models human cognition at a high level of abstraction, including processes such as problem solving, decision making, and learning.
+
+
+
+Soar represents knowledge in a hierarchical structure called a "production system," which consists of a set of "rules" that can be triggered by specific conditions. These rules can be thought of as if-then statements, with the "if" part being the condition and the "then" part being the action that is taken. When a rule is triggered, it can execute a sequence of actions and also modify the current state of the system.
+
+
+
+Soar has been applied to a wide range of problems, including natural language processing, robotics, and simulation. It has also been used to build intelligent tutoring systems and to study the way that humans solve problems.

@@ -1,0 +1,22 @@
+===== OMNI SCREEN kiro/deepseek-3.2 =====
+usable=12/12 salvaged=0 truncated=0 errors=none
+wall clock: 70.1s
+===== OMNI SCREEN kiro/glm-5 =====
+usable=12/12 salvaged=0 truncated=0 errors=none
+wall clock: 46.9s
+===== OMNI SCREEN kiro/qwen3-coder-next =====
+usable=12/12 salvaged=1 truncated=0 errors=none
+wall clock: 28.2s
+===== OMNI SCREEN no-think/kiro/claude-sonnet-4.5 =====
+usable=12/12 salvaged=0 truncated=0 errors=none
+wall clock: 35.9s
+===== OMNI SCREEN mistral/ministral-14b-latest =====
+usable=12/12 salvaged=0 truncated=0 errors=none
+wall clock: 30.7s
+===== OMNI SCREEN mistral/codestral-latest =====
+usable=12/12 salvaged=0 truncated=0 errors=none
+wall clock: 18.0s
+===== OMNI SCREEN auto/best-free =====
+usable=12/12 salvaged=0 truncated=0 errors=none
+wall clock: 44.6s
+EXIT=0

@@ -1,0 +1,830 @@
+[
+  {
+    "id": "book-000",
+    "text": "“I told some of you last Thursday of the principles of the Time\nMachine, and showed you the actual thing itself, incomplete in the\nworkshop. There it is now, a little travel-worn, truly; and one of the\nivory bars is cracked, and a brass rail bent; but the rest of it’s\nsound enough. I expected to finish it on Friday; but on Friday, when\nthe putting together was nearly done, I found that one of the nickel\nbars was exactly one inch too short, and this I had to get remade; so\nthat the thing was not complete until this morning. It was at ten\no’clock today that the first of all Time Machines began its career. I\ngave it a last tap, tried all the screws again, put one more drop of\noil on the quartz rod, and sat myself in the saddle. I suppose a\nsuicide who holds a pistol to his skull feels much the same wonder at\nwhat will come next as I felt then. I took the starting lever in one\nhand and the stopping one in the other, pressed the first, and almost\nimmediately the second. I seemed to reel; I felt a nightmare sensation\nof falling; and, looking round, I saw the laboratory exactly as before.\nHad anything happened? For a moment I suspected that my intellect had\ntricked me. Then I noted the clock. A moment before, as it seemed, it\nhad stood at a minute or so past ten; now it was nearly half-past\nthree!",
+    "label": "HUMAN",
+    "config": "published_book",
+    "question": null,
+    "source": {
+      "gutenberg": 35,
+      "title": "The Time Machine",
+      "author": "H. G. Wells",
+      "header_date": "October 2, 2004 [eBook #35]",
+      "url": "https://www.gutenberg.org/cache/epub/35/pg35.txt",
+      "fetched_from": "cache",
+      "block_range": "111-111",
+      "sha256_16": "f919d1e3752b11d2",
+      "capture": "contiguous slice of the downloaded file; only whitespace was normalised"
+    }
+  },
+  {
+    "id": "book-001",
+    "text": "“I wandered during the afternoon along the valley of the Thames, but\nfound nothing that commended itself to my mind as inaccessible. All the\nbuildings and trees seemed easily practicable to such dexterous\nclimbers as the Morlocks, to judge by their wells, must be. Then the\ntall pinnacles of the Palace of Green Porcelain and the polished gleam\nof its walls came back to my memory; and in the evening, taking Weena\nlike a child upon my shoulder, I went up the hills towards the\nsouth-west. The distance, I had reckoned, was seven or eight miles, but\nit must have been nearer eighteen. I had first seen the place on a\nmoist afternoon when distances are deceptively diminished. In addition,\nthe heel of one of my shoes was loose, and a nail was working through\nthe sole—they were comfortable old shoes I wore about indoors—so that I\nwas lame. And it was already long past sunset when I came in sight of\nthe palace, silhouetted black against the pale yellow of the sky.",
+    "label": "HUMAN",
+    "config": "published_book",
+    "question": null,
+    "source": {
+      "gutenberg": 35,
+      "title": "The Time Machine",
+      "author": "H. G. Wells",
+      "header_date": "October 2, 2004 [eBook #35]",
+      "url": "https://www.gutenberg.org/cache/epub/35/pg35.txt",
+      "fetched_from": "cache",
+      "block_range": "220-220",
+      "sha256_16": "a91fc7ebfb9191e0",
+      "capture": "contiguous slice of the downloaded file; only whitespace was normalised"
+    }
+  },
+  {
+    "id": "book-002",
+    "text": "Farther along we came upon a group of three women and two children in\nthe road, busy clearing out a labourer’s cottage. They had got hold of\na little hand truck, and were piling it up with unclean-looking bundles\nand shabby furniture. They were all too assiduously engaged to talk to\nus as we passed.\nBy Byfleet station we emerged from the pine trees, and found the\ncountry calm and peaceful under the morning sunlight. We were far\nbeyond the range of the Heat-Ray there, and had it not been for the\nsilent desertion of some of the houses, the stirring movement of\npacking in others, and the knot of soldiers standing on the bridge over\nthe railway and staring down the line towards Woking, the day would\nhave seemed very like any other Sunday.",
+    "label": "HUMAN",
+    "config": "published_book",
+    "question": null,
+    "source": {
+      "gutenberg": 36,
+      "title": "The war of the worlds",
+      "author": "H. G. Wells",
+      "header_date": "October 1, 2004 [eBook #36]",
+      "url": "https://www.gutenberg.org/cache/epub/36/pg36.txt",
+      "fetched_from": "cache",
+      "block_range": "307-308",
+      "sha256_16": "f697ace0368bf85f",
+      "capture": "contiguous slice of the downloaded file; only whitespace was normalised"
+    }
+  },
+  {
+    "id": "book-003",
+    "text": "In the first book I have wandered so much from my own adventures to\ntell of the experiences of my brother that all through the last two\nchapters I and the curate have been lurking in the empty house at\nHalliford whither we fled to escape the Black Smoke. There I will\nresume. We stopped there all Sunday night and all the next day—the day\nof the panic—in a little island of daylight, cut off by the Black Smoke\nfrom the rest of the world. We could do nothing but wait in aching\ninactivity during those two weary days.",
+    "label": "HUMAN",
+    "config": "published_book",
+    "question": null,
+    "source": {
+      "gutenberg": 36,
+      "title": "The war of the worlds",
+      "author": "H. G. Wells",
+      "header_date": "October 1, 2004 [eBook #36]",
+      "url": "https://www.gutenberg.org/cache/epub/36/pg36.txt",
+      "fetched_from": "cache",
+      "block_range": "614-614",
+      "sha256_16": "810dfba01fb2b916",
+      "capture": "contiguous slice of the downloaded file; only whitespace was normalised"
+    }
+  },
+  {
+    "id": "book-004",
+    "text": "Soon after we heard that the poor victim had expressed a desire to see my\ncousin. My father wished her not to go but said that he left it to her own\njudgment and feelings to decide. “Yes,” said Elizabeth,\n“I will go, although she is guilty; and you, Victor, shall accompany\nme; I cannot go alone.” The idea of this visit was torture to me, yet\nI could not refuse.\nWe entered the gloomy prison chamber and beheld Justine sitting on some\nstraw at the farther end; her hands were manacled, and her head rested on\nher knees. She rose on seeing us enter, and when we were left alone with\nher, she threw herself at the feet of Elizabeth, weeping bitterly. My\ncousin wept also.",
+    "label": "HUMAN",
+    "config": "published_book",
+    "question": null,
+    "source": {
+      "gutenberg": 84,
+      "title": "Frankenstein; or, the modern prometheus",
+      "author": "Mary Wollstonecraft Shelley",
+      "header_date": "October 1, 1993 [eBook #84]",
+      "url": "https://www.gutenberg.org/cache/epub/84/pg84.txt",
+      "fetched_from": "cache",
+      "block_range": "268-269",
+      "sha256_16": "0b9559b0e7fc3003",
+      "capture": "contiguous slice of the downloaded file; only whitespace was normalised"
+    }
+  },
+  {
+    "id": "book-005",
+    "text": "But in Clerval I saw the image of my former self; he was inquisitive\nand anxious to gain experience and instruction. The difference of\nmanners which he observed was to him an inexhaustible source of\ninstruction and amusement. He was also pursuing an object he had long\nhad in view. His design was to visit India, in the belief that he had\nin his knowledge of its various languages, and in the views he had\ntaken of its society, the means of materially assisting the progress of\nEuropean colonization and trade. In Britain only could he further the\nexecution of his plan. He was for ever busy, and the only check to his\nenjoyments was my sorrowful and dejected mind. I tried to conceal this\nas much as possible, that I might not debar him from the pleasures\nnatural to one who was entering on a new scene of life, undisturbed by\nany care or bitter recollection. I often refused to accompany him,\nalleging another engagement, that I might remain alone. I now also\nbegan to collect the materials necessary for my new creation, and this\nwas to me like the torture of single drops of water continually falling\non the head. Every thought that was devoted to it was an extreme\nanguish, and every word that I spoke in allusion to it caused my lips\nto quiver, and my heart to palpitate.",
+    "label": "HUMAN",
+    "config": "published_book",
+    "question": null,
+    "source": {
+      "gutenberg": 84,
+      "title": "Frankenstein; or, the modern prometheus",
+      "author": "Mary Wollstonecraft Shelley",
+      "header_date": "October 1, 1993 [eBook #84]",
+      "url": "https://www.gutenberg.org/cache/epub/84/pg84.txt",
+      "fetched_from": "cache",
+      "block_range": "532-532",
+      "sha256_16": "28ee09189fa00224",
+      "capture": "contiguous slice of the downloaded file; only whitespace was normalised"
+    }
+  },
+  {
+    "id": "book-006",
+    "text": "The same look of pity came into Dorian Gray’s eyes. Then he stretched\nout his hand, took a piece of paper, and wrote something on it. He read\nit over twice, folded it carefully, and pushed it across the table.\nHaving done this, he got up and went over to the window.\nCampbell looked at him in surprise, and then took up the paper, and\nopened it. As he read it, his face became ghastly pale and he fell back\nin his chair. A horrible sense of sickness came over him. He felt as if\nhis heart was beating itself to death in some empty hollow.",
+    "label": "HUMAN",
+    "config": "published_book",
+    "question": null,
+    "source": {
+      "gutenberg": 174,
+      "title": "The Picture of Dorian Gray",
+      "author": "Oscar Wilde",
+      "header_date": "October 1, 1994 [eBook #174]",
+      "url": "https://www.gutenberg.org/cache/epub/174/pg174.txt",
+      "fetched_from": "cache",
+      "block_range": "1041-1042",
+      "sha256_16": "e441b3f7ef0ca75e",
+      "capture": "contiguous slice of the downloaded file; only whitespace was normalised"
+    }
+  },
+  {
+    "id": "book-007",
+    "text": "They took their seats amidst a crowd of watchers. The tulip-beds across\nthe road flamed like throbbing rings of fire. A white dust—tremulous\ncloud of orris-root it seemed—hung in the panting air. The brightly\ncoloured parasols danced and dipped like monstrous butterflies.\nShe made her brother talk of himself, his hopes, his prospects. He\nspoke slowly and with effort. They passed words to each other as\nplayers at a game pass counters. Sibyl felt oppressed. She could not\ncommunicate her joy. A faint smile curving that sullen mouth was all\nthe echo she could win. After some time she became silent. Suddenly she\ncaught a glimpse of golden hair and laughing lips, and in an open\ncarriage with two ladies Dorian Gray drove past.",
+    "label": "HUMAN",
+    "config": "published_book",
+    "question": null,
+    "source": {
+      "gutenberg": 174,
+      "title": "The Picture of Dorian Gray",
+      "author": "Oscar Wilde",
+      "header_date": "October 1, 1994 [eBook #174]",
+      "url": "https://www.gutenberg.org/cache/epub/174/pg174.txt",
+      "fetched_from": "cache",
+      "block_range": "509-510",
+      "sha256_16": "39b9638e8673d334",
+      "capture": "contiguous slice of the downloaded file; only whitespace was normalised"
+    }
+  },
+  {
+    "id": "book-008",
+    "text": "The whistle of the locomotive penetrates my woods summer and winter,\nsounding like the scream of a hawk sailing over some farmer’s yard,\ninforming me that many restless city merchants are arriving within the\ncircle of the town, or adventurous country traders from the other side.\nAs they come under one horizon, they shout their warning to get off the\ntrack to the other, heard sometimes through the circles of two towns.\nHere come your groceries, country; your rations, countrymen! Nor is\nthere any man so independent on his farm that he can say them nay. And\nhere’s your pay for them! screams the countryman’s whistle; timber like\nlong battering rams going twenty miles an hour against the city’s\nwalls, and chairs enough to seat all the weary and heavy laden that\ndwell within them. With such huge and lumbering civility the country\nhands a chair to the city. All the Indian huckleberry hills are\nstripped, all the cranberry meadows are raked into the city. Up comes\nthe cotton, down goes the woven cloth; up comes the silk, down goes the\nwoollen; up come the books, but down goes the wit that writes them.",
+    "label": "HUMAN",
+    "config": "published_book",
+    "question": null,
+    "source": {
+      "gutenberg": 205,
+      "title": "Walden, and On The Duty Of Civil Disobedience",
+      "author": "Henry David Thoreau",
+      "header_date": "January 1, 1995 [eBook #205]",
+      "url": "https://www.gutenberg.org/cache/epub/205/pg205.txt",
+      "fetched_from": "cache",
+      "block_range": "196-196",
+      "sha256_16": "6622f92ce3dc025f",
+      "capture": "contiguous slice of the downloaded file; only whitespace was normalised"
+    }
+  },
+  {
+    "id": "book-009",
+    "text": "The pond had in the mean while skimmed over in the shadiest and\nshallowest coves, some days or even weeks before the general freezing.\nThe first ice is especially interesting and perfect, being hard, dark,\nand transparent, and affords the best opportunity that ever offers for\nexamining the bottom where it is shallow; for you can lie at your\nlength on ice only an inch thick, like a skater insect on the surface\nof the water, and study the bottom at your leisure, only two or three\ninches distant, like a picture behind a glass, and the water is\nnecessarily always smooth then. There are many furrows in the sand\nwhere some creature has travelled about and doubled on its tracks; and,\nfor wrecks, it is strewn with the cases of cadis worms made of minute\ngrains of white quartz. Perhaps these have creased it, for you find\nsome of their cases in the furrows, though they are deep and broad for\nthem to make. But the ice itself is the object of most interest, though\nyou must improve the earliest opportunity to study it. If you examine\nit closely the morning after it freezes, you find that the greater part\nof the bubbles, which at first appeared to be within it, are against\nits under surface, and that more are continually rising from the\nbottom; while the ice is as yet comparatively solid and dark, that is,\nyou see the water through it. These bubbles are from an eightieth to an\neighth of an inch in diameter, very clear and beautiful, and you see\nyour face reflected in them through the ice.",
+    "label": "HUMAN",
+    "config": "published_book",
+    "question": null,
+    "source": {
+      "gutenberg": 205,
+      "title": "Walden, and On The Duty Of Civil Disobedience",
+      "author": "Henry David Thoreau",
+      "header_date": "January 1, 1995 [eBook #205]",
+      "url": "https://www.gutenberg.org/cache/epub/205/pg205.txt",
+      "fetched_from": "cache",
+      "block_range": "396-396",
+      "sha256_16": "c37ff153ea0087d4",
+      "capture": "contiguous slice of the downloaded file; only whitespace was normalised"
+    }
+  },
+  {
+    "id": "book-010",
+    "text": "'This Gilbert was a clerk from Battle Abbey, who kept the accounts of\nthe Manor of Pevensey. He was tall and pale-coloured, and carried\nthose new-fashioned beads for counting of prayers. They were large\nbrown nuts or seeds, and hanging from his girdle with his pen and\nink-horn they clashed when he walked. His place was in the great\nfireplace. There was his table of accounts, and there he lay o'\nnights. He feared the hounds in the Hall that came nosing after bones\nor to sleep on the warm ashes, and would slash at them with his\nbeads--like a woman. When De Aquila sat in Hall to do justice, take\nfines, or grant lands, Gilbert would so write it in the Manor-roll.\nBut it was none of his work to feed our guests, or to let them depart\nwithout his lord's knowledge.",
+    "label": "HUMAN",
+    "config": "published_book",
+    "question": null,
+    "source": {
+      "gutenberg": 557,
+      "title": "Puck of Pook's Hill",
+      "author": "Rudyard Kipling",
+      "header_date": "June 1, 1996 [eBook #557]",
+      "url": "https://www.gutenberg.org/cache/epub/557/pg557.txt",
+      "fetched_from": "cache",
+      "block_range": "484-484",
+      "sha256_16": "4d92ccfa4cafc859",
+      "capture": "contiguous slice of the downloaded file; only whitespace was normalised"
+    }
+  },
+  {
+    "id": "book-011",
+    "text": "\"'No, Caesar,\" said he. \"Do not tempt the Gods too far. Take men, or\nengines, but not both; else we refuse.\"' 'Engines?' said Una.\n'The catapults of the Wall--huge things forty feet high to the\nhead--firing nets of raw stone or forged bolts. Nothing can stand\nagainst them. He left us our catapults at last, but he took a Caesar's\nhalf of our men without pity. We were a shell when he rolled up the\nlists!\n\"'Hail, Caesar! We, about to die, salute you!\" said Pertinax,\nlaughing. \"If any enemy even leans against the Wall now, it will\ntumble.\"",
+    "label": "HUMAN",
+    "config": "published_book",
+    "question": null,
+    "source": {
+      "gutenberg": 557,
+      "title": "Puck of Pook's Hill",
+      "author": "Rudyard Kipling",
+      "header_date": "June 1, 1996 [eBook #557]",
+      "url": "https://www.gutenberg.org/cache/epub/557/pg557.txt",
+      "fetched_from": "cache",
+      "block_range": "969-971",
+      "sha256_16": "0b69e52cf58c620b",
+      "capture": "contiguous slice of the downloaded file; only whitespace was normalised"
+    }
+  },
+  {
+    "id": "book-012",
+    "text": "\"Well then, let us away to the water-spouts,\" cried Jack, going up to the\nbower for his bow and arrows; \"and bring your spear, Peterkin. It may be\nuseful.\"\nWe now, having made up our minds to examine into this matter, sallied\nforth eagerly in the direction of the water-spout rocks, which, as I have\nbefore mentioned, were not far from our present place of abode. On\narriving there we hastened down to the edge of the rocks, and gazed over\ninto the sea, where we observed the pale-green object still distinctly\nvisible, moving its tail slowly to and fro in the water.",
+    "label": "HUMAN",
+    "config": "published_book",
+    "question": null,
+    "source": {
+      "gutenberg": 646,
+      "title": "The Coral Island: A Tale of the Pacific Ocean",
+      "author": "R. M. Ballantyne",
+      "header_date": "September 1, 1996 [eBook #646]",
+      "url": "https://www.gutenberg.org/cache/epub/646/pg646.txt",
+      "fetched_from": "cache",
+      "block_range": "463-464",
+      "sha256_16": "8a71521aff04c1a8",
+      "capture": "contiguous slice of the downloaded file; only whitespace was normalised"
+    }
+  },
+  {
+    "id": "book-013",
+    "text": "\"But it's a curious fact,\" he continued, after a pause, during which we\nwalked in silence towards the spot where we had left our comrades,--\"it's\na curious fact, that wherever the missionaries get a footin' all these\nthings come to an end at once, an' the savages take to doin' each other\ngood, and singin' psalms, just like Methodists.\"\n\"God bless the missionaries!\" said I, while a feeling of enthusiasm\nfilled my heart, so that I could speak with difficulty. \"God bless and\nprosper the missionaries till they get a footing in every island of the\nsea!\"",
+    "label": "HUMAN",
+    "config": "published_book",
+    "question": null,
+    "source": {
+      "gutenberg": 646,
+      "title": "The Coral Island: A Tale of the Pacific Ocean",
+      "author": "R. M. Ballantyne",
+      "header_date": "September 1, 1996 [eBook #646]",
+      "url": "https://www.gutenberg.org/cache/epub/646/pg646.txt",
+      "fetched_from": "cache",
+      "block_range": "922-923",
+      "sha256_16": "3efabee605e59b6b",
+      "capture": "contiguous slice of the downloaded file; only whitespace was normalised"
+    }
+  },
+  {
+    "id": "book-014",
+    "text": "The return of the robin is commonly announced by the\nnewspapers, like that of eminent or notorious people to a\nwatering-place, as the first authentic notification of spring. And such\nhis appearance in the orchard and garden undoubtedly is. But, in spite\nof his name of migratory thrush, he stays with us all winter, and I\nhave seen him when the thermometer marked 15 degrees below zero of\nFahrenheit, armed impregnably within,(1) like Emerson's Titmouse, and as\ncheerful as he. The robin has a bad reputation among people who do not\nvalue themselves less for being fond of cherries. There is, I admit,\na spice of vulgarity in him, and his song is rather of the Bloomfield\nsort, too largely ballasted with prose. His ethics are of the Poor\nRichard school, and the main chance which calls forth all his energy\nis altogether of the belly. He never has these fine intervals of lunacy\ninto which his cousins, the catbird and the mavis, are apt to fall. But\nfor a' that and twice as muckle 's a' that, I would not exchange him for\nall the cherries that ever came out of Asia Minor. With whatever faults,\nhe has not wholly forfeited that superiority which belongs to the\nchildren of nature. He has a finer taste in fruit than could be\ndistilled from many successive committees of the Horticultural Society,\nand he eats with a relishing gulp not inferior to Dr. Johnson's. He\nfeels and freely exercises his right of eminent domain.",
+    "label": "HUMAN",
+    "config": "published_book",
+    "question": null,
+    "source": {
+      "gutenberg": 880,
+      "title": "My Garden Acquaintance",
+      "author": "James Russell Lowell",
+      "header_date": "April 1, 1997 [eBook #880]",
+      "url": "https://www.gutenberg.org/cache/epub/880/pg880.txt",
+      "fetched_from": "cache",
+      "block_range": "19-19",
+      "sha256_16": "85e8b264fb3b684f",
+      "capture": "contiguous slice of the downloaded file; only whitespace was normalised"
+    }
+  },
+  {
+    "id": "book-015",
+    "text": "Orioles are in great plenty with me.  I have seen seven males\nflashing about the garden at once. A merry crew of them swing their\nhammocks from the pendulous boughs. During one of these later years,\nwhen the canker-worms stripped our elms as bare as winter, these birds\nwent to the trouble of rebuilding their unroofed nests, and chose for\nthe purpose trees which are safe from those swarming vandals, such as\nthe ash and the button-wood. One year a pair (disturbed, I suppose,\nelsewhere) built a second nest in an elm within a few yards of the\nhouse. My friend, Edward E. Hale, told me once that the oriole rejected\nfrom his web all strands of brilliant color, and I thought it a striking\nexample of that instinct of concealment noticeable in many birds, though\nit should seem in this instance that the nest was amply protected by its\nposition from all marauders but owls and squirrels. Last year, however,\nI had the fullest proof that Mr. Hale was mistaken. A pair of orioles\nbuilt on the lowest trailer of a weeping elm, which hung within ten feet\nof our drawing-room window, and so low that I could reach it from the\nground. The nest was wholly woven and felted with ravellings of woollen\ncarpet in which scarlet predominated. Would the same thing have happened\nin the woods? Or did the nearness of a human dwelling perhaps give the\nbirds a greater feeling of security?",
+    "label": "HUMAN",
+    "config": "published_book",
+    "question": null,
+    "source": {
+      "gutenberg": 880,
+      "title": "My Garden Acquaintance",
+      "author": "James Russell Lowell",
+      "header_date": "April 1, 1997 [eBook #880]",
+      "url": "https://www.gutenberg.org/cache/epub/880/pg880.txt",
+      "fetched_from": "cache",
+      "block_range": "33-33",
+      "sha256_16": "d784ec3dbda22637",
+      "capture": "contiguous slice of the downloaded file; only whitespace was normalised"
+    }
+  },
+  {
+    "id": "book-016",
+    "text": "I have been assured by a very knowing American of my acquaintance in\nLondon, that a young healthy child well nursed, is, at a year old, a\nmost delicious nourishing and wholesome food, whether stewed, roasted,\nbaked, or boiled; and I make no doubt that it will equally serve in a\nfricasee, or a ragoust.\nI do therefore humbly offer it to publick consideration, that of the\nhundred and twenty thousand children, already computed, twenty thousand\nmay be reserved for breed, whereof only one fourth part to be males;\nwhich is more than we allow to sheep, black cattle, or swine, and my\nreason is, that these children are seldom the fruits of marriage, a\ncircumstance not much regarded by our savages, therefore, one male will\nbe sufficient to serve four females. That the remaining hundred\nthousand may, at a year old, be offered in sale to the persons of\nquality and fortune, through the kingdom, always advising the mother to\nlet them suck plentifully in the last month, so as to render them\nplump, and fat for a good table. A child will make two dishes at an\nentertainment for friends, and when the family dines alone, the fore or\nhind quarter will make a reasonable dish, and seasoned with a little\npepper or salt, will be very good boiled on the fourth day, especially\nin winter.",
+    "label": "HUMAN",
+    "config": "published_book",
+    "question": null,
+    "source": {
+      "gutenberg": 1080,
+      "title": "A Modest Proposal",
+      "author": "Jonathan Swift",
+      "header_date": "October 1, 1997 [eBook #1080]",
+      "url": "https://www.gutenberg.org/cache/epub/1080/pg1080.txt",
+      "fetched_from": "cache",
+      "block_range": "12-13",
+      "sha256_16": "32198221f6485c1c",
+      "capture": "contiguous slice of the downloaded file; only whitespace was normalised"
+    }
+  },
+  {
+    "id": "book-017",
+    "text": "Secondly, The poorer tenants will have something valuable of their own,\nwhich by law may be made liable to a distress, and help to pay their\nlandlord’s rent, their corn and cattle being already seized, and money\na thing unknown.\nThirdly, Whereas the maintainance of a hundred thousand children, from\ntwo years old, and upwards, cannot be computed at less than ten\nshillings a piece per annum, the nation’s stock will be thereby\nencreased fifty thousand pounds per annum, besides the profit of a new\ndish, introduced to the tables of all gentlemen of fortune in the\nkingdom, who have any refinement in taste. And the money will circulate\namong our selves, the goods being entirely of our own growth and\nmanufacture.",
+    "label": "HUMAN",
+    "config": "published_book",
+    "question": null,
+    "source": {
+      "gutenberg": 1080,
+      "title": "A Modest Proposal",
+      "author": "Jonathan Swift",
+      "header_date": "October 1, 1997 [eBook #1080]",
+      "url": "https://www.gutenberg.org/cache/epub/1080/pg1080.txt",
+      "fetched_from": "cache",
+      "block_range": "25-26",
+      "sha256_16": "b8836349445dd0a1",
+      "capture": "contiguous slice of the downloaded file; only whitespace was normalised"
+    }
+  },
+  {
+    "id": "book-018",
+    "text": "From observations which I have made on certain varieties of hollyhock,\nI am inclined to suspect that they present analogous facts.\nKölreuter, whose accuracy has been confirmed by every subsequent\nobserver, has proved the remarkable fact, that one variety of the\ncommon tobacco is more fertile, when crossed with a widely distinct\nspecies, than are the other varieties. He experimentised on five forms,\nwhich are commonly reputed to be varieties, and which he tested by the\nseverest trial, namely, by reciprocal crosses, and he found their\nmongrel offspring perfectly fertile. But one of these five varieties,\nwhen used either as father or mother, and crossed with the Nicotiana\nglutinosa, always yielded hybrids not so sterile as those which were\nproduced from the four other varieties when crossed with N. glutinosa.\nHence the reproductive system of this one variety must have been in\nsome manner and in some degree modified.",
+    "label": "HUMAN",
+    "config": "published_book",
+    "question": null,
+    "source": {
+      "gutenberg": 1228,
+      "title": "On the Origin of Species By Means of Natural Selection",
+      "author": "Charles Darwin",
+      "header_date": "March 1, 1998 [eBook #1228]",
+      "url": "https://www.gutenberg.org/cache/epub/1228/pg1228.txt",
+      "fetched_from": "cache",
+      "block_range": "442-443",
+      "sha256_16": "126517b27eda306c",
+      "capture": "contiguous slice of the downloaded file; only whitespace was normalised"
+    }
+  },
+  {
+    "id": "book-019",
+    "text": "I kept my word. An hour or two sufficed to sketch my own portrait in\ncrayons; and in less than a fortnight I had completed an ivory\nminiature of an imaginary Blanche Ingram. It looked a lovely face\nenough, and when compared with the real head in chalk, the contrast was\nas great as self-control could desire. I derived benefit from the task:\nit had kept my head and hands employed, and had given force and\nfixedness to the new impressions I wished to stamp indelibly on my\nheart.\nEre long, I had reason to congratulate myself on the course of\nwholesome discipline to which I had thus forced my feelings to submit.\nThanks to it, I was able to meet subsequent occurrences with a decent\ncalm, which, had they found me unprepared, I should probably have been\nunequal to maintain, even externally.",
+    "label": "HUMAN",
+    "config": "published_book",
+    "question": null,
+    "source": {
+      "gutenberg": 1260,
+      "title": "Jane Eyre: An Autobiography",
+      "author": "Charlotte Brontë",
+      "header_date": "March 1, 1998 [eBook #1260]",
+      "url": "https://www.gutenberg.org/cache/epub/1260/pg1260.txt",
+      "fetched_from": "cache",
+      "block_range": "1381-1382",
+      "sha256_16": "631619200540c9ea",
+      "capture": "contiguous slice of the downloaded file; only whitespace was normalised"
+    }
+  },
+  {
+    "id": "book-020",
+    "text": "They entered the woods, and, bidding adieu to the river for a while,\nascended some of the higher grounds; whence, in spots where the opening\nof the trees gave the eye power to wander, were many charming views of\nthe valley, the opposite hills, with the long range of woods\noverspreading many, and occasionally part of the stream. Mr. Gardiner\nexpressed a wish of going round the whole park, but feared it might be\nbeyond a walk. With a triumphant smile, they were told, that it was ten\nmiles round. It settled the matter; and they pursued the accustomed\ncircuit; which brought them again, after some time, in a descent among\nhanging woods, to the edge of the water, and one of its narrowest parts.\nThey crossed it by a simple bridge, in character with the general air of\nthe scene: it was a spot less adorned than any they had yet visited; and\nthe valley, here contracted into a glen, allowed room only for the\nstream, and a narrow walk amidst the rough coppice-wood which bordered\nit. Elizabeth longed to explore its windings; but when they had crossed\nthe bridge, and perceived their distance from the house, Mrs. Gardiner,\nwho was not a great walker, could go no farther, and thought only of\nreturning to the carriage as quickly as possible. Her niece was,\ntherefore, obliged to submit, and they took their way towards the house\non the opposite side of the river, in the nearest direction; but their\nprogress was slow, for Mr.",
+    "label": "HUMAN",
+    "config": "published_book",
+    "question": null,
+    "source": {
+      "gutenberg": 1342,
+      "title": "Pride and Prejudice",
+      "author": "Jane Austen",
+      "header_date": "June 1, 1998 [eBook #1342]",
+      "url": "https://www.gutenberg.org/cache/epub/1342/pg1342.txt",
+      "fetched_from": "cache",
+      "block_range": "1675-1675",
+      "sha256_16": "7e9c2dab38a31771",
+      "capture": "contiguous slice of the downloaded file; only whitespace was normalised"
+    }
+  },
+  {
+    "id": "book-021",
+    "text": "“Insolent girl!” said Elizabeth to herself. “You are much mistaken if\nyou expect to influence me by such a paltry attack as this. I see\nnothing in it but your own wilful ignorance and the malice of Mr.\nDarcy.” She then sought her eldest sister, who had undertaken to make\ninquiries on the same subject of Bingley. Jane met her with a smile of\nsuch sweet complacency, a glow of such happy expression, as sufficiently\nmarked how well she was satisfied with the occurrences of the evening.\nElizabeth instantly read her feelings; and, at that moment, solicitude\nfor Wickham, resentment against his enemies, and everything else, gave\nway before the hope of Jane’s being in the fairest way for happiness.",
+    "label": "HUMAN",
+    "config": "published_book",
+    "question": null,
+    "source": {
+      "gutenberg": 1342,
+      "title": "Pride and Prejudice",
+      "author": "Jane Austen",
+      "header_date": "June 1, 1998 [eBook #1342]",
+      "url": "https://www.gutenberg.org/cache/epub/1342/pg1342.txt",
+      "fetched_from": "cache",
+      "block_range": "844-844",
+      "sha256_16": "270ccf35c62b5070",
+      "capture": "contiguous slice of the downloaded file; only whitespace was normalised"
+    }
+  },
+  {
+    "id": "book-022",
+    "text": "We Britons had at that time particularly settled that it was\ntreasonable to doubt our having and our being the best of everything:\notherwise, while I was scared by the immensity of London, I think I\nmight have had some faint doubts whether it was not rather ugly,\ncrooked, narrow, and dirty.\nMr. Jaggers had duly sent me his address; it was, Little Britain, and\nhe had written after it on his card, “just out of Smithfield, and close\nby the coach-office.” Nevertheless, a hackney-coachman, who seemed to\nhave as many capes to his greasy great-coat as he was years old, packed\nme up in his coach and hemmed me in with a folding and jingling barrier\nof steps, as if he were going to take me fifty miles. His getting on\nhis box, which I remember to have been decorated with an old\nweather-stained pea-green hammercloth moth-eaten into rags, was quite a\nwork of time. It was a wonderful equipage, with six great coronets\noutside, and ragged things behind for I don’t know how many footmen to\nhold on by, and a harrow below them, to prevent amateur footmen from\nyielding to the temptation.",
+    "label": "HUMAN",
+    "config": "published_book",
+    "question": null,
+    "source": {
+      "gutenberg": 1400,
+      "title": "Great Expectations",
+      "author": "Charles Dickens",
+      "header_date": "July 1, 1998 [eBook #1400]",
+      "url": "https://www.gutenberg.org/cache/epub/1400/pg1400.txt",
+      "fetched_from": "cache",
+      "block_range": "1305-1306",
+      "sha256_16": "15f4b011d3685394",
+      "capture": "contiguous slice of the downloaded file; only whitespace was normalised"
+    }
+  },
+  {
+    "id": "book-023",
+    "text": "Miss Havisham’s intentions towards me, all a mere dream; Estella not\ndesigned for me; I only suffered in Satis House as a convenience, a\nsting for the greedy relations, a model with a mechanical heart to\npractise on when no other practice was at hand; those were the first\nsmarts I had. But, sharpest and deepest pain of all,—it was for the\nconvict, guilty of I knew not what crimes, and liable to be taken out\nof those rooms where I sat thinking, and hanged at the Old Bailey door,\nthat I had deserted Joe.",
+    "label": "HUMAN",
+    "config": "published_book",
+    "question": null,
+    "source": {
+      "gutenberg": 1400,
+      "title": "Great Expectations",
+      "author": "Charles Dickens",
+      "header_date": "July 1, 1998 [eBook #1400]",
+      "url": "https://www.gutenberg.org/cache/epub/1400/pg1400.txt",
+      "fetched_from": "cache",
+      "block_range": "2610-2610",
+      "sha256_16": "5a0920e6deaaa4bc",
+      "capture": "contiguous slice of the downloaded file; only whitespace was normalised"
+    }
+  },
+  {
+    "id": "book-024",
+    "text": "And yet what greater proof can there be of a bad and disgraceful state\nof education than this, that not only artisans and the meaner sort of\npeople need the skill of first-rate physicians and judges, but also\nthose who would profess to have had a liberal education? Is it not\ndisgraceful, and a great sign of want of good-breeding, that a man\nshould have to go abroad for his law and physic because he has none of\nhis own at home, and must therefore surrender himself into the hands of\nother men whom he makes lords and judges over him?",
+    "label": "HUMAN",
+    "config": "published_book",
+    "question": null,
+    "source": {
+      "gutenberg": 1497,
+      "title": "THE REPUBLIC By Plato",
+      "author": "Plato",
+      "header_date": null,
+      "url": "https://www.gutenberg.org/cache/epub/1497/pg1497.txt",
+      "fetched_from": "cache",
+      "block_range": "1582-1582",
+      "sha256_16": "b0e96c9735cff8f8",
+      "capture": "contiguous slice of the downloaded file; only whitespace was normalised"
+    }
+  },
+  {
+    "id": "book-025",
+    "text": "Now take a line which has been cut into two unequal parts, and divide\neach of them again in the same proportion, and suppose the two main\ndivisions to answer, one to the visible and the other to the\nintelligible, and then compare the subdivisions in respect of their\nclearness and want of clearness, and you will find that the first\nsection in the sphere of the visible consists of images. And by images\nI mean, in the first place, shadows, and in the second place,\nreflections in water and in solid, smooth and polished bodies and the\nlike: Do you understand?",
+    "label": "HUMAN",
+    "config": "published_book",
+    "question": null,
+    "source": {
+      "gutenberg": 1497,
+      "title": "THE REPUBLIC By Plato",
+      "author": "Plato",
+      "header_date": null,
+      "url": "https://www.gutenberg.org/cache/epub/1497/pg1497.txt",
+      "fetched_from": "cache",
+      "block_range": "3155-3155",
+      "sha256_16": "1011eb1a3bbe5f48",
+      "capture": "contiguous slice of the downloaded file; only whitespace was normalised"
+    }
+  },
+  {
+    "id": "book-026",
+    "text": "“When we reached the harbour we found it land-locked under steep\ncliffs, with a narrow entrance between two headlands. My captains took\nall their ships inside, and made them fast close to one another, for\nthere was never so much as a breath of wind inside, but it was always\ndead calm. I kept my own ship outside, and moored it to a rock at the\nvery end of the point; then I climbed a high rock to reconnoitre, but\ncould see no sign neither of man nor cattle, only some smoke rising\nfrom the ground. So I sent two of my company with an attendant to find\nout what sort of people the inhabitants were.",
+    "label": "HUMAN",
+    "config": "published_book",
+    "question": null,
+    "source": {
+      "gutenberg": 1727,
+      "title": "The Odyssey",
+      "author": "Homer",
+      "header_date": "April 1, 1999 [eBook #1727]",
+      "url": "https://www.gutenberg.org/cache/epub/1727/pg1727.txt",
+      "fetched_from": "cache",
+      "block_range": "442-442",
+      "sha256_16": "dab97e0b599395b8",
+      "capture": "contiguous slice of the downloaded file; only whitespace was normalised"
+    }
+  },
+  {
+    "id": "book-027",
+    "text": "Ulysses, therefore, went to Parnassus to get the presents from\nAutolycus, who with his sons shook hands with him and gave him welcome.\nHis grandmother Amphithea threw her arms about him, and kissed his\nhead, and both his beautiful eyes, while Autolycus desired his sons to\nget dinner ready, and they did as he told them. They brought in a five\nyear old bull, flayed it, made it ready and divided it into joints;\nthese they then cut carefully up into smaller pieces and spitted them;\nthey roasted them sufficiently and served the portions round. Thus\nthrough the livelong day to the going down of the sun they feasted, and\nevery man had his full share so that all were satisfied; but when the\nsun set and it came on dark, they went to bed and enjoyed the boon of\nsleep.",
+    "label": "HUMAN",
+    "config": "published_book",
+    "question": null,
+    "source": {
+      "gutenberg": 1727,
+      "title": "The Odyssey",
+      "author": "Homer",
+      "header_date": "April 1, 1999 [eBook #1727]",
+      "url": "https://www.gutenberg.org/cache/epub/1727/pg1727.txt",
+      "fetched_from": "cache",
+      "block_range": "890-890",
+      "sha256_16": "14b992103851e543",
+      "capture": "contiguous slice of the downloaded file; only whitespace was normalised"
+    }
+  },
+  {
+    "id": "book-028",
+    "text": "XIII. This may ever be my comfort and security: my understanding, that\nruleth over all, will not of itself bring trouble and vexation upon\nitself. This I say; it will not put itself in any fear, it will not lead\nitself into any concupiscence. If it be in the power of any other to\ncompel it to fear, or to grieve, it is free for him to use his power.\nBut sure if itself do not of itself, through some false opinion or\nsupposition incline itself to any such disposition; there is no fear.\nFor as for the body, why should I make the grief of my body, to be the\ngrief of my mind? If that itself can either fear or complain, let it.\nBut as for the soul, which indeed, can only be truly sensible of either\nfear or grief; to which only it belongs according to its different\nimaginations and opinions, to admit of either of these, or of their\ncontraries; thou mayst look to that thyself, that it suffer nothing.\nInduce her not to any such opinion or persuasion. The understanding\nis of itself sufficient unto itself, and needs not (if itself doth not\nbring itself to need) any other thing besides itself, and by consequent\nas it needs nothing, so neither can it be troubled or hindered by\nanything, if itself doth not trouble and hinder itself.",
+    "label": "HUMAN",
+    "config": "published_book",
+    "question": null,
+    "source": {
+      "gutenberg": 2680,
+      "title": "Meditations",
+      "author": "Emperor of Rome Marcus Aurelius",
+      "header_date": "June 1, 2001 [eBook #2680]",
+      "url": "https://www.gutenberg.org/cache/epub/2680/pg2680.txt",
+      "fetched_from": "cache",
+      "block_range": "249-249",
+      "sha256_16": "035933df71ad001e",
+      "capture": "contiguous slice of the downloaded file; only whitespace was normalised"
+    }
+  },
+  {
+    "id": "book-029",
+    "text": "'This is how I have past the last few days. My sister was suddenly\nseized with an internal pain, so violent that I was horrified at her\nlooks; my mother in her trepidation on that account accidentally\nbruised her side on a corner of the wall; she and we were greatly\ntroubled about that blow. For myself; on going to rest I found a\nscorpion in my bed; but I did not lie down upon him, I killed him\nfirst. If you are getting on better, that is a consolation. My mother\nis easier now, thanks be to God. Good-bye, best and sweetest master. My\nlady sends you greeting.'",
+    "label": "HUMAN",
+    "config": "published_book",
+    "question": null,
+    "source": {
+      "gutenberg": 2680,
+      "title": "Meditations",
+      "author": "Emperor of Rome Marcus Aurelius",
+      "header_date": "June 1, 2001 [eBook #2680]",
+      "url": "https://www.gutenberg.org/cache/epub/2680/pg2680.txt",
+      "fetched_from": "cache",
+      "block_range": "505-505",
+      "sha256_16": "33fdfe62a85bd1ec",
+      "capture": "contiguous slice of the downloaded file; only whitespace was normalised"
+    }
+  },
+  {
+    "id": "book-030",
+    "text": "All whaleboats carry certain curious contrivances, originally invented\nby the Nantucket Indians, called druggs. Two thick squares of wood of\nequal size are stoutly clenched together, so that they cross each\nother’s grain at right angles; a line of considerable length is then\nattached to the middle of this block, and the other end of the line\nbeing looped, it can in a moment be fastened to a harpoon. It is\nchiefly among gallied whales that this drugg is used. For then, more\nwhales are close round you than you can possibly chase at one time. But\nsperm whales are not every day encountered; while you may, then, you\nmust kill all you can. And if you cannot kill them all at once, you\nmust wing them, so that they can be afterwards killed at your leisure.\nHence it is, that at times like these the drugg, comes into\nrequisition. Our boat was furnished with three of them. The first and\nsecond were successfully darted, and we saw the whales staggeringly\nrunning off, fettered by the enormous sidelong resistance of the towing\ndrugg. They were cramped like malefactors with the chain and ball. But\nupon flinging the third, in the act of tossing overboard the clumsy\nwooden block, it caught under one of the seats of the boat, and in an\ninstant tore it out and carried it away, dropping the oarsman in the\nboat’s bottom as the seat slid from under him. On both sides the sea\ncame in at the wounded planks, but we stuffed two or three drawers and\nshirts in, and so stopped the leaks for the time.",
+    "label": "HUMAN",
+    "config": "published_book",
+    "question": null,
+    "source": {
+      "gutenberg": 2701,
+      "title": "Moby Dick; Or, The Whale",
+      "author": "Herman Melville",
+      "header_date": "July 1, 2001 [eBook #2701]",
+      "url": "https://www.gutenberg.org/cache/epub/2701/pg2701.txt",
+      "fetched_from": "cache",
+      "block_range": "1869-1869",
+      "sha256_16": "5b6c0c74db84393c",
+      "capture": "contiguous slice of the downloaded file; only whitespace was normalised"
+    }
+  },
+  {
+    "id": "book-031",
+    "text": "But in his joy at the enchanted, tacit acquiescence of the mate, Ahab\ndid not hear his foreboding invocation; nor yet the low laugh from the\nhold; nor yet the presaging vibrations of the winds in the cordage; nor\nyet the hollow flap of the sails against the masts, as for a moment\ntheir hearts sank in. For again Starbuck’s downcast eyes lighted up\nwith the stubbornness of life; the subterranean laugh died away; the\nwinds blew on; the sails filled out; the ship heaved and rolled as\nbefore. Ah, ye admonitions and warnings! why stay ye not when ye come?\nBut rather are ye predictions than warnings, ye shadows! Yet not so\nmuch predictions from without, as verifications of the foregoing things\nwithin. For with little external to constrain us, the innermost\nnecessities in our being, these still drive us on.",
+    "label": "HUMAN",
+    "config": "published_book",
+    "question": null,
+    "source": {
+      "gutenberg": 2701,
+      "title": "Moby Dick; Or, The Whale",
+      "author": "Herman Melville",
+      "header_date": "July 1, 2001 [eBook #2701]",
+      "url": "https://www.gutenberg.org/cache/epub/2701/pg2701.txt",
+      "fetched_from": "cache",
+      "block_range": "937-937",
+      "sha256_16": "0cb724db04ae8a2d",
+      "capture": "contiguous slice of the downloaded file; only whitespace was normalised"
+    }
+  },
+  {
+    "id": "book-032",
+    "text": "A pale oval face came forward into the light. The arch of its fair\ntrailing moustache was repeated in the fair eyebrows looped above\npleasantly astonished eyes. Mr Fogarty was a modest grocer. He had\nfailed in business in a licensed house in the city because his\nfinancial condition had constrained him to tie himself to second-class\ndistillers and brewers. He had opened a small shop on Glasnevin Road\nwhere, he flattered himself, his manners would ingratiate him with the\nhousewives of the district. He bore himself with a certain grace,\ncomplimented little children and spoke with a neat enunciation. He was\nnot without culture.",
+    "label": "HUMAN",
+    "config": "published_book",
+    "question": null,
+    "source": {
+      "gutenberg": 2814,
+      "title": "Dubliners",
+      "author": "James Joyce",
+      "header_date": "September 1, 2001 [eBook #2814]",
+      "url": "https://www.gutenberg.org/cache/epub/2814/pg2814.txt",
+      "fetched_from": "cache",
+      "block_range": "1136-1136",
+      "sha256_16": "2bef82d469567aac",
+      "capture": "contiguous slice of the downloaded file; only whitespace was normalised"
+    }
+  },
+  {
+    "id": "book-033",
+    "text": "But Maria said she had brought something special for papa and mamma,\nsomething they would be sure to like, and she began to look for her\nplumcake. She tried in Downes’s bag and then in the pockets of her\nwaterproof and then on the hallstand but nowhere could she find it.\nThen she asked all the children had any of them eaten it—by mistake, of\ncourse—but the children all said no and looked as if they did not like\nto eat cakes if they were to be accused of stealing. Everybody had a\nsolution for the mystery and Mrs Donnelly said it was plain that Maria\nhad left it behind her in the tram. Maria, remembering how confused the\ngentleman with the greyish moustache had made her, coloured with shame\nand vexation and disappointment. At the thought of the failure of her\nlittle surprise and of the two and fourpence she had thrown away for\nnothing she nearly cried outright.",
+    "label": "HUMAN",
+    "config": "published_book",
+    "question": null,
+    "source": {
+      "gutenberg": 2814,
+      "title": "Dubliners",
+      "author": "James Joyce",
+      "header_date": "September 1, 2001 [eBook #2814]",
+      "url": "https://www.gutenberg.org/cache/epub/2814/pg2814.txt",
+      "fetched_from": "cache",
+      "block_range": "564-564",
+      "sha256_16": "bd69879e815f1526",
+      "capture": "contiguous slice of the downloaded file; only whitespace was normalised"
+    }
+  },
+  {
+    "id": "book-034",
+    "text": "Both these kinds of monopolies derange more or less the natural\ndistribution of the stock of the society; but they do not always derange\nit in the same way.\nMonopolies of the first kind always attract to the particular trade in\nwhich they are established a greater proportion of the stock of the\nsociety than what would go to that trade of its own accord.\nMonopolies of the second kind may sometimes attract stock towards the\nparticular trade in which they are established, and sometimes repel it\nfrom that trade, according to different circumstances. In poor countries,\nthey naturally attract towards that trade more stock than would otherwise\ngo to it. In rich countries, they naturally repel from it a good deal of\nstock which would otherwise go to it.",
+    "label": "HUMAN",
+    "config": "published_book",
+    "question": null,
+    "source": {
+      "gutenberg": 3300,
+      "title": "An Inquiry into the Nature and Causes of the Wealth of Nations",
+      "author": "Adam Smith",
+      "header_date": "June 1, 2002 [eBook #3300]",
+      "url": "https://www.gutenberg.org/cache/epub/3300/pg3300.txt",
+      "fetched_from": "cache",
+      "block_range": "1463-1465",
+      "sha256_16": "94bcd431e2b5fcb9",
+      "capture": "contiguous slice of the downloaded file; only whitespace was normalised"
+    }
+  },
+  {
+    "id": "book-035",
+    "text": "If they employ it in purchasing goods in one foreign country, in order to\nsupply the consumption of another, or in what is called the carrying\ntrade, whatever profit they make will be in addition to the neat revenue\nof their own country. It is like a new fund, created for carrying on a new\ntrade; domestic business being now transacted by paper, and the gold and\nsilver being converted into a fund for this new trade.\nIf they employ it in purchasing foreign goods for home consumption, they\nmay either, first, purchase such goods as are likely to be consumed by\nidle people, who produce nothing, such as foreign wines, foreign silks,\netc.; or, secondly, they may purchase an additional stock of materials,\ntools, and provisions, in order to maintain and employ an additional\nnumber of industrious people, who reproduce, with a profit, the value of\ntheir annual consumption.",
+    "label": "HUMAN",
+    "config": "published_book",
+    "question": null,
+    "source": {
+      "gutenberg": 3300,
+      "title": "An Inquiry into the Nature and Causes of the Wealth of Nations",
+      "author": "Adam Smith",
+      "header_date": "June 1, 2002 [eBook #3300]",
+      "url": "https://www.gutenberg.org/cache/epub/3300/pg3300.txt",
+      "fetched_from": "cache",
+      "block_range": "731-732",
+      "sha256_16": "38deedade9f4d6aa",
+      "capture": "contiguous slice of the downloaded file; only whitespace was normalised"
+    }
+  },
+  {
+    "id": "book-036",
+    "text": "It was only when he had reached the door that he realised what it\nactually was that had drawn him over to it; it was the smell of\nsomething to eat. By the door there was a dish filled with sweetened\nmilk with little pieces of white bread floating in it. He was so\npleased he almost laughed, as he was even hungrier than he had been\nthat morning, and immediately dipped his head into the milk, nearly\ncovering his eyes with it. But he soon drew his head back again in\ndisappointment; not only did the pain in his tender left side make it\ndifficult to eat the food—he was only able to eat if his whole body\nworked together as a snuffling whole—but the milk did not taste at all\nnice. Milk like this was normally his favourite drink, and his sister\nhad certainly left it there for him because of that, but he turned,\nalmost against his own will, away from the dish and crawled back into\nthe centre of the room.",
+    "label": "HUMAN",
+    "config": "published_book",
+    "question": null,
+    "source": {
+      "gutenberg": 5200,
+      "title": "Metamorphosis",
+      "author": "Franz Kafka",
+      "header_date": "August 17, 2005 [eBook #5200]",
+      "url": "https://www.gutenberg.org/cache/epub/5200/pg5200.txt",
+      "fetched_from": "cache",
+      "block_range": "34-34",
+      "sha256_16": "d970a0970c5a17bf",
+      "capture": "contiguous slice of the downloaded file; only whitespace was normalised"
+    }
+  },
+  {
+    "id": "book-037",
+    "text": "Who, in this tired and overworked family, would have had time to give\nmore attention to Gregor than was absolutely necessary? The household\nbudget became even smaller; so now the maid was dismissed; an enormous,\nthick-boned charwoman with white hair that flapped around her head came\nevery morning and evening to do the heaviest work; everything else was\nlooked after by Gregor’s mother on top of the large amount of sewing\nwork she did. Gregor even learned, listening to the evening\nconversation about what price they had hoped for, that several items of\njewellery belonging to the family had been sold, even though both\nmother and sister had been very fond of wearing them at functions and\ncelebrations. But the loudest complaint was that although the flat was\nmuch too big for their present circumstances, they could not move out\nof it, there was no imaginable way of transferring Gregor to the new\naddress. He could see quite well, though, that there were more reasons\nthan consideration for him that made it difficult for them to move, it\nwould have been quite easy to transport him in any suitable crate with\na few air holes in it; the main thing holding the family back from\ntheir decision to move was much more to do with their total despair,\nand the thought that they had been struck with a misfortune unlike\nanything experienced by anyone else they knew or were related to.",
+    "label": "HUMAN",
+    "config": "published_book",
+    "question": null,
+    "source": {
+      "gutenberg": 5200,
+      "title": "Metamorphosis",
+      "author": "Franz Kafka",
+      "header_date": "August 17, 2005 [eBook #5200]",
+      "url": "https://www.gutenberg.org/cache/epub/5200/pg5200.txt",
+      "fetched_from": "cache",
+      "block_range": "68-68",
+      "sha256_16": "dfb61f08f51d9a97",
+      "capture": "contiguous slice of the downloaded file; only whitespace was normalised"
+    }
+  },
+  {
+    "id": "book-038",
+    "text": "Sect. 75. Thus it was easy, and almost natural for children, by a tacit,\nand scarce avoidable consent, to make way for the father’s authority and\ngovernment. They had been accustomed in their childhood to follow his\ndirection, and to refer their little differences to him, and when they\nwere men, who fitter to rule them? Their little properties, and less\ncovetousness, seldom afforded greater controversies; and when any should\narise, where could they have a fitter umpire than he, by whose care they\nhad every one been sustained and brought up, and who had a tenderness\nfor them all? It is no wonder that they made no distinction betwixt\nminority and full age; nor looked after one and twenty, or any other age\nthat might make them the free disposers of themselves and fortunes, when\nthey could have no desire to be out of their pupilage: the government\nthey had been under, during it, continued still to be more their\nprotection than restraint; and they could no where find a greater\nsecurity to their peace, liberties, and fortunes, than in the rule of a\nfather.",
+    "label": "HUMAN",
+    "config": "published_book",
+    "question": null,
+    "source": {
+      "gutenberg": 7370,
+      "title": "Second Treatise of Government",
+      "author": "John Locke",
+      "header_date": "January 1, 2005 [eBook #7370]",
+      "url": "https://www.gutenberg.org/cache/epub/7370/pg7370.txt",
+      "fetched_from": "cache",
+      "block_range": "123-123",
+      "sha256_16": "5ca80603d039dd54",
+      "capture": "contiguous slice of the downloaded file; only whitespace was normalised"
+    }
+  },
+  {
+    "id": "book-039",
+    "text": "Sect. 159. WHERE the legislative and executive power are in distinct\nhands, (as they are in all moderated monarchies, and well-framed\ngovernments) there the good of the society requires, that several things\nshould be left to the discretion of him that has the executive power:\nfor the legislators not being able to foresee, and provide by laws, for\nall that may be useful to the community, the executor of the laws having\nthe power in his hands, has by the common law of nature a right to make\nuse of it for the good of the society, in many cases, where the\nmunicipal law has given no direction, till the legislative can\nconveniently be assembled to provide for it. Many things there are,\nwhich the law can by no means provide for; and those must necessarily be\nleft to the discretion of him that has the executive power in his hands,\nto be ordered by him as the public good and advantage shall require:\nnay, it is fit that the laws themselves should in some cases give way to\nthe executive power, or rather to this fundamental law of nature and\ngovernment, viz.",
+    "label": "HUMAN",
+    "config": "published_book",
+    "question": null,
+    "source": {
+      "gutenberg": 7370,
+      "title": "Second Treatise of Government",
+      "author": "John Locke",
+      "header_date": "January 1, 2005 [eBook #7370]",
+      "url": "https://www.gutenberg.org/cache/epub/7370/pg7370.txt",
+      "fetched_from": "cache",
+      "block_range": "246-246",
+      "sha256_16": "6953b2579aaf7afd",
+      "capture": "contiguous slice of the downloaded file; only whitespace was normalised"
+    }
+  },
+  {
+    "id": "book-040",
+    "text": "The only basis, alas! of this solution, is an optical delusion--if,\nindeed, an optical delusion can be called a basis at all.\nThe first thing done is to confuse cash with produce, then paper money\nwith cash; and from these two confusions it is pretended that a reality\ncan be drawn.\nIt is absolutely necessary in this question to forget money, coin,\nbills, and the other instruments by means of which productions pass from\nhand to hand. Our business is with the productions themselves, which are\nthe real objects of the loan; for when a farmer borrows fifty francs to\nbuy a plough, it is not, in reality, the fifty francs which are lent to\nhim, but the plough; and when a merchant borrows 20,000 francs to\npurchase a house, it is not the 20,000 francs which he owes, but the\nhouse. Money only appears for the sake of facilitating the arrangements\nbetween the parties.",
+    "label": "HUMAN",
+    "config": "published_book",
+    "question": null,
+    "source": {
+      "gutenberg": 15962,
+      "title": "Essays on Political Economy",
+      "author": "Frédéric Bastiat",
+      "header_date": "May 31, 2005 [eBook #15962]",
+      "url": "https://www.gutenberg.org/cache/epub/15962/pg15962.txt",
+      "fetched_from": "cache",
+      "block_range": "299-301",
+      "sha256_16": "9879f02bf187e9f3",
+      "capture": "contiguous slice of the downloaded file; only whitespace was normalised"
+    }
+  },
+  {
+    "id": "book-041",
+    "text": "B. And what is true of me is true of my neighbour, and of the\nneighbour of my neighbour, and so on, from one to another, all over the\ncountry. Therefore, if every Frenchman has more crowns, France must be\nmore rich.\nF. And here you fall into the common mistake of concluding that what\naffects one affects all, and thus confusing the individual with the\ngeneral interest.\nB. Why, what can be more conclusive? What is true of one, must be so\nof all! What are all, but a collection of individuals? You might as well\ntell me that every Frenchman could suddenly grow an inch taller, without\nthe average height of Frenchmen being increased.",
+    "label": "HUMAN",
+    "config": "published_book",
+    "question": null,
+    "source": {
+      "gutenberg": 15962,
+      "title": "Essays on Political Economy",
+      "author": "Frédéric Bastiat",
+      "header_date": "May 31, 2005 [eBook #15962]",
+      "url": "https://www.gutenberg.org/cache/epub/15962/pg15962.txt",
+      "fetched_from": "cache",
+      "block_range": "599-601",
+      "sha256_16": "5d24b0ab4f7381f2",
+      "capture": "contiguous slice of the downloaded file; only whitespace was normalised"
+    }
+  },
+  {
+    "id": "book-042",
+    "text": "In indescribable excitement, and as quickly as her obese body would\npermit, the Baroness leaped to her feet: \"I know you better,\" she said\nwith trembling lips, \"I have been able to foreshadow what is driving you\nabout; I have seen what makes you so restless. You are not the man you\npretend to be; you are not the cold, heartless creature you seem. In\nyour breast there is a spot where you are vulnerable, and there you have\nbeen struck. You are bleeding, man! If we all, I and your daughter and\nyour brothers and your friends and your cowardly creatures, are as\nindifferent and despicable to you as so many flies, there is one who has\nbeen able to wound you; this fact is gnawing at your heart. And do you\nknow why he was in a position to wound you? Because you loved him. Look\nme in the eye, and tell me that I lie. You loved him--your son--you\nidolised him. The fact that he has repudiated your love, that he found\nit of no value to him, the love that blossomed on the ruined lives of\nhis mother and sister, this is the cause of your sorrow. It is written\nacross your brow. And that you are suffering, and suffering for this\nreason, constitutes my revenge.\"",
+    "label": "HUMAN",
+    "config": "published_book",
+    "question": null,
+    "source": {
+      "gutenberg": 25345,
+      "title": "The Goose Man",
+      "author": "Jakob Wassermann",
+      "header_date": "May 6, 2008 [eBook #25345]",
+      "url": "https://www.gutenberg.org/cache/epub/25345/pg25345.txt",
+      "fetched_from": "cache",
+      "block_range": "1288-1288",
+      "sha256_16": "dc570f8015561cb8",
+      "capture": "contiguous slice of the downloaded file; only whitespace was normalised"
+    }
+  },
+  {
+    "id": "book-043",
+    "text": "\"Eleanore is my wife,\" said Daniel every now and then; he would even\nstop in the middle of the street in order to enjoy to the full, and\npreserve if possible, the blessed realisation of this fact.\nHe always knew it. Yet when he was with Eleanore he frequently forgot\nher presence. There were days when he would pass by her as though she\nwere some chance acquaintance.\nThen there were other days when his happiness made him sceptical; he\nwould say: \"Is it then really happiness? Am I happy? If so, why is it\nthat I do not feel my happiness more fervently, terribly?\"",
+    "label": "HUMAN",
+    "config": "published_book",
+    "question": null,
+    "source": {
+      "gutenberg": 25345,
+      "title": "The Goose Man",
+      "author": "Jakob Wassermann",
+      "header_date": "May 6, 2008 [eBook #25345]",
+      "url": "https://www.gutenberg.org/cache/epub/25345/pg25345.txt",
+      "fetched_from": "cache",
+      "block_range": "2591-2593",
+      "sha256_16": "f8631f5d742b30a4",
+      "capture": "contiguous slice of the downloaded file; only whitespace was normalised"
+    }
+  },
+  {
+    "id": "book-044",
+    "text": "\"Well,\" said Sigurd, \"you say what I believe, but it looks very black\nagainst you.\" Then he told him what the rumours were, how he had been\nseen go down the street, then come up the street, how he had shown\nhimself in the yard, said nothing, but beckoned Halward out; how he had\nnot been seen again, and how Halward had been found stiff in his own\nblood in the street.\nGunnar heard all this in silence, and remained silent so long that\nSigurd had to make him speak. \"Well, what are we to answer them?\" he\nsaid.",
+    "label": "HUMAN",
+    "config": "published_book",
+    "question": null,
+    "source": {
+      "gutenberg": 45107,
+      "title": "Frey and His Wife",
+      "author": "Maurice Hewlett",
+      "header_date": "March 10, 2014 [eBook #45107]",
+      "url": "https://www.gutenberg.org/cache/epub/45107/pg45107.txt",
+      "fetched_from": "cache",
+      "block_range": "242-243",
+      "sha256_16": "aae19d9aab567b6e",
+      "capture": "contiguous slice of the downloaded file; only whitespace was normalised"
+    }
+  },
+  {
+    "id": "book-045",
+    "text": "By slow degrees the winter wore away; the clouds broke up, and the thick\nsnow-fleece was pitted all over as if it had been a blanket which moths\nhad fretted. The days drew out longer; men looked up, feeling the sun;\nthe thatches began to drip, and then to run, and to dig for themselves\ndeep channels in the snow. Then began roof-slides by broad blocks at a\ntime, and a man might be buried in slush before he knew it.\nSigrid said that they must make ready Frey's wagon for the road, and\ntold Gunnar where it was stored and asked him to fetch it out. As soon\nas the buds began to swell on the trees they must be off. Gunnar was\nglad of some work, and soon had the wagon out of the shedding and haled\nit into the forecourt.",
+    "label": "HUMAN",
+    "config": "published_book",
+    "question": null,
+    "source": {
+      "gutenberg": 45107,
+      "title": "Frey and His Wife",
+      "author": "Maurice Hewlett",
+      "header_date": "March 10, 2014 [eBook #45107]",
+      "url": "https://www.gutenberg.org/cache/epub/45107/pg45107.txt",
+      "fetched_from": "cache",
+      "block_range": "483-484",
+      "sha256_16": "e7460793e3732a83",
+      "capture": "contiguous slice of the downloaded file; only whitespace was normalised"
+    }
+  }
+]

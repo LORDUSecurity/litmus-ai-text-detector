@@ -112,7 +112,11 @@ const CANDIDATES = [
   { name: 'B balanced+conf  ', aiT: 0.45, huT: 0.42, confT: 0.60, penalty: 1.00 },
   { name: 'C high-precision ', aiT: 0.69, huT: 0.45, confT: 0.00, penalty: 1.00 },
   { name: 'D highprec+conf  ', aiT: 0.69, huT: 0.35, confT: 0.70, penalty: 1.00 },
-  { name: 'E max-precision  ', aiT: 0.79, huT: 0.38, confT: 0.00, penalty: 1.00 }
+  { name: 'E max-precision  ', aiT: 0.79, huT: 0.38, confT: 0.00, penalty: 1.00 },
+  // The band fitted to the nemotron-3-ultra-550b-a55b:free capture and stored on its own row in
+  // `models` (2026-10-07). Listed as a named point so its fold swing is printed on every corpus,
+  // not just the one it was fitted on -- a band chosen on 48 texts is in-sample by construction.
+  { name: 'G free-mirror band', aiT: 0.56, huT: 0.45, confT: 0.00, penalty: 1.00 }
 ];
 
 // Class-stratified halves (corpus alternates AI/HUMAN, so index parity would be degenerate).

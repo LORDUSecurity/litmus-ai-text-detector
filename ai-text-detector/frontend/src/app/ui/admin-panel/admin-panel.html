@@ -1,0 +1,321 @@
+<section class="panel">
+  <header class="panel-head">
+    <h2>Configuration</h2>
+    <p class="sub">
+      Providers, endpoints, API keys and per-model tuned parameters live in the backend's SQLite
+      database — not in <code>.env</code>. Keys are stored encrypted and are shown here only as a
+      masked hint.
+    </p>
+    <div class="row-actions">
+      <button type="button" (click)="reload()">Reload</button>
+      <button type="button" (click)="showNewProvider.set(!showNewProvider())">
+        {{ showNewProvider() ? 'Cancel' : 'Add provider' }}
+      </button>
+      <button type="button" (click)="showNewModel.set(!showNewModel())">
+        {{ showNewModel() ? 'Cancel' : 'Add model' }}
+      </button>
+      <button type="button" (click)="showNewKey.set(!showNewKey())">
+        {{ showNewKey() ? 'Cancel' : 'Add API key' }}
+      </button>
+    </div>
+  </header>
+
+  @if (message(); as m) {
+    <div [class]="'banner tone-' + (m.tone === 'ok' ? 'preflight' : 'rejected')" role="status">
+      <p class="verbatim">{{ m.text }}</p>
+    </div>
+  }
+
+  @if (showNewProvider()) {
+    <form class="inline-form" (ngSubmit)="createProvider(); $event.preventDefault()">
+      <label>name <input name="pname" [(ngModel)]="newProvider().name" placeholder="nvidia" /></label>
+      <label>base_url
+        <input name="purl" size="38" [(ngModel)]="newProvider().base_url"
+               placeholder="https://integrate.api.nvidia.com/v1" />
+      </label>
+      <label>label <input name="plabel" [(ngModel)]="newProvider().label" /></label>
+      <label>notes <input name="pnotes" size="30" [(ngModel)]="newProvider().notes" /></label>
+      <button class="primary" type="submit" [disabled]="busy()">Save provider</button>
+    </form>
+  }
+
+  @if (showNewKey()) {
+    <form class="inline-form" (ngSubmit)="addKey(); $event.preventDefault()">
+      <label>provider
+        <select name="kprov" [(ngModel)]="newKey().providerId">
+          <option [ngValue]="0">— choose —</option>
+          @for (p of providers(); track p.id) {
+            <option [ngValue]="p.id">{{ p.name }}</option>
+          }
+        </select>
+      </label>
+      <label>label <input name="klabel" [(ngModel)]="newKey().label" /></label>
+      <label>api key
+        <input name="kval" type="password" size="40" autocomplete="off"
+               [(ngModel)]="newKey().api_key" placeholder="nvapi-… / sk-or-…" />
+      </label>
+      <button class="primary" type="submit" [disabled]="busy()">Store encrypted</button>
+      <span class="hint">The plaintext is sent once over loopback, encrypted with Fernet, and never
+        returned by any endpoint.</span>
+    </form>
+  }
+
+  @if (showNewModel()) {
+    <form class="inline-form" (ngSubmit)="createModel(); $event.preventDefault()">
+      <label>provider
+        <select name="mprov" [(ngModel)]="newModel().provider_id">
+          <option [ngValue]="0">— choose —</option>
+          @for (p of providers(); track p.id) {
+            <option [ngValue]="p.id">{{ p.name }}</option>
+          }
+        </select>
+      </label>
+      <label>model id
+        <input name="mid" size="40" [(ngModel)]="newModel().model_id"
+               placeholder="nvidia/nemotron-3-ultra-550b-a55b" />
+      </label>
+      <label>lane
+        <select name="mlane" [(ngModel)]="newModel().lane">
+          <option [ngValue]="null">unassigned</option>
+          <option value="primary">primary</option>
+          <option value="secondary">secondary</option>
+        </select>
+      </label>
+      <label>notes <input name="mnotes" size="26" [(ngModel)]="newModel().notes" /></label>
+      <button class="primary" type="submit" [disabled]="busy()">Save model</button>
+    </form>
+  }
+
+  @for (p of providers(); track p.id) {
+    <article class="card">
+      <header class="card-head">
+        <h3>{{ p.label || p.name }} <code>{{ p.name }}</code></h3>
+        <span class="pill" [class.pill-off]="!p.enabled">{{ p.enabled ? 'enabled' : 'disabled' }}</span>
+        @if (p.free_tier) { <span class="pill">free tier</span> }
+      </header>
+      <p class="mono">{{ p.base_url }}</p>
+      @if (p.notes) { <p class="hint">{{ p.notes }}</p> }
+      <p class="hint">
+        {{ p.key_count }} key(s) · {{ p.model_count }} model(s) · auth
+        <code>{{ p.auth_header }}: {{ p.auth_prefix }}&lt;key&gt;</code>
+      </p>
+
+      <table class="grid">
+        <thead>
+          <tr><th>stored keys</th><th>hint</th><th>last used</th><th>active</th><th></th></tr>
+        </thead>
+        <tbody>
+          @for (k of p.keys; track k.id) {
+            <tr>
+              <td>{{ k.label }}</td>
+              <td class="mono">{{ k.key_hint }}</td>
+              <td class="hint">{{ keyUsed(k.last_used_at) }}</td>
+              <td>
+                <button type="button" (click)="toggleKey(k.id, !k.is_active)">
+                  {{ k.is_active ? 'deactivate' : 'activate' }}
+                </button>
+              </td>
+              <td><button type="button" class="danger" (click)="deleteKey(k.id)">delete</button></td>
+            </tr>
+          } @empty {
+            <tr><td colspan="5" class="hint">No key stored — detection for this provider will fail
+              with PROVIDER_KEY_MISSING unless the browser supplies one.</td></tr>
+          }
+        </tbody>
+      </table>
+
+      @if (p.models.length) {
+        <table class="grid">
+          <thead>
+            <tr>
+              <th>model</th><th>lane</th><th>temp</th><th>top_p</th>
+              <th title="0 sends no max_tokens at all: the model answers until it closes its JSON">
+                max_tok (0 = auto)</th>
+              <th>ai ≥</th><th>human ≤</th><th>tie-break ≥</th><th></th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (m of p.models; track m.id) {
+              <tr>
+                <td class="mono">{{ m.model_id }}</td>
+                <td>
+                  <select (change)="assign(m, $any($event.target).value)">
+                    <option value="" [selected]="m.lane === null">—</option>
+                    <option value="primary" [selected]="m.lane === 'primary'">primary</option>
+                    <option value="secondary" [selected]="m.lane === 'secondary'">secondary</option>
+                  </select>
+                </td>
+                <td><input class="num" type="number" step="0.05" [value]="m.temperature"
+                           (change)="editDraft(m, 'temperature', $any($event.target).value)" /></td>
+                <td><input class="num" type="number" step="0.05" [value]="m.top_p"
+                           (change)="editDraft(m, 'top_p', $any($event.target).value)" /></td>
+                <td><input class="num" type="number" step="50" [value]="m.max_tokens"
+                           (change)="editDraft(m, 'max_tokens', $any($event.target).value)" /></td>
+                <td><input class="num" type="number" step="0.01" [value]="m.ai_prob_threshold"
+                           (change)="editDraft(m, 'ai_prob_threshold', $any($event.target).value)" /></td>
+                <td><input class="num" type="number" step="0.01" [value]="m.human_prob_threshold"
+                           (change)="editDraft(m, 'human_prob_threshold', $any($event.target).value)" /></td>
+                <td><input class="num" type="number" step="0.01" [value]="m.secondary_decision_threshold"
+                           (change)="editDraft(m, 'secondary_decision_threshold', $any($event.target).value)" /></td>
+                <td class="row-actions">
+                  <button type="button" (click)="saveModel(m)" [disabled]="!hasDraft(m) || busy()">
+                    Save
+                  </button>
+                  <button type="button" (click)="runProbe(p, m.model_id)" [disabled]="busy()">Probe</button>
+                  <button type="button" class="danger" (click)="deleteModel(m)">Delete</button>
+                </td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      }
+      <div class="row-actions">
+        <button type="button" (click)="updateProvider(p, 'enabled', !p.enabled)">
+          {{ p.enabled ? 'Disable' : 'Enable' }} provider
+        </button>
+        <button type="button" class="danger" (click)="deleteProvider(p)">Delete provider</button>
+      </div>
+    </article>
+  } @empty {
+    <p class="hint">No providers in the database yet. Run <code>python -m backend.seed</code> to
+      import them from <code>.env</code>, or add one above.</p>
+  }
+
+  @if (probe(); as r) {
+    <article class="card">
+      <header class="card-head">
+        <h3>Probe result</h3>
+        <span class="pill" [class.pill-off]="!r.ok">{{ r.ok ? 'answered' : 'failed' }}</span>
+      </header>
+      <p class="mono">{{ r.provider }} · {{ r.model }} · {{ r.base_url }}</p>
+      <p class="hint">
+        HTTP {{ r.status ?? 'n/a' }} in {{ r.latency_ms }}ms
+        @if (r.reply_excerpt) { · reply "{{ r.reply_excerpt }}" }
+      </p>
+      @if (r.error) { <p class="verbatim">{{ r.error }}</p> }
+      @if (r.hint) { <p class="hint">{{ r.hint }}</p> }
+    </article>
+  }
+
+  <!-- Engine target + ranking-page links. Admin-only on the server: /settings is in
+       _ADMIN_PREFIXES_ANY_METHOD, so a plain user gets 403 on GET and POST alike. This is the
+       answer to "how does a packaged local app get a verdict" — it posts to the URL below, and
+       the machine it runs on is the only place that can be wrong. -->
+  <article class="card">
+    <header class="card-head">
+      <h3>Detection engine &amp; site links</h3>
+      @if (engine(); as e) {
+        <span class="pill" [class.pill-off]="!e.reachable">
+          {{ e.reachable ? 'engine reachable' : 'engine unreachable' }}
+        </span>
+      } @else {
+        <span class="pill pill-off">engine status unknown</span>
+      }
+    </header>
+
+    @if (settingsBlocked()) {
+      <p class="hint">
+        These settings are admin-only and this session may not read them. Sign in as the admin to
+        change the engine target, the paper link and the key guides for every user.
+      </p>
+    } @else {
+      <p class="hint">
+        Every detection is decided by the n8n workflow at the URL below — the packaged app ships
+        pointing at <code>{{ engineTarget() }}</code>, so on a machine without n8n nothing here can
+        answer until you point it at a reachable one (a hosted deployment, or
+        <code>docker compose up n8n</code> on this host). Leave a field blank to use that default.
+      </p>
+
+      <form class="inline-form" (ngSubmit)="saveEngine(); $event.preventDefault()">
+        <label>engine URL
+          <input name="n8n_url" size="38" [ngModel]="draft().n8n_url"
+                 (ngModelChange)="editSetting('n8n_url', $event)"
+                 [placeholder]="defaultEngineUrl" autocomplete="off" />
+        </label>
+        <label>webhook path
+          <input name="webhook_path" size="26" [ngModel]="draft().webhook_path"
+                 (ngModelChange)="editSetting('webhook_path', $event)"
+                 [placeholder]="defaultWebhookPath" autocomplete="off" />
+        </label>
+        <button class="primary" type="submit" [disabled]="busy() || draftProblem() !== null">
+          Save engine target
+        </button>
+        <button type="button" (click)="checkEngine()">Re-check</button>
+      </form>
+
+      @if (draftProblem(); as problem) {
+        <p class="verbatim">{{ problem }}</p>
+      }
+
+      @if (engine(); as e) {
+        <p class="mono">
+          posting to {{ e.n8n_url }} · /healthz {{ e.healthz ?? 'no answer' }} · workflow
+          <code>{{ e.workflow_id }}</code>
+        </p>
+        <p class="hint">
+          @if (e.published) { workflow published } @else { workflow NOT published — a webhook on an
+          unpublished version answers 404 }
+          @if (e.webhook_registered) { · webhook registered } @else { · webhook not registered }
+          @if (!e.db_readable) { · n8n database not readable from the backend ({{ e.db_error }}) }
+        </p>
+      }
+
+      <h4>Ranking page links</h4>
+      <form class="inline-form" (ngSubmit)="saveLinks(); $event.preventDefault()">
+        <label>paper URL
+          <input name="paper_url" size="38" [ngModel]="draft().paper_url"
+                 (ngModelChange)="editSetting('paper_url', $event)"
+                 placeholder="https://zenodo.org/record/…" autocomplete="off" />
+        </label>
+        <label>link label
+          <input name="paper_title" [ngModel]="draft().paper_title"
+                 (ngModelChange)="editSetting('paper_title', $event)" />
+        </label>
+        <button class="primary" type="submit" [disabled]="busy() || draftProblem() !== null">
+          Save links
+        </button>
+      </form>
+      <p class="hint">
+        Blank paper URL removes the button from the Ranking page; the reference stays in
+        <code>docs/</code> until it is published. <code>allowed_llm_hosts</code> is the comma-list of
+        gateway hosts BYOK may point at.
+      </p>
+      <label>allowed gateway hosts
+        <input name="allowed_llm_hosts" size="60" [ngModel]="draft().allowed_llm_hosts"
+               (ngModelChange)="editSetting('allowed_llm_hosts', $event)"
+               placeholder="integrate.api.nvidia.com, openrouter.ai" autocomplete="off" />
+      </label>
+
+      <h4>Key guides</h4>
+      <!-- Each row is bound through editGuide rather than [(ngModel)]: the rows live inside the
+           `guides` signal, and mutating g.provider in place never re-invalidates it under zoneless
+           (the same lesson the model-parameter drafts learned). `name` is bound as [attr.name]
+           because NgModel claims a `name` *input* — a plain [name] binding is eaten by the
+           directive and never reaches the DOM, which makes the row unaddressable. -->
+      @for (g of guides(); track $index) {
+        <div class="inline-form">
+          <label>provider
+            <input [attr.name]="'guide_p_' + $index" [ngModel]="g.provider"
+                   (ngModelChange)="editGuide($index, 'provider', $event)" />
+          </label>
+          <label>url
+            <input [attr.name]="'guide_u_' + $index" size="34" [ngModel]="g.url"
+                   (ngModelChange)="editGuide($index, 'url', $event)"
+                   placeholder="https://build.nvidia.com/playground" autocomplete="off" />
+          </label>
+          <label>steps
+            <input [attr.name]="'guide_s_' + $index" size="44" [ngModel]="g.steps"
+                   (ngModelChange)="editGuide($index, 'steps', $event)"
+                   placeholder="sign up → get key → paste below" />
+          </label>
+          <button type="button" class="danger" (click)="removeGuide($index)">Remove</button>
+        </div>
+      } @empty {
+        <p class="hint">No guides yet — the Ranking page shows only the providers it knows about.</p>
+      }
+      <div class="row-actions">
+        <button type="button" (click)="addGuide()">Add guide</button>
+      </div>
+    }
+  </article>
+</section>

@@ -1,0 +1,18 @@
+resume-lanes — 1 incomplete lane(s) [GO]
+
+or-google-gemma-4-26b-a4b-it-free  google/gemma-4-26b-a4b-it:free  usable=0/12  missing=12
+
+skipped (not resumable):
+  rl-429check — base_url http://127.0.0.1:8799/v1 not in .env
+
+===== resume or-google-gemma-4-26b-a4b-it-free =====
+tag=or-google-gemma-4-26b-a4b-it-free model=google/gemma-4-26b-a4b-it:free prompt=direct temp=0.1 top_p=0.9 max_tokens=700 timeout_s=120 n=12 concurrency=1
+base_url=https://openrouter.ai/api/v1 keys=3
+  [ 1/12] ai-000 AI    open_qa     -> ERR:http_429 (143ms, try6)
+  [ 2/12] ai-004 AI    wiki_csai   -> ERR:http_429 (134ms, try6)
+  [ 3/12] ai-008 AI    medicine    -> ERR:http_429 (189ms, try6)
+  [ 4/12] ai-012 AI    finance     -> ERR:http_429 (102ms, try6)
+  [ 5/12] ai-016 AI    reddit_eli5 -> ERR:http_429 (337ms, try6)
+  [ 6/12] ai-020 AI    open_qa     -> ERR:http_429 (135ms, try6)
+  [ 7/12] hu-000 HUMAN open_qa     -> ERR:http_429 (168ms, try6)
+  [ 8/12] hu-004 HUMAN wiki_csai   -> ERR:http_429 (299ms, try6)

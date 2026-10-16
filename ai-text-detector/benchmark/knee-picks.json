@@ -1,0 +1,15 @@
+[
+ {
+  "row_id": 30,
+  "model": "kiro/claude-sonnet-4.5",
+  "ai": 0.8,
+  "hum": 0.3,
+  "gate": 0,
+  "decided": 86,
+  "wrong": 0,
+  "acc_decided": 1,
+  "margin": 0.05,
+  "lattice": "0.15 0.25 0.72 0.75 0.85 0.88 0.92",
+  "changed": false
+ }
+]

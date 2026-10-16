@@ -1,0 +1,11 @@
+resume: keeping 46 scored row(s), calling 2
+tag=nvfull-kimi-k3 model=moonshotai/kimi-k3 prompt=direct temp=0.1 top_p=0.95 max_tokens=1400 timeout_s=260 n=2 concurrency=1
+base_url=https://integrate.api.nvidia.com/v1 keys=1
+  [ 1/2] ai-002 AI    finance     -> 0.87 conf=0.80 (10415ms)
+  [ 2/2] ai-015 AI    open_qa     -> 0.78 conf=0.66 (11298ms)
+
+wrote C:\Users\adam\Desktop\humanizer ultra\ai-text-detector\benchmark\results-nvfull-kimi-k3.jsonl
+params: {"tag":"nvfull-kimi-k3","model":"moonshotai/kimi-k3","prompt":"direct","temperature":0.1,"top_p":0.95,"max_tokens":1400,"tries":2,"wait_ms":15000,"timeout_s":260,"concurrency":1,"base_url":"https://integrate.api.nvidia.com/v1","corpus":"corpus.json","rows":48,"usable":48}
+usable=48/48 salvaged=0 truncated=0 errors=none
+latency ms p50/p90/max: 12649/222968/257887
+wall clock: 21.7s

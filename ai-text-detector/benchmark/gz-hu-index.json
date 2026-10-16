@@ -1,0 +1,122 @@
+[
+ {
+  "id": "hu-000",
+  "config": "finance",
+  "len": 1266
+ },
+ {
+  "id": "hu-001",
+  "config": "medicine",
+  "len": 501
+ },
+ {
+  "id": "hu-002",
+  "config": "open_qa",
+  "len": 350
+ },
+ {
+  "id": "hu-003",
+  "config": "reddit_eli5",
+  "len": 542
+ },
+ {
+  "id": "hu-004",
+  "config": "wiki_csai",
+  "len": 426
+ },
+ {
+  "id": "hu-005",
+  "config": "finance",
+  "len": 645
+ },
+ {
+  "id": "hu-006",
+  "config": "medicine",
+  "len": 597
+ },
+ {
+  "id": "hu-007",
+  "config": "open_qa",
+  "len": 310
+ },
+ {
+  "id": "hu-008",
+  "config": "reddit_eli5",
+  "len": 812
+ },
+ {
+  "id": "hu-009",
+  "config": "wiki_csai",
+  "len": 632
+ },
+ {
+  "id": "hu-010",
+  "config": "finance",
+  "len": 418
+ },
+ {
+  "id": "hu-011",
+  "config": "medicine",
+  "len": 376
+ },
+ {
+  "id": "hu-012",
+  "config": "open_qa",
+  "len": 428
+ },
+ {
+  "id": "hu-013",
+  "config": "reddit_eli5",
+  "len": 361
+ },
+ {
+  "id": "hu-014",
+  "config": "wiki_csai",
+  "len": 457
+ },
+ {
+  "id": "hu-015",
+  "config": "finance",
+  "len": 314
+ },
+ {
+  "id": "hu-016",
+  "config": "medicine",
+  "len": 358
+ },
+ {
+  "id": "hu-017",
+  "config": "open_qa",
+  "len": 321
+ },
+ {
+  "id": "hu-018",
+  "config": "reddit_eli5",
+  "len": 1327
+ },
+ {
+  "id": "hu-019",
+  "config": "wiki_csai",
+  "len": 435
+ },
+ {
+  "id": "hu-020",
+  "config": "finance",
+  "len": 944
+ },
+ {
+  "id": "hu-021",
+  "config": "medicine",
+  "len": 825
+ },
+ {
+  "id": "hu-022",
+  "config": "open_qa",
+  "len": 301
+ },
+ {
+  "id": "hu-023",
+  "config": "reddit_eli5",
+  "len": 593
+ }
+]

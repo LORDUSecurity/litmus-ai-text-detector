@@ -1,0 +1,83 @@
+[
+ {
+  "model": "vertex/DeepSeek-V4-Flash",
+  "http": 404,
+  "ms": 11319,
+  "verdict": "PROVIDER_ERROR",
+  "detail": "[vertex/DeepSeek-V4-Flash] [404]: Unknown error (reset after 2m)",
+  "limit_source": null,
+  "provider": null
+ },
+ {
+  "model": "vertex/GLM-5.1-FP8",
+  "http": 404,
+  "ms": 11001,
+  "verdict": "PROVIDER_ERROR",
+  "detail": "[vertex/GLM-5.1-FP8] [404]: Unknown error (reset after 2m)",
+  "limit_source": null,
+  "provider": null
+ },
+ {
+  "model": "vertex/Qwen3.6-35B-A3B",
+  "http": 404,
+  "ms": 10909,
+  "verdict": "PROVIDER_ERROR",
+  "detail": "[vertex/Qwen3.6-35B-A3B] [404]: Unknown error (reset after 2m)",
+  "limit_source": null,
+  "provider": null
+ },
+ {
+  "model": "vertex/claude-haiku-4-5",
+  "http": 404,
+  "ms": 11063,
+  "verdict": "PROVIDER_ERROR",
+  "detail": "[vertex/claude-haiku-4-5] [404]: Unknown error (reset after 2m)",
+  "limit_source": null,
+  "provider": null
+ },
+ {
+  "model": "vertex/claude-opus-4-5",
+  "http": 404,
+  "ms": 10929,
+  "verdict": "PROVIDER_ERROR",
+  "detail": "[vertex/claude-opus-4-5] [404]: Unknown error (reset after 2m)",
+  "limit_source": null,
+  "provider": null
+ },
+ {
+  "model": "vertex/claude-sonnet-4-5",
+  "http": 404,
+  "ms": 10909,
+  "verdict": "PROVIDER_ERROR",
+  "detail": "[vertex/claude-sonnet-4-5] [404]: Unknown error (reset after 2m)",
+  "limit_source": null,
+  "provider": null
+ },
+ {
+  "model": "vertex/gemini-2.5-flash",
+  "http": 401,
+  "ms": 13949,
+  "verdict": "PROVIDER_ERROR",
+  "detail": "[401]: API keys are not supported by this API. Expected OAuth2 access token or other authentication credentials that assert a principal. See https://cloud.googl",
+  "limit_source": null,
+  "provider": null
+ },
+ {
+  "model": "vertex/gemini-3.1-flash-lite",
+  "http": 401,
+  "ms": 3502,
+  "verdict": "PROVIDER_ERROR",
+  "detail": "[401]: API keys are not supported by this API. Expected OAuth2 access token or other authentication credentials that assert a principal. See https://cloud.googl",
+  "limit_source": null,
+  "provider": null
+ },
+ {
+  "model": "vertex/gemma-4-31b-it",
+  "http": 401,
+  "ms": 81,
+  "verdict": "PROVIDER_ERROR",
+  "detail": "[vertex] All 1 connection(s) authentication expired — please reconnect in the dashboard",
+  "limit_source": null,
+  "provider": null
+ }
+]

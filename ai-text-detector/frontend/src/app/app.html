@@ -1,0 +1,168 @@
+@if (!auth.ready()) {
+  <div class="splash">
+    <div class="orbit" aria-hidden="true"></div>
+  </div>
+} @else if (!auth.user()) {
+  <app-login-view />
+} @else {
+  <main class="shell">
+    <header class="appbar">
+      <div class="brand">
+        <span class="brand-mark" aria-hidden="true">
+          <svg viewBox="0 0 24 24">
+            <path d="M12 2.6l7.5 4.2v5.4c0 4.7-3.2 8.2-7.5 9.4-4.3-1.2-7.5-4.7-7.5-9.4V6.8L12 2.6z" />
+            <path d="M8.2 12.4l2.4 2.4 5-5.4" />
+          </svg>
+        </span>
+        <div>
+          <h1>AI text detection</h1>
+          <p class="sub">Calibrated free-model lanes</p>
+        </div>
+      </div>
+
+      <nav class="nav" role="tablist" aria-label="Views">
+        @for (t of tabs(); track t.id) {
+          <button type="button" role="tab" [attr.aria-selected]="view() === t.id"
+                  (click)="setView(t.id)">
+            <svg class="ico" viewBox="0 0 24 24" aria-hidden="true">
+              @switch (t.id) {
+                @case ('detect') {
+                  <circle cx="11" cy="11" r="6.5" /><path d="M16 16l4.5 4.5M11 8.2v5.6M8.2 11h5.6" />
+                }
+                @case ('ranking') {
+                  <path d="M4 20V9M10 20V4M16 20v-7M22 20H2" />
+                }
+                @case ('history') {
+                  <circle cx="12" cy="12" r="8.5" /><path d="M12 7.5V12l3 2" />
+                }
+                @default {
+                  <path d="M4 7h9M17.5 7H20M4 17h2M10.5 17H20" />
+                  <circle cx="15.2" cy="7" r="2.2" /><circle cx="8.2" cy="17" r="2.2" />
+                }
+              }
+            </svg>
+            {{ t.label }}
+          </button>
+        }
+      </nav>
+
+      <div class="appbar-right">
+        <button type="button" class="icon-btn" (click)="auth.toggleTheme()"
+                [attr.aria-label]="'Switch to ' + (auth.theme() === 'dark' ? 'light' : 'dark') + ' mode'"
+                [title]="'Switch to ' + (auth.theme() === 'dark' ? 'light' : 'dark') + ' mode'">
+          <svg class="ico" viewBox="0 0 24 24" aria-hidden="true">
+            @if (auth.theme() === 'dark') {
+              <circle cx="12" cy="12" r="4.5" />
+              <path d="M12 2v2.5M12 19.5V22M2 12h2.5M19.5 12H22M4.9 4.9l1.8 1.8M17.3 17.3l1.8 1.8M19.1 4.9l-1.8 1.8M6.7 17.3l-1.8 1.8" />
+            } @else {
+              <path d="M20 14.5A8.5 8.5 0 019.5 4a8.5 8.5 0 1010.5 10.5z" />
+            }
+          </svg>
+        </button>
+        <div class="user-chip">
+          <span>{{ auth.username() }}</span>
+          <span class="role" [class.user]="!auth.isAdmin()">{{ auth.isAdmin() ? 'admin' : 'user' }}</span>
+          <button type="button" class="icon-btn" (click)="logout()" aria-label="Sign out" title="Sign out"
+                  style="width:30px;height:30px;border-radius:9px">
+            <svg class="ico" viewBox="0 0 24 24" aria-hidden="true">
+              <path d="M15 4h3a2 2 0 012 2v12a2 2 0 01-2 2h-3M10 8l-4 4 4 4M6 12h11" />
+            </svg>
+          </button>
+        </div>
+      </div>
+    </header>
+
+    @if (view() === 'detect') {
+      @if (notice(); as n) {
+        <div [class]="'banner tone-' + n.kind" role="alert">
+          <svg class="ico banner-ico" viewBox="0 0 24 24" aria-hidden="true">
+            @if (n.kind === 'preflight' || n.kind === 'timeout') {
+              <path d="M12 4.5l8.5 15H3.5l8.5-15z" /><path d="M12 10.5v4M12 17.2v.2" />
+            } @else {
+              <circle cx="12" cy="12" r="8.5" /><path d="M9 9l6 6M15 9l-6 6" />
+            }
+          </svg>
+          <div class="banner-body">
+            @if (n.kind === 'preflight') {
+              <h3>Not sent — fix this first</h3>
+              <ul>
+                @for (line of n.lines; track line) {
+                  <li>{{ line }}</li>
+                }
+              </ul>
+            } @else if (n.kind === 'rejected') {
+              <h3>The workflow rejected the request · HTTP {{ n.status }} · {{ n.errorCode }}</h3>
+              <p class="verbatim">{{ n.error }}</p>
+              @if (n.hint) {
+                <p class="hint">{{ n.hint }}</p>
+              }
+            } @else if (n.kind === 'n8n') {
+              <h3>n8n answered before the workflow could · HTTP {{ n.status }}</h3>
+              <p class="verbatim">{{ n.detail }}</p>
+            } @else if (n.kind === 'unreachable') {
+              <h3>Cannot reach the detection path</h3>
+              <p class="verbatim">{{ n.detail }}</p>
+            } @else if (n.kind === 'timeout') {
+              <h3>Timed out after 150 seconds</h3>
+              <p class="verbatim">{{ n.detail }}</p>
+            }
+          </div>
+        </div>
+      }
+
+      <app-text-panel [state]="form" />
+
+      @if (pickedModel(); as p) {
+        <!-- Say out loud that this run is NOT the deployed lane. A ranked model picked from
+             the Ranking tab answers outside its calibration only if it has no stored band,
+             and the verdict row records the model that decided, so a mislabel is traceable. -->
+        <div class="pick-banner">
+          <span class="pick-dot" aria-hidden="true"></span>
+          Scoring with <b>{{ p }}</b> — chosen on the Ranking tab. Its endpoint, calibrated band
+          and key are applied by the backend.
+          @if (pickedIsTieBreak()) {
+            <span class="pick-note">It is also the deployed tie-break model, so the second opinion
+              is off for this run — a model cannot corroborate itself.</span>
+          }
+          <button class="linkbtn" type="button" (click)="clearPickedModel()">use the deployed lane</button>
+        </div>
+      }
+
+      <div class="run-row">
+        <button class="primary" type="button" [disabled]="pending()" (click)="run()">
+          <svg class="ico" viewBox="0 0 24 24" aria-hidden="true">
+            <circle cx="12" cy="12" r="8.5" /><path d="M12 7.5V12l3 2" />
+          </svg>
+          {{ pending() ? 'Detecting… ' + elapsed() + 's' : 'Detect' }}
+        </button>
+        @if (pending()) {
+          <span class="inflight"><span class="pulse" aria-hidden="true"></span>elapsed {{ elapsed() }}s · {{ inflightHint() }}</span>
+        }
+      </div>
+
+      @if (result(); as r) {
+        <app-result-card [result]="r" [elapsedSeconds]="elapsed()" [text]="detectedText()" />
+        <app-raw-json [data]="r" />
+      }
+    }
+
+    @if (view() === 'ranking') {
+      <app-ranking-view (useModel)="useRankedModel($event)" />
+    }
+
+    @if (view() === 'history') {
+      <app-history-view (reopen)="reopenFromHistory($event)" />
+    }
+
+    @if (view() === 'admin' && auth.isAdmin()) {
+      <div class="panel" style="padding:14px 18px">
+        <p class="muted" style="margin:0">
+          Admin controls. The models, per-model tuned bands, shared API keys and thresholds you set
+          here become the defaults for every user — they never see or change these parameters.
+        </p>
+      </div>
+      <app-admin-panel />
+      <app-config-panel [state]="form" />
+    }
+  </main>
+}

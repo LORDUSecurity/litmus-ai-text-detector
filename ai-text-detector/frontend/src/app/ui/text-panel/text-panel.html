@@ -1,0 +1,45 @@
+<section class="panel">
+  <header class="panel-head">
+    <h2>
+      <svg class="ico" viewBox="0 0 24 24" aria-hidden="true">
+        <path d="M5 5h14M5 10h14M5 15h9M5 20h5" />
+      </svg>
+      Text
+    </h2>
+    <div class="panel-actions">
+      @for (s of samples; track s.id) {
+        <button type="button" class="ghost" (click)="load(s.text)">{{ s.label }}</button>
+      }
+      <label class="ghost" [attr.aria-busy]="extracting()">
+        <input class="file-input" type="file" accept=".txt,.md,.docx,.pdf"
+               (change)="pickFile($event)" />
+        <svg class="ico" viewBox="0 0 24 24" aria-hidden="true">
+          <path d="M12 3v11m0 0 4-4m-4 4-4-4M4 17v3h16v-3" />
+        </svg>
+        {{ extracting() ? 'Reading…' : 'Load document' }}
+      </label>
+      <button type="button" class="ghost" (click)="clear()">Clear</button>
+    </div>
+  </header>
+
+  <textarea
+    rows="12"
+    spellcheck="false"
+    placeholder="Paste the text to judge. 10 to 50000 characters."
+    [ngModel]="state.text()"
+    (ngModelChange)="state.text.set($event)"></textarea>
+
+  <p class="counter" [class.bad]="tooShort() || tooLong()">
+    {{ length() | number }} chars
+    @if (tooShort()) {
+      · minimum {{ min }}
+    }
+    @if (tooLong()) {
+      · over the {{ max }} limit by {{ length() - max }}
+    }
+  </p>
+
+  @if (docStatus(); as s) {
+    <p class="doc-status" [class.bad]="s.bad" aria-live="polite">{{ s.text }}</p>
+  }
+</section>

@@ -1,0 +1,21 @@
+tag=gemini-screen-3flash model=gemini-3-flash-preview prompt=direct temp=0.1 top_p=0.9 max_tokens=1400 timeout_s=90 n=12 concurrency=1
+base_url=https://generativelanguage.googleapis.com/v1beta/openai keys=1
+  [ 1/12] ai-000 AI    open_qa     -> 0.96 conf=0.92 (4092ms)
+  [ 2/12] ai-004 AI    wiki_csai   -> 0.96 conf=0.92 (2575ms)
+  [ 3/12] ai-008 AI    medicine    -> 0.98 conf=0.95 (3501ms)
+  [ 4/12] ai-012 AI    finance     -> 0.92 conf=0.88 (16963ms, try4)
+  [ 5/12] ai-016 AI    reddit_eli5 -> 0.98 conf=0.95 (4866ms)
+  [ 6/12] ai-020 AI    open_qa     -> 0.92 conf=0.88 (3531ms)
+  [ 7/12] hu-000 HUMAN open_qa     -> 0.12 conf=0.90 (7050ms)
+  [ 8/12] hu-004 HUMAN wiki_csai   -> 0.85 conf=0.90 (4209ms)
+  [ 9/12] hu-008 HUMAN medicine    -> 0.12 conf=0.92 (4368ms)
+  [10/12] hu-012 HUMAN finance     -> 0.05 conf=0.92 (4443ms)
+  [11/12] hu-016 HUMAN reddit_eli5 -> 0.05 conf=0.95 (17347ms, try3)
+  [12/12] hu-020 HUMAN open_qa     -> 0.08 conf=0.95 (7306ms)
+
+wrote C:\Users\adam\Desktop\humanizer ultra\ai-text-detector\benchmark\results-gemini-screen-3flash.jsonl
+params: {"tag":"gemini-screen-3flash","model":"gemini-3-flash-preview","prompt":"direct","temperature":0.1,"top_p":0.9,"max_tokens":1400,"tries":4,"wait_ms":15000,"timeout_s":90,"concurrency":1,"base_url":"https://generativelanguage.googleapis.com/v1beta/openai","corpus":"corpus-screen12.json","rows":12,"usable":12}
+usable=12/12 salvaged=0 truncated=0 errors=none
+latency ms p50/p90/max: 4443/16963/17347
+wall clock: 230.9s
+EXIT=0

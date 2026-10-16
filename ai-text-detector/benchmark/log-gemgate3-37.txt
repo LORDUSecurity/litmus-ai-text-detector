@@ -1,0 +1,8 @@
+tag=gemgate3-37 model=gemini-3.7-flash prompt=direct temp=0.1 top_p=0.9 max_tokens=700 timeout_s=150 n=1 concurrency=4
+base_url=https://generativelanguage.googleapis.com/v1beta/openai keys=1
+  [ 1/1] ai-000 AI    open_qa     -> ERR:no_choices (288ms)
+
+wrote C:\Users\adam\Desktop\humanizer ultra\ai-text-detector\benchmark\results-gemgate3-37.jsonl
+params: {"tag":"gemgate3-37","model":"gemini-3.7-flash","prompt":"direct","temperature":0.1,"top_p":0.9,"max_tokens":700,"tries":1,"wait_ms":3000,"timeout_s":150,"concurrency":4,"base_url":"https://generativelanguage.googleapis.com/v1beta/openai","corpus":"corpus.json","rows":1,"usable":0}
+usable=0/1 salvaged=0 truncated=0 errors={"no_choices":1}
+wall clock: 0.3s

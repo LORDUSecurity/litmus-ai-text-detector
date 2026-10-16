@@ -1,0 +1,122 @@
+probing 80 listed models on https://integrate.api.nvidia.com/v1 (text ai-000), concurrency 2
+  [  1/80] 01-ai/yi-large                                 404    319ms  UNEXPECTED_BODY  {"status":404,"title":"Not Found","detail":"Function '23bd45
+  [  2/80] adept/fuyu-8b                                  404    321ms  UNEXPECTED_BODY  {"status":404,"title":"Not Found","detail":"Function 'e598bf
+  [  3/80] ai21labs/jamba-1.5-large-instruct              404    186ms  UNEXPECTED_BODY  {"status":404,"title":"Not Found","detail":"Function '6497fc
+  [  4/80] aisingapore/sea-lion-7b-instruct               404    224ms  UNEXPECTED_BODY  {"status":404,"title":"Not Found","detail":"Function '02f84b
+  [  5/80] bigcode/starcoder2-15b                         404     77ms  UNEXPECTED_BODY  404 page not found
+
+  [  6/80] databricks/dbrx-instruct                       404    177ms  UNEXPECTED_BODY  {"status":404,"title":"Not Found","detail":"Function '3d6c2f
+  [  7/80] deepseek-ai/deepseek-coder-6.7b-instruct       404    152ms  UNEXPECTED_BODY  {"status":404,"title":"Not Found","detail":"Function 'e503b1
+  [  8/80] google/codegemma-1.1-7b                        404    200ms  UNEXPECTED_BODY  {"status":404,"title":"Not Found","detail":"Function 'e2d298
+  [  9/80] google/codegemma-7b                            404    159ms  UNEXPECTED_BODY  {"status":404,"title":"Not Found","detail":"Function '7dfc10
+  [ 10/80] google/deplot                                  404    185ms  UNEXPECTED_BODY  {"status":404,"title":"Not Found","detail":"Function '784a8c
+  [ 11/80] google/diffusiongemma-26b-a4b-it               200    320ms  SCORED           p=0.98 finish=stop
+  [ 12/80] google/gemma-2b                                404    156ms  UNEXPECTED_BODY  {"status":404,"title":"Not Found","detail":"Function '041741
+  [ 13/80] google/gemma-3-12b-it                          404    159ms  UNEXPECTED_BODY  {"status":404,"title":"Not Found","detail":"Function 'ee47df
+  [ 14/80] google/gemma-3-4b-it                           404    150ms  UNEXPECTED_BODY  {"status":404,"title":"Not Found","detail":"Function 'c322f3
+  [ 15/80] deepseek-ai/deepseek-v4.1-flash                200  95227ms  SCORED           p=0.9 finish=stop
+  [ 16/80] google/recurrentgemma-2b                       404    291ms  UNEXPECTED_BODY  {"status":404,"title":"Not Found","detail":"Function '2f4953
+  [ 17/80] ibm/granite-3.0-3b-a800m-instruct              404    198ms  UNEXPECTED_BODY  {"status":404,"title":"Not Found","detail":"Function '673245
+  [ 18/80] ibm/granite-3.0-8b-instruct                    404    190ms  UNEXPECTED_BODY  {"status":404,"title":"Not Found","detail":"Function '5a24a4
+  [ 19/80] ibm/granite-34b-code-instruct                  404    178ms  UNEXPECTED_BODY  {"status":404,"title":"Not Found","detail":"Function '4df48b
+  [ 20/80] ibm/granite-8b-code-instruct                   404    181ms  UNEXPECTED_BODY  {"status":404,"title":"Not Found","detail":"Function 'af7b6f
+  [ 21/80] meta/codellama-70b                             404    189ms  UNEXPECTED_BODY  {"status":404,"title":"Not Found","detail":"Function 'f6b068
+  [ 22/80] meta/llama-3.2-11b-vision-instruct             200    724ms  SCORED           p=0.999 finish=stop
+  [ 23/80] google/gemma-4-31b-it                          200 138623ms  SCORED           p=0.98 finish=stop
+  [ 24/80] meta/llama-guard-4-12b                         400    294ms  UNEXPECTED_BODY  {"object":"error","message":"Conversation roles must alterna
+  [ 25/80] meta/llama2-70b                                404    191ms  UNEXPECTED_BODY  {"status":404,"title":"Not Found","detail":"Function '2fddad
+  [ 26/80] meta/muse-glimmer-30b                          200   9670ms  SCORED           p=0.92 finish=stop
+  [ 27/80] microsoft/kosmos-2                             404    249ms  UNEXPECTED_BODY  {"status":404,"title":"Not Found","detail":"Function '6018fe
+  [ 28/80] microsoft/phi-3-vision-128k-instruct           404    170ms  UNEXPECTED_BODY  {"status":404,"title":"Not Found","detail":"Function '20f253
+  [ 29/80] microsoft/phi-3.5-moe-instruct                 404    178ms  UNEXPECTED_BODY  {"status":404,"title":"Not Found","detail":"Function 'e6cab9
+  [ 30/80] mistralai/codestral-22b-instruct-v0.1          404    166ms  UNEXPECTED_BODY  {"status":404,"title":"Not Found","detail":"Function '9a10b0
+  [ 31/80] mistralai/mistral-7b-instruct-v0.3             404    160ms  UNEXPECTED_BODY  {"status":404,"title":"Not Found","detail":"Function 'cd89bd
+  [ 32/80] mistralai/mistral-large                        404    168ms  UNEXPECTED_BODY  {"status":404,"title":"Not Found","detail":"Function '767b5b
+  [ 33/80] mistralai/mistral-large-2-instruct             404    175ms  UNEXPECTED_BODY  {"status":404,"title":"Not Found","detail":"Function '7fadd4
+  [ 34/80] mistralai/mixtral-8x22b-v0.1                   404    168ms  UNEXPECTED_BODY  {"status":404,"title":"Not Found","detail":"Function '39655f
+  [ 35/80] moonshotai/kimi-k2.6                           404    147ms  UNEXPECTED_BODY  {"status":404,"title":"Not Found","detail":"Function '23d4f0
+  [ 36/80] moonshotai/kimi-k3                             200  14968ms  SCORED           p=0.82 finish=stop
+  [ 37/80] nv-mistralai/mistral-nemo-12b-instruct         404    277ms  UNEXPECTED_BODY  {"status":404,"title":"Not Found","detail":"Function 'f8c051
+  [ 38/80] nvidia/ai-synthetic-video-detector             500    128ms  UNEXPECTED_BODY  {"type":"urn:nvcf-worker-service:problem-details:internal-se
+  [ 39/80] nvidia/cosmos-reason2-8b                       404    185ms  UNEXPECTED_BODY  {"status":404,"title":"Not Found","detail":"Function 'e199b4
+  [ 40/80] nvidia/embed-qa-4                              404     71ms  UNEXPECTED_BODY  404 page not found
+
+  [ 41/80] nvidia/ising-calibration-1.5-31b               200    561ms  SCORED           p=0.0 finish=stop
+  [ 42/80] meta/llama-3.2-90b-vision-instruct               - 150016ms  TIMEOUT          This operation was aborted
+  [ 43/80] nvidia/llama-3.1-nemoguard-8b-topic-control    500    259ms  PROVIDER_ERROR   "Error during inference of request chat-97822202e71f409d81f9
+  [ 44/80] nvidia/llama-3.1-nemotron-51b-instruct         404    178ms  UNEXPECTED_BODY  {"status":404,"title":"Not Found","detail":"Function '5beba5
+  [ 45/80] nvidia/llama-3.1-nemotron-70b-instruct         404    187ms  UNEXPECTED_BODY  {"status":404,"title":"Not Found","detail":"Function '9b9634
+  [ 46/80] nvidia/llama-3.1-nemoguard-8b-content-safety     - 150003ms  TIMEOUT          This operation was aborted
+  [ 47/80] nvidia/llama-3.1-nemotron-ultra-253b-v1        404    300ms  UNEXPECTED_BODY  {"status":404,"title":"Not Found","detail":"Function '84bf12
+  [ 48/80] nvidia/llama-3.2-nemoretriever-1b-vlm-embed-v1 404     65ms  UNEXPECTED_BODY  404 page not found
+
+  [ 49/80] nvidia/llama-3.2-nv-embedqa-1b-v1              404     66ms  UNEXPECTED_BODY  404 page not found
+
+  [ 50/80] nvidia/llama-nemotron-embed-vl-1b-v2           404     82ms  UNEXPECTED_BODY  404 page not found
+
+  [ 51/80] nvidia/llama3-chatqa-1.5-70b                   404    211ms  UNEXPECTED_BODY  {"status":404,"title":"Not Found","detail":"Function '465942
+  [ 52/80] nvidia/mistral-nemo-minitron-8b-8k-instruct    404    205ms  UNEXPECTED_BODY  {"status":404,"title":"Not Found","detail":"Function '5aa06d
+  [ 53/80] nvidia/nemotron-3-embed-1b                     404     75ms  UNEXPECTED_BODY  404 page not found
+
+  [ 54/80] nvidia/nemotron-3-nano-omni-30b-a3b-reasoning  200    755ms  SCORED           p=0.12 finish=stop
+  [ 55/80] nvidia/nemotron-3-super-120b-a12b              200    684ms  SCORED           p=0.12 finish=stop
+  [ 56/80] nvidia/nemotron-3-ultra-550b-a55b              200  20139ms  SCORED           p=0.65 finish=stop
+  [ 57/80] nvidia/nemotron-3.5-content-safety             200    299ms  NO_JSON          User Safety: safe finish=stop
+  [ 58/80] nvidia/nemotron-3.5-lightning-30b-a3b          200   3680ms  EMPTY            no string content finish=length
+  [ 59/80] nvidia/nemotron-4-340b-instruct                404    181ms  UNEXPECTED_BODY  {"status":404,"title":"Not Found","detail":"Function 'b0fcd3
+  [ 60/80] nvidia/nemotron-4-340b-reward                  404    181ms  UNEXPECTED_BODY  {"status":404,"title":"Not Found","detail":"Function 'c53ee0
+  [ 61/80] nvidia/nemotron-nano-3-30b-a3b                 404    201ms  UNEXPECTED_BODY  {"status":404,"title":"Not Found","detail":"Function '2b2dcd
+  [ 62/80] nvidia/nemotron-parse                          400    122ms  UNEXPECTED_BODY  {"object":"error","message":"Expected exactly one message. E
+  [ 63/80] nvidia/nemotron-parse-2.0                      200    760ms  EMPTY            no string content finish=length
+  [ 64/80] nvidia/neva-22b                                404    149ms  UNEXPECTED_BODY  {"status":404,"title":"Not Found","detail":"Function 'bc205f
+  [ 65/80] nvidia/nv-embedqa-mistral-7b-v2                404     95ms  UNEXPECTED_BODY  404 page not found
+
+  [ 66/80] nvidia/nvclip                                  404     79ms  UNEXPECTED_BODY  404 page not found
+
+  [ 67/80] nvidia/riva-translate-4b-instruct              404    160ms  UNEXPECTED_BODY  {"status":404,"title":"Not Found","detail":"Function 'f35337
+  [ 68/80] nvidia/riva-translate-4b-instruct-v2           200   1859ms  NO_JSON          Osaka هي مدينة تقع في منطقة Kansai في اليابان. إنها عاصمة مح
+  [ 69/80] nvidia/vila                                    404    178ms  UNEXPECTED_BODY  {"status":404,"title":"Not Found","detail":"Function '1c8df1
+  [ 70/80] openai/gpt-oss-20b                             200   2516ms  SCORED           p=0.6 finish=stop
+  [ 71/80] poolside/laguna-xs-2.1                         503    154ms  PROVIDER_ERROR   ResourceExhausted: Worker local total request limit reached 
+  [ 72/80] snowflake/arctic-embed-l                       404     77ms  UNEXPECTED_BODY  404 page not found
+
+  [ 73/80] writer/palmyra-creative-122b                   404    208ms  UNEXPECTED_BODY  {"status":404,"title":"Not Found","detail":"Function '00bdd0
+  [ 74/80] writer/palmyra-fin-70b-32k                     404    170ms  UNEXPECTED_BODY  {"status":404,"title":"Not Found","detail":"Function '316490
+  [ 75/80] writer/palmyra-med-70b                         404    170ms  UNEXPECTED_BODY  {"status":404,"title":"Not Found","detail":"Function 'aab712
+  [ 76/80] writer/palmyra-med-70b-32k                     404    176ms  UNEXPECTED_BODY  {"status":404,"title":"Not Found","detail":"Function 'd6faa9
+  [ 77/80] nvidia/llama-3.1-nemotron-safety-guard-8b-v3     - 150010ms  TIMEOUT          This operation was aborted
+  [ 78/80] z-ai/glm-5.3-flash                             200   2271ms  SCORED           p=0.93 finish=stop
+  [ 79/80] zyphra/zamba2-7b-instruct                      404    186ms  UNEXPECTED_BODY  {"status":404,"title":"Not Found","detail":"Function '8378ff
+  [ 80/80] z-ai/glm-5.3                                     - 150001ms  TIMEOUT          This operation was aborted
+
+wrote catalog-probe-primary.json
+tally: {"UNEXPECTED_BODY/404":55,"SCORED/200":12,"TIMEOUT/-":4,"UNEXPECTED_BODY/400":2,"UNEXPECTED_BODY/500":1,"PROVIDER_ERROR/500":1,"NO_JSON/200":2,"EMPTY/200":2,"PROVIDER_ERROR/503":1}
+
+USABLE (returned a score):
+  deepseek-ai/deepseek-v4.1-flash               p=0.9 finish=stop95227ms
+  google/diffusiongemma-26b-a4b-it              p=0.98 finish=stop320ms
+  google/gemma-4-31b-it                         p=0.98 finish=stop138623ms
+  meta/llama-3.2-11b-vision-instruct            p=0.999 finish=stop724ms
+  meta/muse-glimmer-30b                         p=0.92 finish=stop9670ms
+  moonshotai/kimi-k3                            p=0.82 finish=stop14968ms
+  nvidia/ising-calibration-1.5-31b              p=0.0 finish=stop561ms
+  nvidia/nemotron-3-nano-omni-30b-a3b-reasoning p=0.12 finish=stop755ms
+  nvidia/nemotron-3-super-120b-a12b             p=0.12 finish=stop684ms
+  nvidia/nemotron-3-ultra-550b-a55b             p=0.65 finish=stop20139ms
+  openai/gpt-oss-20b                            p=0.6 finish=stop2516ms
+  z-ai/glm-5.3-flash                            p=0.93 finish=stop2271ms
+
+other non-404 behaviour worth a second look:
+  meta/llama-3.2-90b-vision-instruct            null TIMEOUT This operation was aborted
+  meta/llama-guard-4-12b                        400 UNEXPECTED_BODY {"object":"error","message":"Conversation roles must alterna
+  nvidia/ai-synthetic-video-detector            500 UNEXPECTED_BODY {"type":"urn:nvcf-worker-service:problem-details:internal-se
+  nvidia/llama-3.1-nemoguard-8b-content-safety  null TIMEOUT This operation was aborted
+  nvidia/llama-3.1-nemotron-safety-guard-8b-v3  null TIMEOUT This operation was aborted
+  nvidia/nemotron-3.5-content-safety            200 NO_JSON User Safety: safe finish=stop
+  nvidia/nemotron-3.5-lightning-30b-a3b         200 EMPTY no string content finish=length
+  nvidia/nemotron-parse                         400 UNEXPECTED_BODY {"object":"error","message":"Expected exactly one message. E
+  nvidia/nemotron-parse-2.0                     200 EMPTY no string content finish=length
+  nvidia/riva-translate-4b-instruct-v2          200 NO_JSON Osaka هي مدينة تقع في منطقة Kansai في اليابان. إنها عاصمة مح
+  z-ai/glm-5.3                                  null TIMEOUT This operation was aborted
+EXIT=0
+done

@@ -1,0 +1,12 @@
+/// Detect through the local Flask backend (python -m backend.app, port 8787) so
+/// every request that can carry a BYOK key also gets its n8n execution row
+/// deleted by the purger running in that same process. The backend forwards to
+/// n8n itself, so /api/detect -> :8787/detect.
+{
+  "/api": {
+    "target": "http://127.0.0.1:8787",
+    "secure": false,
+    "changeOrigin": true,
+    "pathRewrite": { "^/api": "" }
+  }
+}

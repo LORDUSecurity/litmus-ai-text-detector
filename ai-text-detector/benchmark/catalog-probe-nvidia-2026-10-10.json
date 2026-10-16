@@ -1,0 +1,65 @@
+[
+ {
+  "model": "deepseek-ai/deepseek-v4.1-flash",
+  "http": null,
+  "ms": 150015,
+  "verdict": "TIMEOUT",
+  "detail": "This operation was aborted"
+ },
+ {
+  "model": "google/gemma-4-31b-it",
+  "http": 200,
+  "ms": 13975,
+  "verdict": "SCORED",
+  "detail": "p=0.98 finish=stop"
+ },
+ {
+  "model": "meta/llama-3.2-90b-vision-instruct",
+  "http": null,
+  "ms": 150011,
+  "verdict": "TIMEOUT",
+  "detail": "This operation was aborted"
+ },
+ {
+  "model": "moonshotai/kimi-k3",
+  "http": null,
+  "ms": 150012,
+  "verdict": "TIMEOUT",
+  "detail": "This operation was aborted"
+ },
+ {
+  "model": "nvidia/llama-3.1-nemoguard-8b-content-safety",
+  "http": null,
+  "ms": 150002,
+  "verdict": "TIMEOUT",
+  "detail": "This operation was aborted"
+ },
+ {
+  "model": "nvidia/llama-3.1-nemotron-safety-guard-8b-v3",
+  "http": null,
+  "ms": 150015,
+  "verdict": "TIMEOUT",
+  "detail": "This operation was aborted"
+ },
+ {
+  "model": "nvidia/nemotron-3.5-lightning-30b-a3b",
+  "http": 200,
+  "ms": 11457,
+  "verdict": "REASONING_PREAMBLE",
+  "detail": "Here's a thinking process: 1. **Analyze User Input:** - User prov finish=length"
+ },
+ {
+  "model": "z-ai/glm-5.3",
+  "http": 200,
+  "ms": 14392,
+  "verdict": "SCORED",
+  "detail": "p=0.88 finish=stop"
+ },
+ {
+  "model": "z-ai/glm-5.3-flash",
+  "http": 200,
+  "ms": 23605,
+  "verdict": "SCORED",
+  "detail": "p=0.92 finish=stop"
+ }
+]

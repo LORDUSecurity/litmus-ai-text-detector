@@ -1,0 +1,402 @@
+probing 62 listed models on https://generativelanguage.googleapis.com/v1beta/openai (text ai-000), concurrency 2
+  [  1/62] models/antigravity-preview-05-2026             400    402ms  UNEXPECTED_BODY  [{
+  "error": {
+    "code": 400,
+    "message": "Developer i
+  [  2/62] models/antigravity-preview-09-2026             400    534ms  UNEXPECTED_BODY  [{
+  "error": {
+    "code": 400,
+    "message": "Developer i
+  [  3/62] models/aqa                                     404    194ms  UNEXPECTED_BODY  [{
+  "error": {
+    "code": 404,
+    "message": "models/aqa 
+  [  4/62] models/antigravity-preview-latest              400    475ms  UNEXPECTED_BODY  [{
+  "error": {
+    "code": 400,
+    "message": "Developer i
+  [  5/62] models/deep-research-max-preview-04-2026       429    190ms  UNEXPECTED_BODY  [{
+  "error": {
+    "code": 429,
+    "message": "You exceede
+  [  6/62] models/deep-research-preview-04-2026           429    166ms  UNEXPECTED_BODY  [{
+  "error": {
+    "code": 429,
+    "message": "You exceede
+  [  7/62] models/deep-research-pro-preview-12-2025       429    189ms  UNEXPECTED_BODY  [{
+  "error": {
+    "code": 429,
+    "message": "You exceede
+  [  8/62] models/gemini-2.5-computer-use-preview-10-2025 429    195ms  UNEXPECTED_BODY  [{
+  "error": {
+    "code": 429,
+    "message": "You exceede
+  [  9/62] models/gemini-2.5-flash                        429    268ms  UNEXPECTED_BODY  [{
+  "error": {
+    "code": 429,
+    "message": "You exceede
+  [ 10/62] models/gemini-2.5-flash-image                  429    189ms  UNEXPECTED_BODY  [{
+  "error": {
+    "code": 429,
+    "message": "You exceede
+  [ 11/62] models/gemini-2.5-flash-lite                   404    146ms  UNEXPECTED_BODY  [{
+  "error": {
+    "code": 404,
+    "message": "This model 
+  [ 12/62] models/gemini-2.5-flash-native-audio-latest    400    172ms  UNEXPECTED_BODY  [{
+  "error": {
+    "code": 400,
+    "message": "models/gemi
+  [ 13/62] models/gemini-2.5-flash-native-audio-preview-09-2025 400    185ms  UNEXPECTED_BODY  [{
+  "error": {
+    "code": 400,
+    "message": "models/gemi
+  [ 14/62] models/gemini-2.5-flash-native-audio-preview-12-2025 400    175ms  UNEXPECTED_BODY  [{
+  "error": {
+    "code": 400,
+    "message": "models/gemi
+  [ 15/62] models/gemini-2.5-pro                          404    200ms  UNEXPECTED_BODY  [{
+  "error": {
+    "code": 404,
+    "message": "This model 
+  [ 16/62] models/gemini-2.5-pro-preview-tts              429    184ms  UNEXPECTED_BODY  [{
+  "error": {
+    "code": 429,
+    "message": "You exceede
+  [ 17/62] models/gemini-2.5-flash-preview-tts            400    502ms  UNEXPECTED_BODY  [{
+  "error": {
+    "code": 400,
+    "message": "The request
+  [ 18/62] models/gemini-3-flash-preview                  429    162ms  UNEXPECTED_BODY  [{
+  "error": {
+    "code": 429,
+    "message": "You exceede
+  [ 19/62] models/gemini-3-pro-image                      429    176ms  UNEXPECTED_BODY  [{
+  "error": {
+    "code": 429,
+    "message": "You exceede
+  [ 20/62] models/gemini-3-pro-image-preview              429    184ms  UNEXPECTED_BODY  [{
+  "error": {
+    "code": 429,
+    "message": "You exceede
+  [ 21/62] models/gemini-3.1-flash-image                  429    180ms  UNEXPECTED_BODY  [{
+  "error": {
+    "code": 429,
+    "message": "You exceede
+  [ 22/62] models/gemini-3.1-flash-image-preview          429    180ms  UNEXPECTED_BODY  [{
+  "error": {
+    "code": 429,
+    "message": "You exceede
+  [ 23/62] models/gemini-3.1-flash-lite-image             429    201ms  UNEXPECTED_BODY  [{
+  "error": {
+    "code": 429,
+    "message": "You exceede
+  [ 24/62] models/gemini-3.1-flash-lite                   200   6119ms  SCORED           p=0.92 finish=stop
+  [ 25/62] models/gemini-3.1-flash-live-preview           400    208ms  UNEXPECTED_BODY  [{
+  "error": {
+    "code": 400,
+    "message": "models/gemi
+  [ 26/62] models/gemini-3.1-flash-tts-preview            400    563ms  UNEXPECTED_BODY  [{
+  "error": {
+    "code": 400,
+    "message": "Developer i
+  [ 27/62] models/gemini-3.1-pro-preview                  429    192ms  UNEXPECTED_BODY  [{
+  "error": {
+    "code": 429,
+    "message": "You exceede
+  [ 28/62] models/gemini-3.1-pro-preview-customtools      429    187ms  UNEXPECTED_BODY  [{
+  "error": {
+    "code": 429,
+    "message": "You exceede
+  [ 29/62] models/gemini-3.5-flash                        200   1782ms  SCORED           p=0.92 finish=stop
+  [ 30/62] models/gemini-3.5-flash-lite                   200    685ms  SCORED           p=0.99 finish=stop
+  [ 31/62] models/gemini-3.5-live-translate-preview       400    185ms  UNEXPECTED_BODY  [{
+  "error": {
+    "code": 400,
+    "message": "models/gemi
+  [ 32/62] models/gemini-3.1-flash-lite-preview           200   9916ms  SCORED           p=0.92 finish=stop
+  [ 33/62] models/gemini-3.5-transcribe-live              400    186ms  UNEXPECTED_BODY  [{
+  "error": {
+    "code": 400,
+    "message": "models/gemi
+  [ 34/62] models/gemini-3.5-transcribe                   400    561ms  UNEXPECTED_BODY  [{
+  "error": {
+    "code": 400,
+    "message": "Developer i
+  [ 35/62] models/gemini-3.6-flash                        200   2369ms  SCORED           p=0.92 finish=stop
+  [ 36/62] models/gemini-3.7-flash                        200   2359ms  SCORED           p=0.85 finish=stop
+  [ 37/62] models/gemini-3.8-flash-lite-tts               400    572ms  UNEXPECTED_BODY  [{
+  "error": {
+    "code": 400,
+    "message": "Developer i
+  [ 38/62] models/gemini-3.8-flash-tts                    400    532ms  UNEXPECTED_BODY  [{
+  "error": {
+    "code": 400,
+    "message": "Developer i
+  [ 39/62] models/gemini-3.8-live                         400    190ms  UNEXPECTED_BODY  [{
+  "error": {
+    "code": 400,
+    "message": "models/gemi
+  [ 40/62] models/gemini-3.8-live-extended-thinking       400    183ms  UNEXPECTED_BODY  [{
+  "error": {
+    "code": 400,
+    "message": "models/gemi
+  [ 41/62] models/gemini-embedding-001                    404    200ms  UNEXPECTED_BODY  [{
+  "error": {
+    "code": 404,
+    "message": "models/gemi
+  [ 42/62] models/gemini-embedding-2                      404    182ms  UNEXPECTED_BODY  [{
+  "error": {
+    "code": 404,
+    "message": "models/gemi
+  [ 43/62] models/gemini-embedding-2-preview              404    184ms  UNEXPECTED_BODY  [{
+  "error": {
+    "code": 404,
+    "message": "models/gemi
+  [ 44/62] models/gemini-3.8-flash                        200   2524ms  SCORED           p=0.88 finish=stop
+  [ 45/62] models/gemini-flash-lite-latest                200    821ms  SCORED           p=0.98 finish=stop
+  [ 46/62] models/gemini-nano-banana-2.1                  429    211ms  UNEXPECTED_BODY  [{
+  "error": {
+    "code": 429,
+    "message": "You exceede
+  [ 47/62] models/gemini-omni-1.1-flash                   429    173ms  UNEXPECTED_BODY  [{
+  "error": {
+    "code": 429,
+    "message": "You exceede
+  [ 48/62] models/gemini-omni-flash-preview               429    187ms  UNEXPECTED_BODY  [{
+  "error": {
+    "code": 429,
+    "message": "You exceede
+  [ 49/62] models/gemini-pro-latest                       429    171ms  UNEXPECTED_BODY  [{
+  "error": {
+    "code": 429,
+    "message": "You exceede
+  [ 50/62] models/gemini-flash-latest                     503   2485ms  UNEXPECTED_BODY  [{
+  "error": {
+    "code": 503,
+    "message": "This model 
+  [ 51/62] models/gemini-robotics-er-2-streaming-preview  400    179ms  UNEXPECTED_BODY  [{
+  "error": {
+    "code": 400,
+    "message": "models/gemi
+  [ 52/62] models/gemini-robotics-er-2-preview            200   1974ms  SCORED           p=0.95 finish=stop
+  [ 53/62] models/gemma-4-26b-a4b-it                      200   9678ms  SCORED           p=0.95 finish=stop
+  [ 54/62] models/lyria-3-clip-preview                    429    151ms  UNEXPECTED_BODY  [{
+  "error": {
+    "code": 429,
+    "message": "You exceede
+  [ 55/62] models/lyria-3-pro-preview                     429    188ms  UNEXPECTED_BODY  [{
+  "error": {
+    "code": 429,
+    "message": "You exceede
+  [ 56/62] models/lyria-3.5                               429    175ms  UNEXPECTED_BODY  [{
+  "error": {
+    "code": 429,
+    "message": "You exceede
+  [ 57/62] models/lyria-realtime-exp                      400    155ms  UNEXPECTED_BODY  [{
+  "error": {
+    "code": 400,
+    "message": "models/lyri
+  [ 58/62] models/nano-banana-pro-preview                 429    160ms  UNEXPECTED_BODY  [{
+  "error": {
+    "code": 429,
+    "message": "You exceede
+  [ 59/62] models/veo-3.1-fast-generate-preview           404    178ms  UNEXPECTED_BODY  [{
+  "error": {
+    "code": 404,
+    "message": "models/veo-
+  [ 60/62] models/veo-3.1-generate-preview                404    185ms  UNEXPECTED_BODY  [{
+  "error": {
+    "code": 404,
+    "message": "models/veo-
+  [ 61/62] models/veo-3.1-lite-generate-preview           404    176ms  UNEXPECTED_BODY  [{
+  "error": {
+    "code": 404,
+    "message": "models/veo-
+  [ 62/62] models/gemma-4-31b-it                          200  28437ms  SCORED           p=0.98 finish=stop
+
+wrote catalog-probe-primary.json
+tally: {"UNEXPECTED_BODY/400":18,"UNEXPECTED_BODY/404":9,"UNEXPECTED_BODY/429":23,"SCORED/200":11,"UNEXPECTED_BODY/503":1}
+
+USABLE (returned a score):
+  models/gemini-3.1-flash-lite                  p=0.92 finish=stop6119ms
+  models/gemini-3.1-flash-lite-preview          p=0.92 finish=stop9916ms
+  models/gemini-3.5-flash                       p=0.92 finish=stop1782ms
+  models/gemini-3.5-flash-lite                  p=0.99 finish=stop685ms
+  models/gemini-3.6-flash                       p=0.92 finish=stop2369ms
+  models/gemini-3.7-flash                       p=0.85 finish=stop2359ms
+  models/gemini-3.8-flash                       p=0.88 finish=stop2524ms
+  models/gemini-flash-lite-latest               p=0.98 finish=stop821ms
+  models/gemini-robotics-er-2-preview           p=0.95 finish=stop1974ms
+  models/gemma-4-26b-a4b-it                     p=0.95 finish=stop9678ms
+  models/gemma-4-31b-it                         p=0.98 finish=stop28437ms
+
+other non-404 behaviour worth a second look:
+  models/antigravity-preview-05-2026            400 UNEXPECTED_BODY [{
+  "error": {
+    "code": 400,
+    "message": "Developer i
+  models/antigravity-preview-09-2026            400 UNEXPECTED_BODY [{
+  "error": {
+    "code": 400,
+    "message": "Developer i
+  models/antigravity-preview-latest             400 UNEXPECTED_BODY [{
+  "error": {
+    "code": 400,
+    "message": "Developer i
+  models/deep-research-max-preview-04-2026      429 UNEXPECTED_BODY [{
+  "error": {
+    "code": 429,
+    "message": "You exceede
+  models/deep-research-preview-04-2026          429 UNEXPECTED_BODY [{
+  "error": {
+    "code": 429,
+    "message": "You exceede
+  models/deep-research-pro-preview-12-2025      429 UNEXPECTED_BODY [{
+  "error": {
+    "code": 429,
+    "message": "You exceede
+  models/gemini-2.5-computer-use-preview-10-2025429 UNEXPECTED_BODY [{
+  "error": {
+    "code": 429,
+    "message": "You exceede
+  models/gemini-2.5-flash                       429 UNEXPECTED_BODY [{
+  "error": {
+    "code": 429,
+    "message": "You exceede
+  models/gemini-2.5-flash-image                 429 UNEXPECTED_BODY [{
+  "error": {
+    "code": 429,
+    "message": "You exceede
+  models/gemini-2.5-flash-native-audio-latest   400 UNEXPECTED_BODY [{
+  "error": {
+    "code": 400,
+    "message": "models/gemi
+  models/gemini-2.5-flash-native-audio-preview-09-2025400 UNEXPECTED_BODY [{
+  "error": {
+    "code": 400,
+    "message": "models/gemi
+  models/gemini-2.5-flash-native-audio-preview-12-2025400 UNEXPECTED_BODY [{
+  "error": {
+    "code": 400,
+    "message": "models/gemi
+  models/gemini-2.5-flash-preview-tts           400 UNEXPECTED_BODY [{
+  "error": {
+    "code": 400,
+    "message": "The request
+  models/gemini-2.5-pro-preview-tts             429 UNEXPECTED_BODY [{
+  "error": {
+    "code": 429,
+    "message": "You exceede
+  models/gemini-3-flash-preview                 429 UNEXPECTED_BODY [{
+  "error": {
+    "code": 429,
+    "message": "You exceede
+  models/gemini-3-pro-image                     429 UNEXPECTED_BODY [{
+  "error": {
+    "code": 429,
+    "message": "You exceede
+  models/gemini-3-pro-image-preview             429 UNEXPECTED_BODY [{
+  "error": {
+    "code": 429,
+    "message": "You exceede
+  models/gemini-3.1-flash-image                 429 UNEXPECTED_BODY [{
+  "error": {
+    "code": 429,
+    "message": "You exceede
+  models/gemini-3.1-flash-image-preview         429 UNEXPECTED_BODY [{
+  "error": {
+    "code": 429,
+    "message": "You exceede
+  models/gemini-3.1-flash-lite-image            429 UNEXPECTED_BODY [{
+  "error": {
+    "code": 429,
+    "message": "You exceede
+  models/gemini-3.1-flash-live-preview          400 UNEXPECTED_BODY [{
+  "error": {
+    "code": 400,
+    "message": "models/gemi
+  models/gemini-3.1-flash-tts-preview           400 UNEXPECTED_BODY [{
+  "error": {
+    "code": 400,
+    "message": "Developer i
+  models/gemini-3.1-pro-preview                 429 UNEXPECTED_BODY [{
+  "error": {
+    "code": 429,
+    "message": "You exceede
+  models/gemini-3.1-pro-preview-customtools     429 UNEXPECTED_BODY [{
+  "error": {
+    "code": 429,
+    "message": "You exceede
+  models/gemini-3.5-live-translate-preview      400 UNEXPECTED_BODY [{
+  "error": {
+    "code": 400,
+    "message": "models/gemi
+  models/gemini-3.5-transcribe                  400 UNEXPECTED_BODY [{
+  "error": {
+    "code": 400,
+    "message": "Developer i
+  models/gemini-3.5-transcribe-live             400 UNEXPECTED_BODY [{
+  "error": {
+    "code": 400,
+    "message": "models/gemi
+  models/gemini-3.8-flash-lite-tts              400 UNEXPECTED_BODY [{
+  "error": {
+    "code": 400,
+    "message": "Developer i
+  models/gemini-3.8-flash-tts                   400 UNEXPECTED_BODY [{
+  "error": {
+    "code": 400,
+    "message": "Developer i
+  models/gemini-3.8-live                        400 UNEXPECTED_BODY [{
+  "error": {
+    "code": 400,
+    "message": "models/gemi
+  models/gemini-3.8-live-extended-thinking      400 UNEXPECTED_BODY [{
+  "error": {
+    "code": 400,
+    "message": "models/gemi
+  models/gemini-flash-latest                    503 UNEXPECTED_BODY [{
+  "error": {
+    "code": 503,
+    "message": "This model 
+  models/gemini-nano-banana-2.1                 429 UNEXPECTED_BODY [{
+  "error": {
+    "code": 429,
+    "message": "You exceede
+  models/gemini-omni-1.1-flash                  429 UNEXPECTED_BODY [{
+  "error": {
+    "code": 429,
+    "message": "You exceede
+  models/gemini-omni-flash-preview              429 UNEXPECTED_BODY [{
+  "error": {
+    "code": 429,
+    "message": "You exceede
+  models/gemini-pro-latest                      429 UNEXPECTED_BODY [{
+  "error": {
+    "code": 429,
+    "message": "You exceede
+  models/gemini-robotics-er-2-streaming-preview 400 UNEXPECTED_BODY [{
+  "error": {
+    "code": 400,
+    "message": "models/gemi
+  models/lyria-3-clip-preview                   429 UNEXPECTED_BODY [{
+  "error": {
+    "code": 429,
+    "message": "You exceede
+  models/lyria-3-pro-preview                    429 UNEXPECTED_BODY [{
+  "error": {
+    "code": 429,
+    "message": "You exceede
+  models/lyria-3.5                              429 UNEXPECTED_BODY [{
+  "error": {
+    "code": 429,
+    "message": "You exceede
+  models/lyria-realtime-exp                     400 UNEXPECTED_BODY [{
+  "error": {
+    "code": 400,
+    "message": "models/lyri
+  models/nano-banana-pro-preview                429 UNEXPECTED_BODY [{
+  "error": {
+    "code": 429,
+    "message": "You exceede

@@ -1,0 +1,67 @@
+tag=oosstress-nv-glm-5-3 model=z-ai/glm-5.3 prompt=direct temp=0.1 top_p=0.9 max_tokens=1400 timeout_s=300 n=42 concurrency=2
+base_url=https://integrate.api.nvidia.com/v1 keys=1
+  [ 1/42] stress-001 HUMAN published_book -> 0.02 conf=0.95 (257557ms)
+  [ 2/42] stress-000 HUMAN published_book -> 0.02 conf=0.95 (267756ms)
+  [ 3/42] stress-002 HUMAN published_book -> 0.02 conf=0.95 (245723ms)
+  [ 4/42] stress-004 HUMAN published_book -> 0.01 conf=0.99 (221606ms)
+  [ 5/42] stress-003 HUMAN published_book -> ERR:exception (300008ms, try2)
+  [ 6/42] stress-006 HUMAN published_book -> 0.01 conf=0.97 (225144ms)
+  [ 7/42] stress-005 HUMAN published_book -> 0.01 conf=0.98 (252755ms, try2)
+  [ 8/42] stress-008 HUMAN published_book -> 0.02 conf=0.95 (283799ms)
+  [ 9/42] stress-007 HUMAN published_book -> 0.01 conf=0.97 (206772ms, try2)
+  [10/42] stress-009 HUMAN published_book -> 0.02 conf=0.95 (211016ms)
+  [11/42] stress-010 HUMAN published_book -> 0.02 conf=0.95 (187184ms)
+  [12/42] stress-011 HUMAN published_book -> 0.01 conf=0.96 (217502ms)
+  [13/42] stress-013 HUMAN published_book -> 0.01 conf=0.98 (242086ms)
+  [14/42] stress-012 HUMAN published_book -> ERR:exception (300007ms, try2)
+  [15/42] stress-014 HUMAN published_book -> 0.02 conf=0.95 (261462ms)
+  [16/42] stress-015 HUMAN published_book -> 0.01 conf=0.98 (264806ms)
+  [17/42] stress-017 HUMAN published_book -> 0.01 conf=0.98 (288046ms)
+  [18/42] stress-016 HUMAN published_book -> ERR:exception (300016ms, try2)
+  [19/42] stress-018 HUMAN published_book -> 0.02 conf=0.95 (267719ms)
+  [20/42] stress-019 HUMAN published_book -> 0.02 conf=0.95 (260343ms)
+  [21/42] stress-020 HUMAN published_book -> ERR:exception (300009ms, try2)
+  [22/42] stress-021 HUMAN published_book -> ERR:exception (300011ms, try2)
+  [23/42] stress-022 HUMAN published_book -> 0.02 conf=0.95 (296789ms, try2)
+  [24/42] stress-023 HUMAN published_book -> ERR:exception (300013ms, try2)
+  [25/42] stress-025 HUMAN published_book -> 0.01 conf=0.95 (274498ms)
+  [26/42] stress-024 HUMAN published_book -> ERR:exception (300007ms, try2)
+  [27/42] stress-027 HUMAN published_book -> 0.01 conf=0.97 (289440ms)
+  [28/42] stress-026 HUMAN published_book -> ERR:exception (300017ms, try2)
+  [29/42] stress-028 HUMAN published_book -> 0.02 conf=0.97 (278079ms)
+  [30/42] stress-029 HUMAN published_book -> 0.02 conf=0.95 (263365ms)
+  [31/42] stress-031 HUMAN published_book -> 0.03 conf=0.90 (285886ms)
+  [32/42] stress-030 HUMAN published_book -> 0.03 conf=0.92 (261648ms, try2)
+  [33/42] stress-032 HUMAN published_book -> 0.02 conf=0.93 (225791ms)
+  [34/42] stress-ai-000 AI    google/gemma-4-31b-it -> 0.92 conf=0.85 (280841ms)
+  [35/42] stress-ai-001 AI    google/gemma-4-31b-it -> 0.93 conf=0.85 (244034ms)
+  [36/42] stress-ai-002 AI    nvidia/nemotron-3.5-lightning-30b-a3b -> 0.92 conf=0.82 (281463ms)
+  [37/42] stress-ai-003 AI    google/gemma-4-31b-it -> 0.93 conf=0.85 (292525ms)
+  [38/42] stress-ai-004 AI    nvidia/nemotron-3.5-lightning-30b-a3b -> 0.88 conf=0.78 (263862ms)
+  [39/42] stress-ai-005 AI    nvidia/nemotron-3.5-lightning-30b-a3b -> 0.93 conf=0.85 (247743ms)
+  [40/42] stress-ai-006 AI    google/gemma-4-31b-it -> 0.86 conf=0.78 (279486ms, try2)
+  [41/42] stress-ai-007 AI    google/gemma-4-31b-it -> 0.92 conf=0.78 (277433ms, try2)
+  [42/42] stress-ai-008 AI    google/gemma-4-31b-it -> 0.92 conf=0.82 (286303ms)
+
+wrote C:\Users\adam\Desktop\humanizer ultra\ai-text-detector\benchmark\results-oosstress-nv-glm-5-3.jsonl
+params: {"tag":"oosstress-nv-glm-5-3","model":"z-ai/glm-5.3","prompt":"direct","temperature":0.1,"top_p":0.9,"max_tokens":1400,"tries":2,"wait_ms":3000,"timeout_s":300,"concurrency":2,"base_url":"https://integrate.api.nvidia.com/v1","corpus":"corpus-stress.json","rows":42,"usable":34}
+usable=34/42 salvaged=0 truncated=0 errors={"exception":8}
+latency ms p50/p90/max: 263862/288046/296789
+wall clock: 7849.5s
+resume: keeping 34 scored row(s), calling 8
+tag=oosstress-nv-glm-5-3 model=z-ai/glm-5.3 prompt=direct temp=0.1 top_p=0.9 max_tokens=1400 timeout_s=450 n=8 concurrency=2
+base_url=https://integrate.api.nvidia.com/v1 keys=1
+  [ 1/8] stress-012 HUMAN published_book -> 0.01 conf=0.98 (300938ms)
+  [ 2/8] stress-016 HUMAN published_book -> 0.01 conf=0.99 (287238ms)
+  [ 3/8] stress-003 HUMAN published_book -> ERR:http_504 (302124ms, try2)
+  [ 4/8] stress-020 HUMAN published_book -> ERR:http_504 (302253ms, try2)
+  [ 5/8] stress-021 HUMAN published_book -> ERR:http_504 (302221ms, try2)
+  [ 6/8] stress-023 HUMAN published_book -> ERR:http_504 (302241ms, try2)
+  [ 7/8] stress-024 HUMAN published_book -> 0.01 conf=0.98 (294148ms, try2)
+  [ 8/8] stress-026 HUMAN published_book -> ERR:http_504 (302218ms, try2)
+
+wrote C:\Users\adam\Desktop\humanizer ultra\ai-text-detector\benchmark\results-oosstress-nv-glm-5-3.jsonl
+params: {"tag":"oosstress-nv-glm-5-3","model":"z-ai/glm-5.3","prompt":"direct","temperature":0.1,"top_p":0.9,"max_tokens":1400,"tries":2,"wait_ms":3000,"timeout_s":450,"concurrency":2,"base_url":"https://integrate.api.nvidia.com/v1","corpus":"corpus-stress.json","rows":42,"usable":37}
+usable=37/42 salvaged=0 truncated=0 errors={"http_504":5}
+latency ms p50/p90/max: 264806/292525/300938
+wall clock: 2410.7s

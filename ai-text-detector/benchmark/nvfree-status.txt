@@ -1,0 +1,4 @@
+clean-nvfull-glm-5-3 z-ai/glm-5.3 GATE_DEAD
+clean-nvfull-glm-5-3-flash z-ai/glm-5.3-flash GATE_OK usable=2
+clean-nvfull-gemma-4-31b-it google/gemma-4-31b-it GATE_OK usable=1
+clean-nvfull-nemotron-3-5-lightning nvidia/nemotron-3.5-lightning-30b-a3b GATE_OK usable=1

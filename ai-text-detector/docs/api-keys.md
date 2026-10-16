@@ -1,5 +1,16 @@
 # API Keys & Configuration
 
+> **Superseded for the running stack (2026-10-06).** The AI-only pipeline keeps keys in the
+> backend's SQLite (`api_keys`, Fernet-encrypted with `backend/data/backend-secret.key`),
+> managed through `POST /providers/<id>/keys` to add one and `DELETE /keys/<id>` to remove
+> it, from the **Configuration** tab's admin panel; the
+> backend injects them into the n8n call as `x-primary-api-key` / `x-secondary-api-key`
+> headers. `.env` supplies the defaults the workflow falls back to when no key is stored for
+> a provider, plus the model and threshold values. Nothing in the running stack reads
+> `OMNIROUTE_*` from Docker, and the n8n execution rows that would otherwise hold a BYOK
+> header are deleted by the backend's purger a second later.
+> Everything below documents the legacy Docker/Postgres pipeline.
+
 ## Where to Insert API Keys
 
 ### 1. OmniRoute Configuration

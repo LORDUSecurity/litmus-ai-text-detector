@@ -1,0 +1,1 @@
+{"id":"ai-000","label":"AI","config":"open_qa","text_length":505,"ok":false,"error_code":"no_choices","error_detail":"[{\"error\":{\"code\":400,\"message\":\"Invalid Auth key.\",\"status\":\"INVALID_ARGUMENT\"}}]","salvaged":false,"truncated":false,"ai_probability":null,"confidence":null,"signals":null,"latency_ms":288,"attempt":1,"http_status":400,"rate_limit":null}

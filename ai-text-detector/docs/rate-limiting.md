@@ -1,5 +1,24 @@
 # Rate Limiting Guide
 
+> **Superseded for the running stack (2026-10-07).** Almost everything below describes the
+> legacy Docker/Postgres pipeline — the `detector/queue.py` limiter, the `provider_performance`
+> queries and the Cerebras quotas do not exist in the AI-only stack. What actually governs
+> request pressure today is three things, none of them in a queue:
+>
+> 1. **Per-lane retry inside the workflow** — `retryOnFail` with `maxTries: 4` and
+>    `waitBetweenTries: 3000` on each model node (`n8n/generate-workflow.py`), verified through
+>    the webhook against a loopback mock by `tools/verify-lane-retry.js`.
+> 2. **Key rotation in the backend** — stalest-used-first over the stored keys for a provider,
+>    stamping `api_keys.last_used_at`, so a second stored account is real capacity rather than
+>    dead weight.
+> 3. **A headroom gate before spending** — `tools/probe-or-headroom.js` distinguishes the class-(a)
+>    upstream-pool 429 from the class-(b) account-cap 429 and exits non-zero when every key is
+>    capped; the benchmark scripts refuse to run on that exit code.
+>
+> The measured behaviour of the free tiers — the two 429 classes, the cap that only appears in a
+> 429 body, and the upstream error that arrives inside an HTTP 200 — is in
+> [free-model-research.md](free-model-research.md). Everything below is kept for reference.
+
 ## Overview
 
 Rate limiting prevents abuse and respects free-tier provider quotas. The system implements:
@@ -39,6 +58,15 @@ NVIDIA_TPM=50000            # 50K tokens per minute
 OPENROUTER_RPM=20           # 20 requests per minute
 OPENROUTER_RPD=200          # 200 requests per day
 ```
+
+> **These two numbers are not measured, and nothing reads them.** Verified 2026-10-07: no Python,
+> JS or workflow file references `OPENROUTER_RPD`/`OPENROUTER_RPM` (or any `*_RPD`/`*_RPM`) — they
+> are leftover configuration from the retired statistical detector. Treat them as a pacing guess.
+> The gateway's own class-(b) 429 body echoes `X-RateLimit-Limit: "50"`, which contradicts 200, so
+> at least one of the two is wrong. What has been measured instead: the free tier caps at
+> `free-models-per-day` per account, `GET /api/v1/key` never exposes a request counter, and a
+> **successful** request carries no `x-ratelimit-*` header at all — see
+> [free-model-research.md](free-model-research.md).
 
 **How to verify:**
 - OpenRouter dashboard shows your actual limits

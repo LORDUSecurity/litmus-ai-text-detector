@@ -1,0 +1,9 @@
+[
+ {
+  "model": "liquid/lfm-2.5-2.6b:free",
+  "http": 200,
+  "ms": 6886,
+  "verdict": "SCORED",
+  "detail": "p=0.98 finish=stop"
+ }
+]

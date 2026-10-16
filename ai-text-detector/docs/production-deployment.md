@@ -1,5 +1,34 @@
 # Deployment & Production Setup
 
+> **Superseded for the running stack (2026-10-06).** Everything below describes the legacy
+> Docker Compose pipeline (detector service + PostgreSQL + Redis + n8n). The stack that runs
+> today has no compose file and no Postgres:
+>
+> ```bash
+> python -m backend.seed && python -m backend.app   # Flask + SQLite + execution purger, 127.0.0.1:8787
+> node tools/start-n8n.js start                     # n8n 2.35.7 on npm, its own SQLite at N8N_USER_FOLDER
+> cd frontend && npx ng build                        # static files; dev server via npm start
+> ```
+>
+> `./quickstart.sh` does all three, waits on the webhook's own 400 response rather than
+> `/healthz` (which answers 200 about a minute before the webhook registry exists), and
+> `./quickstart.sh --stop` takes the ports down. Deploying a regenerated workflow means
+> `import:workflow` → `publish:workflow --id=ai-detection-ai-only` → **restart n8n**;
+> `update:workflow --active=true` does not register the webhook on n8n 2.x. The first owner
+> account is created at `http://localhost:5678/setup`, and `/gateway-health` on the backend
+> is the endpoint that reports whether the workflow is actually published and listening.
+> Note `N8N_BLOCK_ENV_ACCESS_IN_NODE=false` is required — the Code nodes read `$env`.
+
+> **Corrected the sequence above, measured 2026-10-07 00:00Z.** `import:workflow` prints
+> `Deactivating workflow …` as it imports, so after an import the workflow row is inactive and
+> `publish:workflow` alone leaves the webhook unregistered — it answers 404 `The requested webhook
+> "POST ai-detect-ai" is not registered`. The full sequence that ends with a listening webhook is
+> `import:workflow` → `publish:workflow` → `update:workflow --id=… --active=true` → **restart**.
+> Skipping the activation step reproduces the 404; the second restart after it is what registered
+> the route ("Activated workflow …" in the startup log, then 21/21 live assertions in
+> `node n8n/live-contract-test.js`). An earlier note that `update:workflow --active=true` "does not
+> register the webhook" described doing it *instead of* publishing; it is needed *in addition*.
+
 ## Pre-Production Checklist
 
 - [ ] All API keys configured in `.env` (never commit `.env` to git)

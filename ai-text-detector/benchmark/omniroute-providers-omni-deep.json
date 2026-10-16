@@ -1,0 +1,1973 @@
+{
+  "generated": "2026-10-11T22:32:53.841Z",
+  "base_url": "http://localhost:20128/v1",
+  "catalogue_total": 1589,
+  "in_scope": 206,
+  "per_prefix": 80,
+  "summary": [
+    {
+      "prefix": "auto",
+      "models_listed": 38,
+      "probed": 38,
+      "scored": 30,
+      "status": "SERVABLE",
+      "reason": null,
+      "sample_model": "auto/best-coding"
+    },
+    {
+      "prefix": "mistral",
+      "models_listed": 49,
+      "probed": 49,
+      "scored": 12,
+      "status": "SERVABLE",
+      "reason": null,
+      "sample_model": "mistral/codestral-2508"
+    },
+    {
+      "prefix": "kr",
+      "models_listed": 21,
+      "probed": 21,
+      "scored": 7,
+      "status": "SERVABLE",
+      "reason": null,
+      "sample_model": "kr/claude-sonnet-4.5"
+    },
+    {
+      "prefix": "kiro",
+      "models_listed": 21,
+      "probed": 21,
+      "scored": 7,
+      "status": "SERVABLE",
+      "reason": null,
+      "sample_model": "kiro/claude-sonnet-4.5"
+    },
+    {
+      "prefix": "no-think",
+      "models_listed": 77,
+      "probed": 77,
+      "scored": 3,
+      "status": "SERVABLE",
+      "reason": null,
+      "sample_model": "no-think/kr/claude-sonnet-4.5"
+    }
+  ],
+  "probes": [
+    {
+      "model": "no-think/kr/claude-sonnet-5",
+      "started": "2026-10-11T22:14:38.841Z",
+      "http": 400,
+      "verdict": "PROVIDER_ERROR",
+      "detail": "[400]: Invalid model. Please select a different model to continue.",
+      "ms": 3738,
+      "prefix": "no-think"
+    },
+    {
+      "model": "no-think/kiro/claude-sonnet-5",
+      "started": "2026-10-11T22:14:38.846Z",
+      "http": 400,
+      "verdict": "PROVIDER_ERROR",
+      "detail": "[400]: Invalid model. Please select a different model to continue.",
+      "ms": 3755,
+      "prefix": "no-think"
+    },
+    {
+      "model": "no-think/kr/claude-sonnet-4.5",
+      "started": "2026-10-11T22:14:42.580Z",
+      "http": 200,
+      "verdict": "SCORED",
+      "detail": "p=0.85",
+      "finish": "stop",
+      "ms": 2632,
+      "prefix": "no-think"
+    },
+    {
+      "model": "no-think/kiro/claude-sonnet-4.5",
+      "started": "2026-10-11T22:14:42.603Z",
+      "http": 200,
+      "verdict": "SCORED",
+      "detail": "p=0.85",
+      "finish": "stop",
+      "ms": 2577,
+      "prefix": "no-think"
+    },
+    {
+      "model": "no-think/kr/claude-haiku-4.5",
+      "started": "2026-10-11T22:14:45.181Z",
+      "http": 200,
+      "verdict": "SCORED",
+      "detail": "p=0.85",
+      "finish": "stop",
+      "ms": 1225,
+      "prefix": "no-think"
+    },
+    {
+      "model": "no-think/kiro/claude-haiku-4.5",
+      "started": "2026-10-11T22:14:45.212Z",
+      "http": 200,
+      "verdict": "NO_JSON",
+      "detail": "I appreciate you testing me, but I need to clarify: I'm Kiro, an AI de",
+      "finish": "stop",
+      "ms": 2437,
+      "prefix": "no-think"
+    },
+    {
+      "model": "no-think/dv/claude-opus-5-max",
+      "started": "2026-10-11T22:14:46.406Z",
+      "http": 502,
+      "verdict": "PROVIDER_ERROR",
+      "detail": "[devin-cli/claude-opus-5-max] Devin CLI exited with code 1 (reset after 5s)",
+      "ms": 18428,
+      "prefix": "no-think"
+    },
+    {
+      "model": "no-think/devin-cli/claude-opus-5-max",
+      "started": "2026-10-11T22:14:47.649Z",
+      "http": 502,
+      "verdict": "PROVIDER_ERROR",
+      "detail": "[devin-cli/claude-opus-5-max] Devin CLI exited with code 1 (reset after 5s)",
+      "ms": 17181,
+      "prefix": "no-think"
+    },
+    {
+      "model": "no-think/dv/claude-opus-4-8-max",
+      "started": "2026-10-11T22:15:04.830Z",
+      "http": 502,
+      "verdict": "PROVIDER_ERROR",
+      "detail": "[devin-cli/claude-opus-4-8-max] Devin CLI exited with code 1 (reset after 5s)",
+      "ms": 18274,
+      "prefix": "no-think"
+    },
+    {
+      "model": "no-think/devin-cli/claude-opus-4-8-max",
+      "started": "2026-10-11T22:15:04.834Z",
+      "http": 502,
+      "verdict": "PROVIDER_ERROR",
+      "detail": "[devin-cli/claude-opus-4-8-max] Devin CLI exited with code 1 (reset after 5s)",
+      "ms": 18272,
+      "prefix": "no-think"
+    },
+    {
+      "model": "no-think/dv/claude-opus-4-7-max",
+      "started": "2026-10-11T22:15:23.104Z",
+      "http": 502,
+      "verdict": "PROVIDER_ERROR",
+      "detail": "[devin-cli/claude-opus-4-7-max] Devin CLI exited with code 1 (reset after 5s)",
+      "ms": 17899,
+      "prefix": "no-think"
+    },
+    {
+      "model": "no-think/devin-cli/claude-opus-4-7-max",
+      "started": "2026-10-11T22:15:23.106Z",
+      "http": 502,
+      "verdict": "PROVIDER_ERROR",
+      "detail": "[devin-cli/claude-opus-4-7-max] Devin CLI exited with code 1 (reset after 5s)",
+      "ms": 17898,
+      "prefix": "no-think"
+    },
+    {
+      "model": "no-think/dv/claude-opus-4-6-thinking-1m",
+      "started": "2026-10-11T22:15:41.003Z",
+      "http": 502,
+      "verdict": "PROVIDER_ERROR",
+      "detail": "[devin-cli/claude-opus-4-6-thinking-1m] Devin CLI exited with code 1 (reset after 5s)",
+      "ms": 18227,
+      "prefix": "no-think"
+    },
+    {
+      "model": "no-think/devin-cli/claude-opus-4-6-thinking-1m",
+      "started": "2026-10-11T22:15:41.004Z",
+      "http": 502,
+      "verdict": "PROVIDER_ERROR",
+      "detail": "[devin-cli/claude-opus-4-6-thinking-1m] Devin CLI exited with code 1 (reset after 5s)",
+      "ms": 18228,
+      "prefix": "no-think"
+    },
+    {
+      "model": "no-think/dv/claude-opus-4-6-thinking",
+      "started": "2026-10-11T22:15:59.231Z",
+      "http": 502,
+      "verdict": "PROVIDER_ERROR",
+      "detail": "[devin-cli/claude-opus-4-6-thinking] Devin CLI exited with code 1 (reset after 5s)",
+      "ms": 18306,
+      "prefix": "no-think"
+    },
+    {
+      "model": "no-think/devin-cli/claude-opus-4-6-thinking",
+      "started": "2026-10-11T22:15:59.232Z",
+      "http": 502,
+      "verdict": "PROVIDER_ERROR",
+      "detail": "[devin-cli/claude-opus-4-6-thinking] Devin CLI exited with code 1 (reset after 5s)",
+      "ms": 18303,
+      "prefix": "no-think"
+    },
+    {
+      "model": "no-think/dv/claude-opus-4-6-1m",
+      "started": "2026-10-11T22:16:17.535Z",
+      "http": 502,
+      "verdict": "PROVIDER_ERROR",
+      "detail": "[devin-cli/claude-opus-4-6-1m] Devin CLI exited with code 1 (reset after 5s)",
+      "ms": 18040,
+      "prefix": "no-think"
+    },
+    {
+      "model": "no-think/devin-cli/claude-opus-4-6-1m",
+      "started": "2026-10-11T22:16:17.537Z",
+      "http": 502,
+      "verdict": "PROVIDER_ERROR",
+      "detail": "[devin-cli/claude-opus-4-6-1m] Devin CLI exited with code 1 (reset after 5s)",
+      "ms": 18035,
+      "prefix": "no-think"
+    },
+    {
+      "model": "no-think/dv/claude-opus-4-6",
+      "started": "2026-10-11T22:16:35.572Z",
+      "http": 502,
+      "verdict": "PROVIDER_ERROR",
+      "detail": "[devin-cli/claude-opus-4-6] Devin CLI exited with code 1 (reset after 5s)",
+      "ms": 17814,
+      "prefix": "no-think"
+    },
+    {
+      "model": "no-think/devin-cli/claude-opus-4-6",
+      "started": "2026-10-11T22:16:35.575Z",
+      "http": 502,
+      "verdict": "PROVIDER_ERROR",
+      "detail": "[devin-cli/claude-opus-4-6] Devin CLI exited with code 1 (reset after 5s)",
+      "ms": 17813,
+      "prefix": "no-think"
+    },
+    {
+      "model": "no-think/dv/claude-sonnet-5-max",
+      "started": "2026-10-11T22:16:53.386Z",
+      "http": 502,
+      "verdict": "PROVIDER_ERROR",
+      "detail": "[devin-cli/claude-sonnet-5-max] Devin CLI exited with code 1 (reset after 5s)",
+      "ms": 17956,
+      "prefix": "no-think"
+    },
+    {
+      "model": "no-think/devin-cli/claude-sonnet-5-max",
+      "started": "2026-10-11T22:16:53.388Z",
+      "http": 502,
+      "verdict": "PROVIDER_ERROR",
+      "detail": "[devin-cli/claude-sonnet-5-max] Devin CLI exited with code 1 (reset after 5s)",
+      "ms": 17953,
+      "prefix": "no-think"
+    },
+    {
+      "model": "no-think/dv/claude-sonnet-4-6-thinking-1m",
+      "started": "2026-10-11T22:17:11.341Z",
+      "http": 502,
+      "verdict": "PROVIDER_ERROR",
+      "detail": "[devin-cli/claude-sonnet-4-6-thinking-1m] Devin CLI exited with code 1 (reset after 5s)",
+      "ms": 17473,
+      "prefix": "no-think"
+    },
+    {
+      "model": "no-think/devin-cli/claude-sonnet-4-6-thinking-1m",
+      "started": "2026-10-11T22:17:11.342Z",
+      "http": 502,
+      "verdict": "PROVIDER_ERROR",
+      "detail": "[devin-cli/claude-sonnet-4-6-thinking-1m] Devin CLI exited with code 1 (reset after 5s)",
+      "ms": 17469,
+      "prefix": "no-think"
+    },
+    {
+      "model": "no-think/dv/claude-sonnet-4-6-thinking",
+      "started": "2026-10-11T22:17:28.811Z",
+      "http": 502,
+      "verdict": "PROVIDER_ERROR",
+      "detail": "[devin-cli/claude-sonnet-4-6-thinking] Devin CLI exited with code 1 (reset after 5s)",
+      "ms": 18445,
+      "prefix": "no-think"
+    },
+    {
+      "model": "no-think/devin-cli/claude-sonnet-4-6-thinking",
+      "started": "2026-10-11T22:17:28.814Z",
+      "http": 502,
+      "verdict": "PROVIDER_ERROR",
+      "detail": "[devin-cli/claude-sonnet-4-6-thinking] Devin CLI exited with code 1 (reset after 5s)",
+      "ms": 18441,
+      "prefix": "no-think"
+    },
+    {
+      "model": "no-think/dv/claude-sonnet-4-6-1m",
+      "started": "2026-10-11T22:17:47.255Z",
+      "http": 502,
+      "verdict": "PROVIDER_ERROR",
+      "detail": "[devin-cli/claude-sonnet-4-6-1m] Devin CLI exited with code 1 (reset after 5s)",
+      "ms": 18425,
+      "prefix": "no-think"
+    },
+    {
+      "model": "no-think/devin-cli/claude-sonnet-4-6-1m",
+      "started": "2026-10-11T22:17:47.257Z",
+      "http": 502,
+      "verdict": "PROVIDER_ERROR",
+      "detail": "[devin-cli/claude-sonnet-4-6-1m] Devin CLI exited with code 1 (reset after 5s)",
+      "ms": 18424,
+      "prefix": "no-think"
+    },
+    {
+      "model": "no-think/dv/claude-sonnet-4-6",
+      "started": "2026-10-11T22:18:05.680Z",
+      "http": 502,
+      "verdict": "PROVIDER_ERROR",
+      "detail": "[devin-cli/claude-sonnet-4-6] Devin CLI exited with code 1 (reset after 5s)",
+      "ms": 17807,
+      "prefix": "no-think"
+    },
+    {
+      "model": "no-think/devin-cli/claude-sonnet-4-6",
+      "started": "2026-10-11T22:18:05.681Z",
+      "http": 502,
+      "verdict": "PROVIDER_ERROR",
+      "detail": "[devin-cli/claude-sonnet-4-6] Devin CLI exited with code 1 (reset after 5s)",
+      "ms": 17803,
+      "prefix": "no-think"
+    },
+    {
+      "model": "no-think/dva/claude-opus-5-max",
+      "started": "2026-10-11T22:18:23.484Z",
+      "http": 400,
+      "verdict": "PROVIDER_ERROR",
+      "detail": "[400]: Model is not present in the current Devin catalog: claude-opus-5",
+      "ms": 155,
+      "prefix": "no-think"
+    },
+    {
+      "model": "no-think/dva/claude-opus-4-8-max",
+      "started": "2026-10-11T22:18:23.487Z",
+      "http": 400,
+      "verdict": "PROVIDER_ERROR",
+      "detail": "[400]: Model is not present in the current Devin catalog: claude-opus-4-8",
+      "ms": 248,
+      "prefix": "no-think"
+    },
+    {
+      "model": "no-think/dva/claude-opus-4-7-max",
+      "started": "2026-10-11T22:18:23.640Z",
+      "http": 400,
+      "verdict": "PROVIDER_ERROR",
+      "detail": "[400]: Model is not present in the current Devin catalog: claude-opus-4-7",
+      "ms": 161,
+      "prefix": "no-think"
+    },
+    {
+      "model": "no-think/dva/claude-opus-4-6-thinking-1m",
+      "started": "2026-10-11T22:18:23.735Z",
+      "http": 500,
+      "verdict": "PROVIDER_ERROR",
+      "detail": "[500]: DEVIN_AGENTIC_HOME must be an absolute path inside the bridge sandbox",
+      "ms": 145,
+      "prefix": "no-think"
+    },
+    {
+      "model": "no-think/dva/claude-opus-4-6-thinking",
+      "started": "2026-10-11T22:18:23.801Z",
+      "http": 500,
+      "verdict": "PROVIDER_ERROR",
+      "detail": "[500]: DEVIN_AGENTIC_HOME must be an absolute path inside the bridge sandbox",
+      "ms": 158,
+      "prefix": "no-think"
+    },
+    {
+      "model": "no-think/dva/claude-opus-4-6-1m",
+      "started": "2026-10-11T22:18:23.880Z",
+      "http": 500,
+      "verdict": "PROVIDER_ERROR",
+      "detail": "[500]: DEVIN_AGENTIC_HOME must be an absolute path inside the bridge sandbox",
+      "ms": 164,
+      "prefix": "no-think"
+    },
+    {
+      "model": "no-think/dva/claude-opus-4-6",
+      "started": "2026-10-11T22:18:23.959Z",
+      "http": 500,
+      "verdict": "PROVIDER_ERROR",
+      "detail": "[500]: DEVIN_AGENTIC_HOME must be an absolute path inside the bridge sandbox",
+      "ms": 173,
+      "prefix": "no-think"
+    },
+    {
+      "model": "no-think/dva/claude-sonnet-5-max",
+      "started": "2026-10-11T22:18:24.044Z",
+      "http": 400,
+      "verdict": "PROVIDER_ERROR",
+      "detail": "[400]: Model is not present in the current Devin catalog: claude-sonnet-5",
+      "ms": 159,
+      "prefix": "no-think"
+    },
+    {
+      "model": "no-think/dva/claude-sonnet-4-6-thinking-1m",
+      "started": "2026-10-11T22:18:24.132Z",
+      "http": 500,
+      "verdict": "PROVIDER_ERROR",
+      "detail": "[500]: DEVIN_AGENTIC_HOME must be an absolute path inside the bridge sandbox",
+      "ms": 152,
+      "prefix": "no-think"
+    },
+    {
+      "model": "no-think/dva/claude-sonnet-4-6-thinking",
+      "started": "2026-10-11T22:18:24.203Z",
+      "http": 500,
+      "verdict": "PROVIDER_ERROR",
+      "detail": "[500]: DEVIN_AGENTIC_HOME must be an absolute path inside the bridge sandbox",
+      "ms": 154,
+      "prefix": "no-think"
+    },
+    {
+      "model": "no-think/dva/claude-sonnet-4-6-1m",
+      "started": "2026-10-11T22:18:24.284Z",
+      "http": 500,
+      "verdict": "PROVIDER_ERROR",
+      "detail": "[500]: DEVIN_AGENTIC_HOME must be an absolute path inside the bridge sandbox",
+      "ms": 158,
+      "prefix": "no-think"
+    },
+    {
+      "model": "no-think/dva/claude-sonnet-4-6",
+      "started": "2026-10-11T22:18:24.357Z",
+      "http": 500,
+      "verdict": "PROVIDER_ERROR",
+      "detail": "[500]: DEVIN_AGENTIC_HOME must be an absolute path inside the bridge sandbox",
+      "ms": 176,
+      "prefix": "no-think"
+    },
+    {
+      "model": "no-think/oc/claude-opus-5",
+      "started": "2026-10-11T22:18:24.442Z",
+      "http": 402,
+      "verdict": "PROVIDER_ERROR",
+      "detail": "[402]: This model requires an opencode API key — add one in Settings → Providers.",
+      "ms": 181,
+      "prefix": "no-think"
+    },
+    {
+      "model": "no-think/opencode/claude-opus-5",
+      "started": "2026-10-11T22:18:24.533Z",
+      "http": 402,
+      "verdict": "PROVIDER_ERROR",
+      "detail": "[opencode-zen/claude-opus-5] [402]: This model requires an opencode API key — add one in Settings → Providers. (reset after 2m)",
+      "ms": 352,
+      "prefix": "no-think"
+    },
+    {
+      "model": "no-think/oc/claude-opus-4-8",
+      "started": "2026-10-11T22:18:24.623Z",
+      "http": 402,
+      "verdict": "PROVIDER_ERROR",
+      "detail": "[402]: This model requires an opencode API key — add one in Settings → Providers.",
+      "ms": 162,
+      "prefix": "no-think"
+    },
+    {
+      "model": "no-think/opencode/claude-opus-4-8",
+      "started": "2026-10-11T22:18:24.785Z",
+      "http": 402,
+      "verdict": "PROVIDER_ERROR",
+      "detail": "[opencode-zen/claude-opus-4-8] [402]: This model requires an opencode API key — add one in Settings → Providers. (reset after 2m)",
+      "ms": 536,
+      "prefix": "no-think"
+    },
+    {
+      "model": "no-think/oc/claude-opus-4-7",
+      "started": "2026-10-11T22:18:24.886Z",
+      "http": 402,
+      "verdict": "PROVIDER_ERROR",
+      "detail": "[402]: This model requires an opencode API key — add one in Settings → Providers.",
+      "ms": 90,
+      "prefix": "no-think"
+    },
+    {
+      "model": "no-think/opencode/claude-opus-4-7",
+      "started": "2026-10-11T22:18:24.976Z",
+      "http": 402,
+      "verdict": "PROVIDER_ERROR",
+      "detail": "[402]: This model requires an opencode API key — add one in Settings → Providers.",
+      "ms": 115,
+      "prefix": "no-think"
+    },
+    {
+      "model": "no-think/oc/claude-opus-4-6",
+      "started": "2026-10-11T22:18:25.091Z",
+      "http": 402,
+      "verdict": "PROVIDER_ERROR",
+      "detail": "[402]: This model requires an opencode API key — add one in Settings → Providers.",
+      "ms": 96,
+      "prefix": "no-think"
+    },
+    {
+      "model": "no-think/opencode/claude-opus-4-6",
+      "started": "2026-10-11T22:18:25.187Z",
+      "http": 402,
+      "verdict": "PROVIDER_ERROR",
+      "detail": "[402]: This model requires an opencode API key — add one in Settings → Providers.",
+      "ms": 114,
+      "prefix": "no-think"
+    },
+    {
+      "model": "no-think/oc/claude-opus-4-5",
+      "started": "2026-10-11T22:18:25.302Z",
+      "http": 402,
+      "verdict": "PROVIDER_ERROR",
+      "detail": "[402]: This model requires an opencode API key — add one in Settings → Providers.",
+      "ms": 118,
+      "prefix": "no-think"
+    },
+    {
+      "model": "no-think/opencode/claude-opus-4-5",
+      "started": "2026-10-11T22:18:25.321Z",
+      "http": 402,
+      "verdict": "PROVIDER_ERROR",
+      "detail": "[402]: This model requires an opencode API key — add one in Settings → Providers.",
+      "ms": 187,
+      "prefix": "no-think"
+    },
+    {
+      "model": "no-think/oc/claude-sonnet-5",
+      "started": "2026-10-11T22:18:25.421Z",
+      "http": 402,
+      "verdict": "PROVIDER_ERROR",
+      "detail": "[402]: This model requires an opencode API key — add one in Settings → Providers.",
+      "ms": 185,
+      "prefix": "no-think"
+    },
+    {
+      "model": "no-think/opencode/claude-sonnet-5",
+      "started": "2026-10-11T22:18:25.508Z",
+      "http": 402,
+      "verdict": "PROVIDER_ERROR",
+      "detail": "[402]: This model requires an opencode API key — add one in Settings → Providers.",
+      "ms": 189,
+      "prefix": "no-think"
+    },
+    {
+      "model": "no-think/oc/claude-sonnet-4-6",
+      "started": "2026-10-11T22:18:25.607Z",
+      "http": 402,
+      "verdict": "PROVIDER_ERROR",
+      "detail": "[402]: This model requires an opencode API key — add one in Settings → Providers.",
+      "ms": 168,
+      "prefix": "no-think"
+    },
+    {
+      "model": "no-think/opencode/claude-sonnet-4-6",
+      "started": "2026-10-11T22:18:25.697Z",
+      "http": 402,
+      "verdict": "PROVIDER_ERROR",
+      "detail": "[402]: This model requires an opencode API key — add one in Settings → Providers.",
+      "ms": 174,
+      "prefix": "no-think"
+    },
+    {
+      "model": "no-think/oc/claude-sonnet-4-5",
+      "started": "2026-10-11T22:18:25.775Z",
+      "http": 402,
+      "verdict": "PROVIDER_ERROR",
+      "detail": "[402]: This model requires an opencode API key — add one in Settings → Providers.",
+      "ms": 175,
+      "prefix": "no-think"
+    },
+    {
+      "model": "no-think/opencode/claude-sonnet-4-5",
+      "started": "2026-10-11T22:18:25.871Z",
+      "http": 402,
+      "verdict": "PROVIDER_ERROR",
+      "detail": "[402]: This model requires an opencode API key — add one in Settings → Providers.",
+      "ms": 212,
+      "prefix": "no-think"
+    },
+    {
+      "model": "no-think/bm/claude-sonnet-4-5",
+      "started": "2026-10-11T22:18:25.951Z",
+      "http": 400,
+      "verdict": "PROVIDER_ERROR",
+      "detail": "Model 'claude-sonnet-4-5' is not available in the active live catalog for provider 'bluesminds'.",
+      "ms": 168,
+      "prefix": "no-think"
+    },
+    {
+      "model": "no-think/bluesminds/claude-sonnet-4-5",
+      "started": "2026-10-11T22:18:26.083Z",
+      "http": 400,
+      "verdict": "PROVIDER_ERROR",
+      "detail": "Model 'claude-sonnet-4-5' is not available in the active live catalog for provider 'bluesminds'.",
+      "ms": 72,
+      "prefix": "no-think"
+    },
+    {
+      "model": "no-think/bm/claude-opus-4-5",
+      "started": "2026-10-11T22:18:26.119Z",
+      "http": 400,
+      "verdict": "PROVIDER_ERROR",
+      "detail": "Model 'claude-opus-4-5' is not available in the active live catalog for provider 'bluesminds'.",
+      "ms": 104,
+      "prefix": "no-think"
+    },
+    {
+      "model": "no-think/bluesminds/claude-opus-4-5",
+      "started": "2026-10-11T22:18:26.155Z",
+      "http": 400,
+      "verdict": "PROVIDER_ERROR",
+      "detail": "Model 'claude-opus-4-5' is not available in the active live catalog for provider 'bluesminds'.",
+      "ms": 117,
+      "prefix": "no-think"
+    },
+    {
+      "model": "no-think/vertex/claude-opus-5",
+      "started": "2026-10-11T22:18:26.223Z",
+      "http": 429,
+      "verdict": "PROVIDER_ERROR",
+      "detail": "[vertex/claude-opus-5] All vertex accounts have exhausted their quota (reset after 5m)",
+      "ms": 170,
+      "prefix": "no-think"
+    },
+    {
+      "model": "no-think/vertex/claude-sonnet-5",
+      "started": "2026-10-11T22:18:26.273Z",
+      "http": 429,
+      "verdict": "PROVIDER_ERROR",
+      "detail": "[vertex/claude-sonnet-5] All vertex accounts have exhausted their quota (reset after 5m)",
+      "ms": 151,
+      "prefix": "no-think"
+    },
+    {
+      "model": "no-think/vertex/claude-opus-4-8",
+      "started": "2026-10-11T22:18:26.393Z",
+      "http": 429,
+      "verdict": "PROVIDER_ERROR",
+      "detail": "[vertex/claude-opus-4-8] All vertex accounts have exhausted their quota (reset after 5m)",
+      "ms": 92,
+      "prefix": "no-think"
+    },
+    {
+      "model": "no-think/vertex/claude-opus-4-7",
+      "started": "2026-10-11T22:18:26.424Z",
+      "http": 429,
+      "verdict": "PROVIDER_ERROR",
+      "detail": "[vertex/claude-opus-4-7] All vertex accounts have exhausted their quota (reset after 5m)",
+      "ms": 112,
+      "prefix": "no-think"
+    },
+    {
+      "model": "no-think/vertex/claude-opus-4-6",
+      "started": "2026-10-11T22:18:26.486Z",
+      "http": 429,
+      "verdict": "PROVIDER_ERROR",
+      "detail": "[vertex/claude-opus-4-6] All vertex accounts have exhausted their quota (reset after 5m)",
+      "ms": 106,
+      "prefix": "no-think"
+    },
+    {
+      "model": "no-think/vertex/claude-sonnet-4-6",
+      "started": "2026-10-11T22:18:26.536Z",
+      "http": 429,
+      "verdict": "PROVIDER_ERROR",
+      "detail": "[vertex/claude-sonnet-4-6] All vertex accounts have exhausted their quota (reset after 5m)",
+      "ms": 102,
+      "prefix": "no-think"
+    },
+    {
+      "model": "no-think/vertex/claude-sonnet-4-5-v2",
+      "started": "2026-10-11T22:18:26.592Z",
+      "http": 429,
+      "verdict": "PROVIDER_ERROR",
+      "detail": "[vertex/claude-sonnet-4-5-v2] All vertex accounts have exhausted their quota (reset after 5m)",
+      "ms": 89,
+      "prefix": "no-think"
+    },
+    {
+      "model": "no-think/vertex/claude-sonnet-4-5",
+      "started": "2026-10-11T22:18:26.638Z",
+      "http": 429,
+      "verdict": "PROVIDER_ERROR",
+      "detail": "[vertex/claude-sonnet-4-5] All vertex accounts have exhausted their quota (reset after 5m)",
+      "ms": 69,
+      "prefix": "no-think"
+    },
+    {
+      "model": "no-think/vertex/claude-opus-4-5",
+      "started": "2026-10-11T22:18:26.681Z",
+      "http": 429,
+      "verdict": "PROVIDER_ERROR",
+      "detail": "[vertex/claude-opus-4-5] All vertex accounts have exhausted their quota (reset after 5m)",
+      "ms": 55,
+      "prefix": "no-think"
+    },
+    {
+      "model": "no-think/lma/claude-haiku-4-5-20251001",
+      "started": "2026-10-11T22:18:26.707Z",
+      "http": 401,
+      "verdict": "PROVIDER_ERROR",
+      "detail": "[401]: User not found",
+      "ms": 4541,
+      "prefix": "no-think"
+    },
+    {
+      "model": "no-think/lmarena/claude-haiku-4-5-20251001",
+      "started": "2026-10-11T22:18:26.736Z",
+      "http": 401,
+      "verdict": "PROVIDER_ERROR",
+      "detail": "[401]: User not found",
+      "ms": 4540,
+      "prefix": "no-think"
+    },
+    {
+      "model": "no-think/lma/claude-sonnet-5",
+      "started": "2026-10-11T22:18:31.248Z",
+      "http": 401,
+      "verdict": "PROVIDER_ERROR",
+      "detail": "[401]: User not found",
+      "ms": 3858,
+      "prefix": "no-think"
+    },
+    {
+      "model": "no-think/lmarena/claude-sonnet-5",
+      "started": "2026-10-11T22:18:31.276Z",
+      "http": 401,
+      "verdict": "PROVIDER_ERROR",
+      "detail": "[401]: User not found",
+      "ms": 3517,
+      "prefix": "no-think"
+    },
+    {
+      "model": "no-think/lma/claude-sonnet-5-search",
+      "started": "2026-10-11T22:18:34.793Z",
+      "http": 401,
+      "verdict": "PROVIDER_ERROR",
+      "detail": "[401]: User not found",
+      "ms": 3556,
+      "prefix": "no-think"
+    },
+    {
+      "model": "no-think/lmarena/claude-sonnet-5-search",
+      "started": "2026-10-11T22:18:35.106Z",
+      "http": 401,
+      "verdict": "PROVIDER_ERROR",
+      "detail": "[401]: User not found",
+      "ms": 3270,
+      "prefix": "no-think"
+    },
+    {
+      "model": "mistral/mistral-large-latest",
+      "started": "2026-10-11T22:18:38.349Z",
+      "http": 400,
+      "verdict": "PROVIDER_ERROR",
+      "detail": "Model 'mistral-large-latest' is not available in the active live catalog for provider 'mistral'.",
+      "ms": 70,
+      "prefix": "mistral"
+    },
+    {
+      "model": "mistral/devstral-latest",
+      "started": "2026-10-11T22:18:38.376Z",
+      "http": 400,
+      "verdict": "PROVIDER_ERROR",
+      "detail": "Model 'devstral-latest' is not available in the active live catalog for provider 'mistral'.",
+      "ms": 78,
+      "prefix": "mistral"
+    },
+    {
+      "model": "mistral/codestral-2508",
+      "started": "2026-10-11T22:18:38.419Z",
+      "http": 200,
+      "verdict": "SCORED",
+      "detail": "p=0.05",
+      "finish": "stop",
+      "ms": 876,
+      "prefix": "mistral"
+    },
+    {
+      "model": "mistral/codestral-latest",
+      "started": "2026-10-11T22:18:38.454Z",
+      "http": 200,
+      "verdict": "SCORED",
+      "detail": "p=0.05",
+      "finish": "stop",
+      "ms": 1034,
+      "prefix": "mistral"
+    },
+    {
+      "model": "mistral/mistral-code-latest",
+      "started": "2026-10-11T22:18:39.295Z",
+      "http": 200,
+      "verdict": "SCORED",
+      "detail": "p=0.05",
+      "finish": "stop",
+      "ms": 555,
+      "prefix": "mistral"
+    },
+    {
+      "model": "mistral/mistral-code-fim-latest",
+      "started": "2026-10-11T22:18:39.488Z",
+      "http": 200,
+      "verdict": "SCORED",
+      "detail": "p=0.0",
+      "finish": "stop",
+      "ms": 748,
+      "prefix": "mistral"
+    },
+    {
+      "model": "mistral/mistral-small-2603",
+      "started": "2026-10-11T22:18:39.851Z",
+      "http": 429,
+      "verdict": "PROVIDER_ERROR",
+      "detail": "[mistral/mistral-small-2603] [429]: Rate limit exceeded (reset after 3s)",
+      "ms": 28656,
+      "prefix": "mistral"
+    },
+    {
+      "model": "mistral/mistral-small-latest",
+      "started": "2026-10-11T22:18:40.236Z",
+      "http": 429,
+      "verdict": "PROVIDER_ERROR",
+      "detail": "[mistral/mistral-small-latest] [429]: Rate limit exceeded (reset after 3s)",
+      "ms": 27922,
+      "prefix": "mistral"
+    },
+    {
+      "model": "mistral/mistral-vibe-cli-fast",
+      "started": "2026-10-11T22:19:08.158Z",
+      "http": 429,
+      "verdict": "PROVIDER_ERROR",
+      "detail": "[mistral/mistral-vibe-cli-fast] [429]: Rate limit exceeded (reset after 3s)",
+      "ms": 23684,
+      "prefix": "mistral"
+    },
+    {
+      "model": "mistral/magistral-small-latest",
+      "started": "2026-10-11T22:19:08.507Z",
+      "http": 429,
+      "verdict": "PROVIDER_ERROR",
+      "detail": "[mistral/magistral-small-latest] [429]: Rate limit exceeded (reset after 3s)",
+      "ms": 22938,
+      "prefix": "mistral"
+    },
+    {
+      "model": "mistral/voxtral-small-2507",
+      "started": "2026-10-11T22:19:31.445Z",
+      "http": 200,
+      "verdict": "SCORED",
+      "detail": "p=0.05",
+      "finish": "stop",
+      "ms": 3935,
+      "prefix": "mistral"
+    },
+    {
+      "model": "mistral/voxtral-small-latest",
+      "started": "2026-10-11T22:19:31.842Z",
+      "http": 200,
+      "verdict": "SCORED",
+      "detail": "p=0.05",
+      "finish": "stop",
+      "ms": 3098,
+      "prefix": "mistral"
+    },
+    {
+      "model": "mistral/labs-leanstral-1-5-1",
+      "started": "2026-10-11T22:19:34.940Z",
+      "http": 403,
+      "verdict": "PROVIDER_ERROR",
+      "detail": "[mistral/labs-leanstral-1-5-1] [403]: Model labs-leanstral-1-5-1 is a Labs model. To use Labs models, an admin must enable them in your organization settings at",
+      "ms": 19890,
+      "prefix": "mistral"
+    },
+    {
+      "model": "mistral/labs-leanstral-1-5",
+      "started": "2026-10-11T22:19:35.380Z",
+      "http": 403,
+      "verdict": "PROVIDER_ERROR",
+      "detail": "[mistral/labs-leanstral-1-5] [403]: Model labs-leanstral-1-5 is a Labs model. To use Labs models, an admin must enable them in your organization settings at htt",
+      "ms": 19094,
+      "prefix": "mistral"
+    },
+    {
+      "model": "mistral/ministral-3b-2512",
+      "started": "2026-10-11T22:19:54.474Z",
+      "http": 200,
+      "verdict": "SCORED",
+      "detail": "p=0.99",
+      "finish": "stop",
+      "ms": 3563,
+      "prefix": "mistral"
+    },
+    {
+      "model": "mistral/ministral-3b-latest",
+      "started": "2026-10-11T22:19:54.830Z",
+      "http": 200,
+      "verdict": "SCORED",
+      "detail": "p=0.99",
+      "finish": "stop",
+      "ms": 3950,
+      "prefix": "mistral"
+    },
+    {
+      "model": "mistral/ministral-8b-2512",
+      "started": "2026-10-11T22:19:58.037Z",
+      "http": 200,
+      "verdict": "SCORED",
+      "detail": "p=0.01",
+      "finish": "stop",
+      "ms": 941,
+      "prefix": "mistral"
+    },
+    {
+      "model": "mistral/ministral-8b-latest",
+      "started": "2026-10-11T22:19:58.781Z",
+      "http": 200,
+      "verdict": "SCORED",
+      "detail": "p=0.01",
+      "finish": "stop",
+      "ms": 870,
+      "prefix": "mistral"
+    },
+    {
+      "model": "mistral/ministral-14b-2512",
+      "started": "2026-10-11T22:19:58.978Z",
+      "http": 200,
+      "verdict": "SCORED",
+      "detail": "p=0.0",
+      "finish": "stop",
+      "ms": 930,
+      "prefix": "mistral"
+    },
+    {
+      "model": "mistral/ministral-14b-latest",
+      "started": "2026-10-11T22:19:59.651Z",
+      "http": 200,
+      "verdict": "SCORED",
+      "detail": "p=0.0",
+      "finish": "stop",
+      "ms": 673,
+      "prefix": "mistral"
+    },
+    {
+      "model": "mistral/mistral-medium-latest",
+      "started": "2026-10-11T22:19:59.908Z",
+      "http": 429,
+      "verdict": "PROVIDER_ERROR",
+      "detail": "[mistral/mistral-medium-latest] [429]: Rate limit exceeded (reset after 3s)",
+      "ms": 28951,
+      "prefix": "mistral"
+    },
+    {
+      "model": "mistral/mistral-medium",
+      "started": "2026-10-11T22:20:00.325Z",
+      "http": 429,
+      "verdict": "PROVIDER_ERROR",
+      "detail": "[mistral/mistral-medium] [429]: Rate limit exceeded (reset after 3s)",
+      "ms": 28141,
+      "prefix": "mistral"
+    },
+    {
+      "model": "mistral/mistral-medium-3-5",
+      "started": "2026-10-11T22:20:28.466Z",
+      "http": 429,
+      "verdict": "PROVIDER_ERROR",
+      "detail": "[mistral/mistral-medium-3-5] [429]: Rate limit exceeded (reset after 3s)",
+      "ms": 23613,
+      "prefix": "mistral"
+    },
+    {
+      "model": "mistral/mistral-medium-3.5",
+      "started": "2026-10-11T22:20:28.859Z",
+      "http": 429,
+      "verdict": "PROVIDER_ERROR",
+      "detail": "[mistral/mistral-medium-3.5] [429]: Rate limit exceeded (reset after 3s)",
+      "ms": 22814,
+      "prefix": "mistral"
+    },
+    {
+      "model": "mistral/mistral-medium-3",
+      "started": "2026-10-11T22:20:51.673Z",
+      "http": 429,
+      "verdict": "PROVIDER_ERROR",
+      "detail": "[mistral/mistral-medium-3] [429]: Rate limit exceeded (reset after 3s)",
+      "ms": 23764,
+      "prefix": "mistral"
+    },
+    {
+      "model": "mistral/mistral-medium-2604",
+      "started": "2026-10-11T22:20:52.079Z",
+      "http": 429,
+      "verdict": "PROVIDER_ERROR",
+      "detail": "[mistral/mistral-medium-2604] [429]: Rate limit exceeded (reset after 3s)",
+      "ms": 22840,
+      "prefix": "mistral"
+    },
+    {
+      "model": "mistral/mistral-vibe-cli-latest",
+      "started": "2026-10-11T22:21:14.920Z",
+      "http": 429,
+      "verdict": "PROVIDER_ERROR",
+      "detail": "[mistral/mistral-vibe-cli-latest] [429]: Rate limit exceeded (reset after 3s)",
+      "ms": 23997,
+      "prefix": "mistral"
+    },
+    {
+      "model": "mistral/mistral-vibe-cli-with-tools",
+      "started": "2026-10-11T22:21:15.437Z",
+      "http": 429,
+      "verdict": "PROVIDER_ERROR",
+      "detail": "[mistral/mistral-vibe-cli-with-tools] [429]: Rate limit exceeded (reset after 3s)",
+      "ms": 23245,
+      "prefix": "mistral"
+    },
+    {
+      "model": "mistral/magistral-medium-latest",
+      "started": "2026-10-11T22:21:38.683Z",
+      "http": 429,
+      "verdict": "PROVIDER_ERROR",
+      "detail": "[mistral/magistral-medium-latest] [429]: Rate limit exceeded (reset after 3s)",
+      "ms": 25453,
+      "prefix": "mistral"
+    },
+    {
+      "model": "mistral/mistral-embed-2312",
+      "started": "2026-10-11T22:21:38.917Z",
+      "http": 400,
+      "verdict": "PROVIDER_ERROR",
+      "detail": "[400]: Invalid model: mistral-embed-2312",
+      "ms": 3088,
+      "prefix": "mistral"
+    },
+    {
+      "model": "mistral/mistral-embed",
+      "started": "2026-10-11T22:21:42.005Z",
+      "http": 400,
+      "verdict": "PROVIDER_ERROR",
+      "detail": "[400]: Invalid model: mistral-embed",
+      "ms": 683,
+      "prefix": "mistral"
+    },
+    {
+      "model": "mistral/codestral-embed",
+      "started": "2026-10-11T22:21:42.688Z",
+      "http": 400,
+      "verdict": "PROVIDER_ERROR",
+      "detail": "[400]: Invalid model: codestral-embed",
+      "ms": 370,
+      "prefix": "mistral"
+    },
+    {
+      "model": "mistral/codestral-embed-2505",
+      "started": "2026-10-11T22:21:43.058Z",
+      "http": 400,
+      "verdict": "PROVIDER_ERROR",
+      "detail": "[400]: Invalid model: codestral-embed-2505",
+      "ms": 322,
+      "prefix": "mistral"
+    },
+    {
+      "model": "mistral/mistral-moderation-2603",
+      "started": "2026-10-11T22:21:43.380Z",
+      "http": 400,
+      "verdict": "PROVIDER_ERROR",
+      "detail": "[400]: Invalid model: mistral-moderation-2603",
+      "ms": 344,
+      "prefix": "mistral"
+    },
+    {
+      "model": "mistral/mistral-ocr-2512",
+      "started": "2026-10-11T22:21:43.724Z",
+      "http": 400,
+      "verdict": "PROVIDER_ERROR",
+      "detail": "[400]: Invalid model: mistral-ocr-2512",
+      "ms": 361,
+      "prefix": "mistral"
+    },
+    {
+      "model": "mistral/mistral-ocr-3-0",
+      "started": "2026-10-11T22:21:44.085Z",
+      "http": 400,
+      "verdict": "PROVIDER_ERROR",
+      "detail": "[400]: Invalid model: mistral-ocr-3-0",
+      "ms": 339,
+      "prefix": "mistral"
+    },
+    {
+      "model": "mistral/mistral-ocr-3",
+      "started": "2026-10-11T22:21:44.425Z",
+      "http": 400,
+      "verdict": "PROVIDER_ERROR",
+      "detail": "[400]: Invalid model: mistral-ocr-3",
+      "ms": 343,
+      "prefix": "mistral"
+    },
+    {
+      "model": "mistral/mistral-ocr-4-0",
+      "started": "2026-10-11T22:21:44.768Z",
+      "http": 400,
+      "verdict": "PROVIDER_ERROR",
+      "detail": "[400]: Invalid model: mistral-ocr-4-0",
+      "ms": 325,
+      "prefix": "mistral"
+    },
+    {
+      "model": "mistral/mistral-ocr-latest",
+      "started": "2026-10-11T22:21:45.094Z",
+      "http": 400,
+      "verdict": "PROVIDER_ERROR",
+      "detail": "[400]: Invalid model: mistral-ocr-latest",
+      "ms": 395,
+      "prefix": "mistral"
+    },
+    {
+      "model": "mistral/mistral-ocr-4",
+      "started": "2026-10-11T22:21:45.489Z",
+      "http": 400,
+      "verdict": "PROVIDER_ERROR",
+      "detail": "[400]: Invalid model: mistral-ocr-4",
+      "ms": 647,
+      "prefix": "mistral"
+    },
+    {
+      "model": "mistral/mistral-ocr-4-1",
+      "started": "2026-10-11T22:21:46.136Z",
+      "http": 400,
+      "verdict": "PROVIDER_ERROR",
+      "detail": "[400]: Invalid model: mistral-ocr-4-1",
+      "ms": 444,
+      "prefix": "mistral"
+    },
+    {
+      "model": "mistral/voxtral-mini-2602",
+      "started": "2026-10-11T22:21:46.580Z",
+      "http": 400,
+      "verdict": "PROVIDER_ERROR",
+      "detail": "[400]: Invalid model: voxtral-mini-2602",
+      "ms": 3451,
+      "prefix": "mistral"
+    },
+    {
+      "model": "mistral/voxtral-mini-latest",
+      "started": "2026-10-11T22:21:50.031Z",
+      "http": 400,
+      "verdict": "PROVIDER_ERROR",
+      "detail": "[400]: Invalid model: voxtral-mini-latest",
+      "ms": 725,
+      "prefix": "mistral"
+    },
+    {
+      "model": "mistral/voxtral-mini-transcribe-realtime-2602",
+      "started": "2026-10-11T22:21:50.756Z",
+      "http": 400,
+      "verdict": "PROVIDER_ERROR",
+      "detail": "[400]: Invalid model: voxtral-mini-transcribe-realtime-2602",
+      "ms": 288,
+      "prefix": "mistral"
+    },
+    {
+      "model": "mistral/voxtral-mini-realtime-2602",
+      "started": "2026-10-11T22:21:51.044Z",
+      "http": 400,
+      "verdict": "PROVIDER_ERROR",
+      "detail": "[400]: Invalid model: voxtral-mini-realtime-2602",
+      "ms": 404,
+      "prefix": "mistral"
+    },
+    {
+      "model": "mistral/voxtral-mini-realtime-latest",
+      "started": "2026-10-11T22:21:51.448Z",
+      "http": 400,
+      "verdict": "PROVIDER_ERROR",
+      "detail": "[400]: Invalid model: voxtral-mini-realtime-latest",
+      "ms": 345,
+      "prefix": "mistral"
+    },
+    {
+      "model": "mistral/voxtral-mini-tts-2603",
+      "started": "2026-10-11T22:21:51.793Z",
+      "http": 400,
+      "verdict": "PROVIDER_ERROR",
+      "detail": "[400]: Invalid model: voxtral-mini-tts-2603",
+      "ms": 356,
+      "prefix": "mistral"
+    },
+    {
+      "model": "mistral/voxtral-mini-tts-latest",
+      "started": "2026-10-11T22:21:52.150Z",
+      "http": 400,
+      "verdict": "PROVIDER_ERROR",
+      "detail": "[400]: Invalid model: voxtral-mini-tts-latest",
+      "ms": 380,
+      "prefix": "mistral"
+    },
+    {
+      "model": "mistral/mistral-moderation-latest",
+      "started": "2026-10-11T22:21:52.530Z",
+      "http": 400,
+      "verdict": "PROVIDER_ERROR",
+      "detail": "Model 'mistral-moderation-latest' is not available in the active live catalog for provider 'mistral'.",
+      "ms": 45,
+      "prefix": "mistral"
+    },
+    {
+      "model": "auto/best-coding",
+      "started": "2026-10-11T22:21:52.576Z",
+      "http": 200,
+      "verdict": "SCORED",
+      "detail": "p=0.98",
+      "finish": "stop",
+      "ms": 9613,
+      "prefix": "auto"
+    },
+    {
+      "model": "auto/best-reasoning",
+      "started": "2026-10-11T22:22:02.189Z",
+      "http": 200,
+      "verdict": "SCORED",
+      "detail": "p=0.98",
+      "finish": "stop",
+      "ms": 6368,
+      "prefix": "auto"
+    },
+    {
+      "model": "auto/best-fast",
+      "started": "2026-10-11T22:22:04.136Z",
+      "http": 200,
+      "verdict": "SCORED",
+      "detail": "p=0.98",
+      "finish": "stop",
+      "ms": 7937,
+      "prefix": "auto"
+    },
+    {
+      "model": "auto/best-vision",
+      "started": "2026-10-11T22:22:08.557Z",
+      "http": 200,
+      "verdict": "SCORED",
+      "detail": "p=0.98",
+      "finish": "stop",
+      "ms": 6836,
+      "prefix": "auto"
+    },
+    {
+      "model": "auto/best-chat",
+      "started": "2026-10-11T22:22:12.073Z",
+      "http": 200,
+      "verdict": "SCORED",
+      "detail": "p=0.98",
+      "finish": "stop",
+      "ms": 5839,
+      "prefix": "auto"
+    },
+    {
+      "model": "auto/best-coding-fast",
+      "started": "2026-10-11T22:22:15.393Z",
+      "http": 200,
+      "verdict": "SCORED",
+      "detail": "p=0.98",
+      "finish": "stop",
+      "ms": 26620,
+      "prefix": "auto"
+    },
+    {
+      "model": "auto/pro-coding",
+      "started": "2026-10-11T22:22:17.912Z",
+      "http": 200,
+      "verdict": "SCORED",
+      "detail": "p=0.999",
+      "finish": "stop",
+      "ms": 26580,
+      "prefix": "auto"
+    },
+    {
+      "model": "auto/pro-reasoning",
+      "started": "2026-10-11T22:22:42.013Z",
+      "http": 200,
+      "verdict": "SCORED",
+      "detail": "p=0.98",
+      "finish": "stop",
+      "ms": 7864,
+      "prefix": "auto"
+    },
+    {
+      "model": "auto/pro-vision",
+      "started": "2026-10-11T22:22:44.492Z",
+      "http": 200,
+      "verdict": "SCORED",
+      "detail": "p=0.98",
+      "finish": "stop",
+      "ms": 59342,
+      "prefix": "auto"
+    },
+    {
+      "model": "auto/pro-chat",
+      "started": "2026-10-11T22:22:49.877Z",
+      "http": 200,
+      "verdict": "SCORED",
+      "detail": "p=0.98",
+      "finish": "stop",
+      "ms": 77646,
+      "prefix": "auto"
+    },
+    {
+      "model": "auto/pro-fast",
+      "started": "2026-10-11T22:23:43.834Z",
+      "http": 200,
+      "verdict": "SCORED",
+      "detail": "p=0.98",
+      "finish": "stop",
+      "ms": 70556,
+      "prefix": "auto"
+    },
+    {
+      "model": "auto/coding",
+      "started": "2026-10-11T22:24:07.523Z",
+      "http": 200,
+      "verdict": "SCORED",
+      "detail": "p=0.98",
+      "finish": "stop",
+      "ms": 91821,
+      "prefix": "auto"
+    },
+    {
+      "model": "auto/fast",
+      "started": "2026-10-11T22:24:54.390Z",
+      "http": 200,
+      "verdict": "NO_JSON",
+      "detail": "ai_probability\": 0.98, \"confidence\": 0.95}",
+      "finish": "stop",
+      "ms": 64352,
+      "prefix": "auto"
+    },
+    {
+      "model": "auto/chat",
+      "started": "2026-10-11T22:25:39.344Z",
+      "http": 200,
+      "verdict": "SCORED",
+      "detail": "p=0.98",
+      "finish": "stop",
+      "ms": 64751,
+      "prefix": "auto"
+    },
+    {
+      "model": "auto/cheap",
+      "started": "2026-10-11T22:25:58.742Z",
+      "http": 200,
+      "verdict": "SCORED",
+      "detail": "p=0.98",
+      "finish": "stop",
+      "ms": 51815,
+      "prefix": "auto"
+    },
+    {
+      "model": "auto/offline",
+      "started": "2026-10-11T22:26:44.096Z",
+      "http": 200,
+      "verdict": "NO_JSON",
+      "detail": "ai_probability\": 0.98, \"confidence\": 0.95}",
+      "finish": "stop",
+      "ms": 8754,
+      "prefix": "auto"
+    },
+    {
+      "model": "auto/smart",
+      "started": "2026-10-11T22:26:50.557Z",
+      "http": 200,
+      "verdict": "SCORED",
+      "detail": "p=0.98",
+      "finish": "stop",
+      "ms": 58703,
+      "prefix": "auto"
+    },
+    {
+      "model": "auto/claude-opus",
+      "started": "2026-10-11T22:26:52.850Z",
+      "http": 200,
+      "verdict": "SCORED",
+      "detail": "p=0.98",
+      "finish": "stop",
+      "ms": 53673,
+      "prefix": "auto"
+    },
+    {
+      "model": "auto/claude-sonnet",
+      "started": "2026-10-11T22:27:46.523Z",
+      "http": 200,
+      "verdict": "SCORED",
+      "detail": "p=0.98",
+      "finish": "stop",
+      "ms": 53277,
+      "prefix": "auto"
+    },
+    {
+      "model": "auto/best-free",
+      "started": "2026-10-11T22:27:49.260Z",
+      "http": 200,
+      "verdict": "SCORED",
+      "detail": "p=0.15",
+      "finish": "stop",
+      "ms": 3074,
+      "prefix": "auto"
+    },
+    {
+      "model": "auto/best-chaos",
+      "started": "2026-10-11T22:27:52.334Z",
+      "http": 200,
+      "verdict": "HTTP_200",
+      "detail": ": chaos 4 fail bluesminds/meta/llama-3.1-8b-instruct\n\n: chaos 2 fail qoder/qwen3.8-max-preview\n\n: chaos 0 fail nvidia/01-ai/yi-large\n\n: chaos 1 fail lmarena/ama",
+      "ms": 1247,
+      "prefix": "auto"
+    },
+    {
+      "model": "auto/chaos",
+      "started": "2026-10-11T22:27:53.581Z",
+      "http": 200,
+      "verdict": "HTTP_200",
+      "detail": ": chaos 0 fail lmarena/amazon.nova-pro-v1:0\n\n: chaos 4 fail gemini-web/gemini-3.1-pro\n\n: chaos 1 fail nvidia/adept/fuyu-8b\n\n: chaos 3 ok mistral/codestral-2508\n",
+      "ms": 3090,
+      "prefix": "auto"
+    },
+    {
+      "model": "auto/coding:fast",
+      "started": "2026-10-11T22:27:56.671Z",
+      "http": 200,
+      "verdict": "SCORED",
+      "detail": "p=0.88",
+      "finish": "stop",
+      "ms": 69504,
+      "prefix": "auto"
+    },
+    {
+      "model": "auto/coding:cheap",
+      "started": "2026-10-11T22:28:39.801Z",
+      "http": 200,
+      "verdict": "SCORED",
+      "detail": "p=0.88",
+      "finish": "stop",
+      "ms": 26373,
+      "prefix": "auto"
+    },
+    {
+      "model": "auto/coding:free",
+      "started": "2026-10-11T22:29:06.174Z",
+      "http": 200,
+      "verdict": "SCORED",
+      "detail": "p=0.35",
+      "finish": "stop",
+      "ms": 7461,
+      "prefix": "auto"
+    },
+    {
+      "model": "auto/coding:pro",
+      "started": "2026-10-11T22:29:06.175Z",
+      "http": 200,
+      "verdict": "SCORED",
+      "detail": "p=0.88",
+      "finish": "stop",
+      "ms": 72894,
+      "prefix": "auto"
+    },
+    {
+      "model": "auto/coding:reliable",
+      "started": "2026-10-11T22:29:13.635Z",
+      "http": 503,
+      "verdict": "PROVIDER_ERROR",
+      "detail": "Maximum combo retry limit reached",
+      "ms": 46107,
+      "prefix": "auto"
+    },
+    {
+      "model": "auto/reasoning",
+      "started": "2026-10-11T22:29:59.742Z",
+      "http": 200,
+      "verdict": "SCORED",
+      "detail": "p=0.88",
+      "finish": "stop",
+      "ms": 66433,
+      "prefix": "auto"
+    },
+    {
+      "model": "auto/reasoning:pro",
+      "started": "2026-10-11T22:30:19.069Z",
+      "http": 200,
+      "verdict": "SCORED",
+      "detail": "p=0.88",
+      "finish": "stop",
+      "ms": 47107,
+      "prefix": "auto"
+    },
+    {
+      "model": "auto/vision",
+      "started": "2026-10-11T22:31:06.175Z",
+      "http": 200,
+      "verdict": "SCORED",
+      "detail": "p=0.85",
+      "finish": "stop",
+      "ms": 20912,
+      "prefix": "auto"
+    },
+    {
+      "model": "auto/multimodal",
+      "started": "2026-10-11T22:31:06.177Z",
+      "http": 200,
+      "verdict": "SCORED",
+      "detail": "p=0.82",
+      "finish": "stop",
+      "ms": 18755,
+      "prefix": "auto"
+    },
+    {
+      "model": "auto/glm",
+      "started": "2026-10-11T22:31:24.932Z",
+      "http": 200,
+      "verdict": "SCORED",
+      "detail": "p=0.45",
+      "finish": "stop",
+      "ms": 23674,
+      "prefix": "auto"
+    },
+    {
+      "model": "auto/minimax",
+      "started": "2026-10-11T22:31:27.087Z",
+      "http": 200,
+      "verdict": "NO_JSON",
+      "detail": "I'm Kiro, an AI development environment. I'm not an AI text detection ",
+      "finish": "stop",
+      "ms": 7242,
+      "prefix": "auto"
+    },
+    {
+      "model": "auto/mimo",
+      "started": "2026-10-11T22:31:34.330Z",
+      "http": 401,
+      "verdict": "PROVIDER_ERROR",
+      "detail": "lmarena/mimo-v2.5: auth — [401]: User not found (HTTP 401); oc/mimo-v2.5-free: auth — [401]: Model mimo-v2.5-free is not supported (HTTP 401)",
+      "ms": 4197,
+      "prefix": "auto"
+    },
+    {
+      "model": "auto/zai",
+      "started": "2026-10-11T22:31:38.527Z",
+      "http": 200,
+      "verdict": "SCORED",
+      "detail": "p=0.9",
+      "finish": "stop",
+      "ms": 25350,
+      "prefix": "auto"
+    },
+    {
+      "model": "auto/gemma",
+      "started": "2026-10-11T22:31:48.606Z",
+      "http": 200,
+      "verdict": "SCORED",
+      "detail": "p=0.1",
+      "finish": "stop",
+      "ms": 41177,
+      "prefix": "auto"
+    },
+    {
+      "model": "auto/llama",
+      "started": "2026-10-11T22:32:03.877Z",
+      "http": 200,
+      "verdict": "SCORED",
+      "detail": "p=0.98",
+      "finish": "stop",
+      "ms": 9317,
+      "prefix": "auto"
+    },
+    {
+      "model": "auto/gemini",
+      "started": "2026-10-11T22:32:13.194Z",
+      "http": 502,
+      "verdict": "PROVIDER_ERROR",
+      "detail": "lmarena/gemini-2.5-pro-grounding: auth — [401]: User not found (HTTP 401); dva/gemini-3-1-pro-high: provider — [500]: DEVIN_AGENTIC_HOME must be an absolute pat",
+      "ms": 10434,
+      "prefix": "auto"
+    },
+    {
+      "model": "kr/claude-sonnet-5",
+      "started": "2026-10-11T22:32:23.628Z",
+      "http": 400,
+      "verdict": "PROVIDER_ERROR",
+      "detail": "[400]: Invalid model. Please select a different model to continue.",
+      "ms": 1020,
+      "prefix": "kr"
+    },
+    {
+      "model": "kr/claude-sonnet-4.5",
+      "started": "2026-10-11T22:32:24.648Z",
+      "http": 200,
+      "verdict": "SCORED",
+      "detail": "p=0.85",
+      "finish": "stop",
+      "ms": 2553,
+      "prefix": "kr"
+    },
+    {
+      "model": "kr/claude-haiku-4.5",
+      "started": "2026-10-11T22:32:27.201Z",
+      "http": 200,
+      "verdict": "SCORED",
+      "detail": "p=0.72",
+      "finish": "stop",
+      "ms": 1119,
+      "prefix": "kr"
+    },
+    {
+      "model": "kr/deepseek-3.2",
+      "started": "2026-10-11T22:32:28.320Z",
+      "http": 200,
+      "verdict": "SCORED",
+      "detail": "p=0.85",
+      "finish": "stop",
+      "ms": 1274,
+      "prefix": "kr"
+    },
+    {
+      "model": "kr/minimax-m2.5",
+      "started": "2026-10-11T22:32:29.594Z",
+      "http": 200,
+      "verdict": "SCORED",
+      "detail": "p=0.78",
+      "finish": "stop",
+      "ms": 4669,
+      "prefix": "kr"
+    },
+    {
+      "model": "kr/minimax-m2.1",
+      "started": "2026-10-11T22:32:29.783Z",
+      "http": 200,
+      "verdict": "SCORED",
+      "detail": "p=0.02",
+      "finish": "stop",
+      "ms": 2613,
+      "prefix": "kr"
+    },
+    {
+      "model": "kr/glm-5",
+      "started": "2026-10-11T22:32:32.396Z",
+      "http": 200,
+      "verdict": "SCORED",
+      "detail": "p=0.65",
+      "finish": "stop",
+      "ms": 1614,
+      "prefix": "kr"
+    },
+    {
+      "model": "kr/qwen3-coder-next",
+      "started": "2026-10-11T22:32:34.010Z",
+      "http": 200,
+      "verdict": "SCORED",
+      "detail": "p=0.32",
+      "finish": "stop",
+      "ms": 1057,
+      "prefix": "kr"
+    },
+    {
+      "model": "kr/gpt-5.6-sol",
+      "started": "2026-10-11T22:32:34.263Z",
+      "http": 400,
+      "verdict": "PROVIDER_ERROR",
+      "detail": "[400]: Invalid model. Please select a different model to continue.",
+      "ms": 667,
+      "prefix": "kr"
+    },
+    {
+      "model": "kr/gpt-5.6-terra",
+      "started": "2026-10-11T22:32:34.931Z",
+      "http": 400,
+      "verdict": "PROVIDER_ERROR",
+      "detail": "[400]: Invalid model. Please select a different model to continue.",
+      "ms": 615,
+      "prefix": "kr"
+    },
+    {
+      "model": "kr/gpt-5.6-luna",
+      "started": "2026-10-11T22:32:35.067Z",
+      "http": 400,
+      "verdict": "PROVIDER_ERROR",
+      "detail": "[400]: Invalid model. Please select a different model to continue.",
+      "ms": 651,
+      "prefix": "kr"
+    },
+    {
+      "model": "kr/claude-sonnet-5-low",
+      "started": "2026-10-11T22:32:35.546Z",
+      "http": 400,
+      "verdict": "PROVIDER_ERROR",
+      "detail": "[400]: Invalid model. Please select a different model to continue.",
+      "ms": 1073,
+      "prefix": "kr"
+    },
+    {
+      "model": "kr/claude-sonnet-5-medium",
+      "started": "2026-10-11T22:32:35.718Z",
+      "http": 400,
+      "verdict": "PROVIDER_ERROR",
+      "detail": "[400]: Invalid model. Please select a different model to continue.",
+      "ms": 975,
+      "prefix": "kr"
+    },
+    {
+      "model": "kr/claude-sonnet-5-high",
+      "started": "2026-10-11T22:32:36.619Z",
+      "http": 400,
+      "verdict": "PROVIDER_ERROR",
+      "detail": "[400]: Invalid model. Please select a different model to continue.",
+      "ms": 1111,
+      "prefix": "kr"
+    },
+    {
+      "model": "kr/claude-sonnet-5-xhigh",
+      "started": "2026-10-11T22:32:36.694Z",
+      "http": 400,
+      "verdict": "PROVIDER_ERROR",
+      "detail": "[400]: Invalid model. Please select a different model to continue.",
+      "ms": 1251,
+      "prefix": "kr"
+    },
+    {
+      "model": "kr/claude-sonnet-4.5-low",
+      "started": "2026-10-11T22:32:37.731Z",
+      "http": 400,
+      "verdict": "PROVIDER_ERROR",
+      "detail": "[400]: Invalid model. Please select a different model to continue.",
+      "ms": 700,
+      "prefix": "kr"
+    },
+    {
+      "model": "kr/claude-sonnet-4.5-medium",
+      "started": "2026-10-11T22:32:37.945Z",
+      "http": 400,
+      "verdict": "PROVIDER_ERROR",
+      "detail": "[400]: Invalid model. Please select a different model to continue.",
+      "ms": 638,
+      "prefix": "kr"
+    },
+    {
+      "model": "kr/claude-sonnet-4.5-high",
+      "started": "2026-10-11T22:32:38.431Z",
+      "http": 400,
+      "verdict": "PROVIDER_ERROR",
+      "detail": "[400]: Invalid model. Please select a different model to continue.",
+      "ms": 641,
+      "prefix": "kr"
+    },
+    {
+      "model": "kr/claude-haiku-4.5-low",
+      "started": "2026-10-11T22:32:38.583Z",
+      "http": 400,
+      "verdict": "PROVIDER_ERROR",
+      "detail": "[400]: Invalid model. Please select a different model to continue.",
+      "ms": 570,
+      "prefix": "kr"
+    },
+    {
+      "model": "kr/claude-haiku-4.5-medium",
+      "started": "2026-10-11T22:32:39.073Z",
+      "http": 400,
+      "verdict": "PROVIDER_ERROR",
+      "detail": "[400]: Invalid model. Please select a different model to continue.",
+      "ms": 525,
+      "prefix": "kr"
+    },
+    {
+      "model": "kr/claude-haiku-4.5-high",
+      "started": "2026-10-11T22:32:39.153Z",
+      "http": 400,
+      "verdict": "PROVIDER_ERROR",
+      "detail": "[400]: Invalid model. Please select a different model to continue.",
+      "ms": 581,
+      "prefix": "kr"
+    },
+    {
+      "model": "kiro/claude-sonnet-5",
+      "started": "2026-10-11T22:32:39.599Z",
+      "http": 400,
+      "verdict": "PROVIDER_ERROR",
+      "detail": "[400]: Invalid model. Please select a different model to continue.",
+      "ms": 1031,
+      "prefix": "kiro"
+    },
+    {
+      "model": "kiro/claude-sonnet-4.5",
+      "started": "2026-10-11T22:32:39.734Z",
+      "http": 200,
+      "verdict": "SCORED",
+      "detail": "p=0.85",
+      "finish": "stop",
+      "ms": 3049,
+      "prefix": "kiro"
+    },
+    {
+      "model": "kiro/claude-haiku-4.5",
+      "started": "2026-10-11T22:32:40.630Z",
+      "http": 200,
+      "verdict": "SCORED",
+      "detail": "p=0.85",
+      "finish": "stop",
+      "ms": 1293,
+      "prefix": "kiro"
+    },
+    {
+      "model": "kiro/deepseek-3.2",
+      "started": "2026-10-11T22:32:41.924Z",
+      "http": 200,
+      "verdict": "SCORED",
+      "detail": "p=0.35",
+      "finish": "stop",
+      "ms": 1230,
+      "prefix": "kiro"
+    },
+    {
+      "model": "kiro/minimax-m2.5",
+      "started": "2026-10-11T22:32:42.784Z",
+      "http": 200,
+      "verdict": "SCORED",
+      "detail": "p=0.82",
+      "finish": "stop",
+      "ms": 6060,
+      "prefix": "kiro"
+    },
+    {
+      "model": "kiro/minimax-m2.1",
+      "started": "2026-10-11T22:32:43.154Z",
+      "http": 200,
+      "verdict": "SCORED",
+      "detail": "p=0.02",
+      "finish": "stop",
+      "ms": 2419,
+      "prefix": "kiro"
+    },
+    {
+      "model": "kiro/glm-5",
+      "started": "2026-10-11T22:32:45.573Z",
+      "http": 200,
+      "verdict": "SCORED",
+      "detail": "p=0.85",
+      "finish": "stop",
+      "ms": 1169,
+      "prefix": "kiro"
+    },
+    {
+      "model": "kiro/qwen3-coder-next",
+      "started": "2026-10-11T22:32:46.742Z",
+      "http": 200,
+      "verdict": "SCORED",
+      "detail": "p=0.12",
+      "finish": "stop",
+      "ms": 991,
+      "prefix": "kiro"
+    },
+    {
+      "model": "kiro/gpt-5.6-sol",
+      "started": "2026-10-11T22:32:47.734Z",
+      "http": 400,
+      "verdict": "PROVIDER_ERROR",
+      "detail": "[400]: Invalid model. Please select a different model to continue.",
+      "ms": 532,
+      "prefix": "kiro"
+    },
+    {
+      "model": "kiro/gpt-5.6-terra",
+      "started": "2026-10-11T22:32:48.266Z",
+      "http": 400,
+      "verdict": "PROVIDER_ERROR",
+      "detail": "[400]: Invalid model. Please select a different model to continue.",
+      "ms": 603,
+      "prefix": "kiro"
+    },
+    {
+      "model": "kiro/gpt-5.6-luna",
+      "started": "2026-10-11T22:32:48.844Z",
+      "http": 400,
+      "verdict": "PROVIDER_ERROR",
+      "detail": "[400]: Invalid model. Please select a different model to continue.",
+      "ms": 600,
+      "prefix": "kiro"
+    },
+    {
+      "model": "kiro/claude-sonnet-5-low",
+      "started": "2026-10-11T22:32:48.870Z",
+      "http": 400,
+      "verdict": "PROVIDER_ERROR",
+      "detail": "[400]: Invalid model. Please select a different model to continue.",
+      "ms": 1389,
+      "prefix": "kiro"
+    },
+    {
+      "model": "kiro/claude-sonnet-5-medium",
+      "started": "2026-10-11T22:32:49.445Z",
+      "http": 400,
+      "verdict": "PROVIDER_ERROR",
+      "detail": "[400]: Invalid model. Please select a different model to continue.",
+      "ms": 1395,
+      "prefix": "kiro"
+    },
+    {
+      "model": "kiro/claude-sonnet-5-high",
+      "started": "2026-10-11T22:32:50.259Z",
+      "http": 400,
+      "verdict": "PROVIDER_ERROR",
+      "detail": "[400]: Invalid model. Please select a different model to continue.",
+      "ms": 1214,
+      "prefix": "kiro"
+    },
+    {
+      "model": "kiro/claude-sonnet-5-xhigh",
+      "started": "2026-10-11T22:32:50.840Z",
+      "http": 400,
+      "verdict": "PROVIDER_ERROR",
+      "detail": "[400]: Invalid model. Please select a different model to continue.",
+      "ms": 1110,
+      "prefix": "kiro"
+    },
+    {
+      "model": "kiro/claude-sonnet-4.5-low",
+      "started": "2026-10-11T22:32:51.473Z",
+      "http": 400,
+      "verdict": "PROVIDER_ERROR",
+      "detail": "[400]: Invalid model. Please select a different model to continue.",
+      "ms": 659,
+      "prefix": "kiro"
+    },
+    {
+      "model": "kiro/claude-sonnet-4.5-medium",
+      "started": "2026-10-11T22:32:51.950Z",
+      "http": 400,
+      "verdict": "PROVIDER_ERROR",
+      "detail": "[400]: Invalid model. Please select a different model to continue.",
+      "ms": 655,
+      "prefix": "kiro"
+    },
+    {
+      "model": "kiro/claude-sonnet-4.5-high",
+      "started": "2026-10-11T22:32:52.133Z",
+      "http": 400,
+      "verdict": "PROVIDER_ERROR",
+      "detail": "[400]: Invalid model. Please select a different model to continue.",
+      "ms": 651,
+      "prefix": "kiro"
+    },
+    {
+      "model": "kiro/claude-haiku-4.5-low",
+      "started": "2026-10-11T22:32:52.605Z",
+      "http": 400,
+      "verdict": "PROVIDER_ERROR",
+      "detail": "[400]: Invalid model. Please select a different model to continue.",
+      "ms": 621,
+      "prefix": "kiro"
+    },
+    {
+      "model": "kiro/claude-haiku-4.5-medium",
+      "started": "2026-10-11T22:32:52.784Z",
+      "http": 400,
+      "verdict": "PROVIDER_ERROR",
+      "detail": "[400]: Invalid model. Please select a different model to continue.",
+      "ms": 600,
+      "prefix": "kiro"
+    },
+    {
+      "model": "kiro/claude-haiku-4.5-high",
+      "started": "2026-10-11T22:32:53.226Z",
+      "http": 400,
+      "verdict": "PROVIDER_ERROR",
+      "detail": "[400]: Invalid model. Please select a different model to continue.",
+      "ms": 613,
+      "prefix": "kiro"
+    }
+  ]
+}

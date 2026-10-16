@@ -1,0 +1,14 @@
+resume: keeping 7 scored row(s), calling 5
+tag=gemscreen-gemini-3-8-flash model=gemini-3.8-flash prompt=direct temp=0.1 top_p=0.9 max_tokens=1400 timeout_s=150 n=5 concurrency=1
+base_url=https://generativelanguage.googleapis.com/v1beta/openai keys=1
+  [ 1/5] ai-008 AI    medicine    -> 0.96 conf=0.92 (2987ms)
+  [ 2/5] hu-008 HUMAN medicine    -> 0.03 conf=0.94 (10204ms)
+  [ 3/5] hu-012 HUMAN finance     -> 0.04 conf=0.92 (6664ms, try2)
+  [ 4/5] hu-016 HUMAN reddit_eli5 -> 0.03 conf=0.95 (3599ms)
+  [ 5/5] hu-020 HUMAN open_qa     -> 0.08 conf=0.88 (6997ms, try2)
+
+wrote C:\Users\adam\Desktop\humanizer ultra\ai-text-detector\benchmark\results-gemscreen-gemini-3-8-flash.jsonl
+params: {"tag":"gemscreen-gemini-3-8-flash","model":"gemini-3.8-flash","prompt":"direct","temperature":0.1,"top_p":0.9,"max_tokens":1400,"tries":2,"wait_ms":20000,"timeout_s":150,"concurrency":1,"base_url":"https://generativelanguage.googleapis.com/v1beta/openai","corpus":"corpus-screen12.json","rows":12,"usable":12}
+usable=12/12 salvaged=0 truncated=0 errors=none
+latency ms p50/p90/max: 18309/73198/74929
+wall clock: 70.9s

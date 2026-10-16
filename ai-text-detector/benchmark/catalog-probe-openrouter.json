@@ -1,0 +1,114 @@
+[
+ {
+  "model": "apodex/apodex-1.1-mini:free",
+  "http": 429,
+  "ms": 646,
+  "verdict": "PROVIDER_ERROR",
+  "detail": "Provider returned error"
+ },
+ {
+  "model": "cohere/north-mini-code:free",
+  "http": 200,
+  "ms": 3563,
+  "verdict": "SCORED",
+  "detail": "p=0.28 finish=stop"
+ },
+ {
+  "model": "dots-studio/dots-3-note-preview:free",
+  "http": 200,
+  "ms": 11251,
+  "verdict": "EMPTY",
+  "detail": "no string content finish=length"
+ },
+ {
+  "model": "google/gemma-4-26b-a4b-it:free",
+  "http": 200,
+  "ms": 1198,
+  "verdict": "SCORED",
+  "detail": "p=0.98 finish=stop"
+ },
+ {
+  "model": "google/gemma-4-31b-it:free",
+  "http": 200,
+  "ms": 1415,
+  "verdict": "SCORED",
+  "detail": "p=0.98 finish=stop"
+ },
+ {
+  "model": "inclusionai/ling-3.0-flash-sante:free",
+  "http": 200,
+  "ms": 4233,
+  "verdict": "SCORED",
+  "detail": "p=0.8 finish=stop"
+ },
+ {
+  "model": "liquid/lfm-2.5-2.6b:free",
+  "http": 429,
+  "ms": 283,
+  "verdict": "PROVIDER_ERROR",
+  "detail": "Provider returned error"
+ },
+ {
+  "model": "nvidia/nemotron-3-nano-omni-30b-a3b-reasoning:free",
+  "http": 200,
+  "ms": 6775,
+  "verdict": "SCORED",
+  "detail": "p=0.73 finish=stop"
+ },
+ {
+  "model": "nvidia/nemotron-3-super-120b-a12b:free",
+  "http": 200,
+  "ms": 1877,
+  "verdict": "SCORED",
+  "detail": "p=0.12 finish=stop"
+ },
+ {
+  "model": "nvidia/nemotron-3-ultra-550b-a55b:free",
+  "http": 200,
+  "ms": 386,
+  "verdict": "PROVIDER_ERROR",
+  "detail": "Upstream error from Nvidia: Service temporarily overloaded"
+ },
+ {
+  "model": "nvidia/nemotron-3.5-content-safety:free",
+  "http": 200,
+  "ms": 2063,
+  "verdict": "NO_JSON",
+  "detail": "User Safety: safe finish=stop"
+ },
+ {
+  "model": "nvidia/nemotron-3.5-lightning:free",
+  "http": 200,
+  "ms": 25619,
+  "verdict": "SCORED",
+  "detail": "p=0.18 finish=length"
+ },
+ {
+  "model": "poolside/laguna-s-2.1:free",
+  "http": 429,
+  "ms": 177,
+  "verdict": "PROVIDER_ERROR",
+  "detail": "Provider returned error"
+ },
+ {
+  "model": "poolside/laguna-xs-2.1:free",
+  "http": 429,
+  "ms": 528,
+  "verdict": "PROVIDER_ERROR",
+  "detail": "Provider returned error"
+ },
+ {
+  "model": "thinkingmachines/inkling-small:free",
+  "http": 403,
+  "ms": 56,
+  "verdict": "PROVIDER_ERROR",
+  "detail": "thinkingmachines/inkling-small:free is only available on agentic harnesses. Try plugging it into a coding agent or produ"
+ },
+ {
+  "model": "thinkingmachines/inkling:free",
+  "http": 403,
+  "ms": 65,
+  "verdict": "PROVIDER_ERROR",
+  "detail": "thinkingmachines/inkling:free is only available on agentic harnesses. Try plugging it into a coding agent or productivit"
+ }
+]

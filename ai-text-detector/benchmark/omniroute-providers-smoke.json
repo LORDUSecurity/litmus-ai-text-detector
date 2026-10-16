@@ -1,0 +1,47 @@
+{
+  "generated": "2026-10-10T22:52:32.937Z",
+  "base_url": "http://localhost:20128/v1",
+  "catalogue_total": 1608,
+  "in_scope": 25,
+  "per_prefix": 1,
+  "summary": [
+    {
+      "prefix": "kiro",
+      "models_listed": 21,
+      "probed": 1,
+      "scored": 0,
+      "status": "PROVIDER_ERROR",
+      "reason": "[400]: Invalid model. Please select a different model to continue.",
+      "sample_model": "kiro/claude-sonnet-5"
+    },
+    {
+      "prefix": "gemini-web",
+      "models_listed": 4,
+      "probed": 1,
+      "scored": 0,
+      "status": "PROVIDER_ERROR",
+      "reason": "[gemini-web/gemini-3.1-pro] [503]: Gemini Web requires the Playwright Chromium browser, which is not installed. Run `npx playwright install chromium` on the hos",
+      "sample_model": "gemini-web/gemini-3.1-pro"
+    }
+  ],
+  "probes": [
+    {
+      "model": "kiro/claude-sonnet-5",
+      "started": "2026-10-10T22:52:20.877Z",
+      "http": 400,
+      "verdict": "PROVIDER_ERROR",
+      "detail": "[400]: Invalid model. Please select a different model to continue.",
+      "ms": 1272,
+      "prefix": "kiro"
+    },
+    {
+      "model": "gemini-web/gemini-3.1-pro",
+      "started": "2026-10-10T22:52:20.885Z",
+      "http": 503,
+      "verdict": "PROVIDER_ERROR",
+      "detail": "[gemini-web/gemini-3.1-pro] [503]: Gemini Web requires the Playwright Chromium browser, which is not installed. Run `npx playwright install chromium` on the hos",
+      "ms": 12051,
+      "prefix": "gemini-web"
+    }
+  ]
+}

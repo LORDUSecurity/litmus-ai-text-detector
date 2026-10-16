@@ -1,0 +1,48 @@
+tag=appgw-nemotron-ultra model=nvidia/nemotron-3-ultra-550b-a55b prompt=direct temp=0.1 top_p=0.9 max_tokens=700 timeout_s=260 n=4 concurrency=1
+base_url=https://integrate.api.nvidia.com/v1 keys=1
+  [ 1/4] short-hu HUMAN finance     -> 0.15 conf=0.85 (8941ms)
+  [ 2/4] med-ai AI    open_qa     -> 0.60 conf=0.55 (6692ms)
+  [ 3/4] long-hu HUMAN finance     -> 0.18 conf=0.75 (35842ms)
+  [ 4/4] defer-ai AI    finance     -> 0.15 conf=0.85 (32100ms)
+
+wrote C:\Users\adam\Desktop\humanizer ultra\ai-text-detector\benchmark\results-appgw-nemotron-ultra.jsonl
+params: {"tag":"appgw-nemotron-ultra","model":"nvidia/nemotron-3-ultra-550b-a55b","prompt":"direct","temperature":0.1,"top_p":0.9,"max_tokens":700,"tries":4,"wait_ms":3000,"timeout_s":260,"concurrency":1,"base_url":"https://integrate.api.nvidia.com/v1","corpus":"appbench-corpus.json","rows":4,"usable":4}
+usable=4/4 salvaged=0 truncated=0 errors=none
+latency ms p50/p90/max: 32100/35842/35842
+wall clock: 83.6s
+tag=appgw-glm53flash model=z-ai/glm-5.3-flash prompt=direct temp=0.1 top_p=0.9 max_tokens=700 timeout_s=260 n=4 concurrency=1
+base_url=https://integrate.api.nvidia.com/v1 keys=1
+  [ 1/4] short-hu HUMAN finance     -> 0.15 conf=0.60 (50376ms)
+  [ 2/4] med-ai AI    open_qa     -> 0.90 conf=0.85 (70918ms)
+  [ 3/4] long-hu HUMAN finance     -> 0.06 conf=0.82 (46801ms)
+  [ 4/4] defer-ai AI    finance     -> 0.60 conf=0.40 (58758ms)
+
+wrote C:\Users\adam\Desktop\humanizer ultra\ai-text-detector\benchmark\results-appgw-glm53flash.jsonl
+params: {"tag":"appgw-glm53flash","model":"z-ai/glm-5.3-flash","prompt":"direct","temperature":0.1,"top_p":0.9,"max_tokens":700,"tries":4,"wait_ms":3000,"timeout_s":260,"concurrency":1,"base_url":"https://integrate.api.nvidia.com/v1","corpus":"appbench-corpus.json","rows":4,"usable":4}
+usable=4/4 salvaged=0 truncated=0 errors=none
+latency ms p50/p90/max: 58758/70918/70918
+wall clock: 226.9s
+tag=appgw-gemma4-31b model=google/gemma-4-31b-it prompt=direct temp=0.1 top_p=0.9 max_tokens=700 timeout_s=260 n=4 concurrency=1
+base_url=https://integrate.api.nvidia.com/v1 keys=1
+  [ 1/4] short-hu HUMAN finance     -> ERR:exception (260003ms, try4)
+  [ 2/4] med-ai AI    open_qa     -> ERR:exception (260013ms, try4)
+  [ 3/4] long-hu HUMAN finance     -> 0.05 conf=0.95 (96949ms, try2)
+  [ 4/4] defer-ai AI    finance     -> 1.00 conf=0.99 (83081ms)
+
+wrote C:\Users\adam\Desktop\humanizer ultra\ai-text-detector\benchmark\results-appgw-gemma4-31b.jsonl
+params: {"tag":"appgw-gemma4-31b","model":"google/gemma-4-31b-it","prompt":"direct","temperature":0.1,"top_p":0.9,"max_tokens":700,"tries":4,"wait_ms":3000,"timeout_s":260,"concurrency":1,"base_url":"https://integrate.api.nvidia.com/v1","corpus":"appbench-corpus.json","rows":4,"usable":2}
+usable=2/4 salvaged=0 truncated=0 errors={"exception":2}
+latency ms p50/p90/max: 96949/96949/96949
+wall clock: 2559.2s
+tag=appgw-deepseek-v41 model=deepseek-ai/deepseek-v4.1-flash prompt=direct temp=0.1 top_p=0.9 max_tokens=700 timeout_s=260 n=4 concurrency=1
+base_url=https://integrate.api.nvidia.com/v1 keys=1
+  [ 1/4] short-hu HUMAN finance     -> 0.15 conf=0.70 (197210ms)
+  [ 2/4] med-ai AI    open_qa     -> 0.90 conf=0.80 (177524ms)
+  [ 3/4] long-hu HUMAN finance     -> 0.15 conf=0.80 (243816ms)
+  [ 4/4] defer-ai AI    finance     -> 0.08 conf=0.82 (230779ms, try3)
+
+wrote C:\Users\adam\Desktop\humanizer ultra\ai-text-detector\benchmark\results-appgw-deepseek-v41.jsonl
+params: {"tag":"appgw-deepseek-v41","model":"deepseek-ai/deepseek-v4.1-flash","prompt":"direct","temperature":0.1,"top_p":0.9,"max_tokens":700,"tries":4,"wait_ms":3000,"timeout_s":260,"concurrency":1,"base_url":"https://integrate.api.nvidia.com/v1","corpus":"appbench-corpus.json","rows":4,"usable":4}
+usable=4/4 salvaged=0 truncated=0 errors=none
+latency ms p50/p90/max: 230779/243816/243816
+wall clock: 1378.4s

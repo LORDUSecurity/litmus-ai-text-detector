@@ -273,4 +273,68 @@ This spec is not satisfied by code that compiles. Done means:
 - the SQLite key count is unchanged after that call, shown as actual query output;
 - the UI has been driven in a real browser, golden path and failure banners.
 
+## 15. As built (2026-10-06) — two deviations from this spec, and one item that cannot be met
+
+**§9 changed: the UI does not talk to n8n directly.** `proxy.conf.json` maps `/api` to
+`http://127.0.0.1:8787`, the new `tools/detector-gateway.js`, which forwards to the webhook and
+adds CORS. The gateway is load-bearing, not a convenience — see the next point. The config panel
+reads `/api/gateway-health` and says out loud whether purging is active.
+
+**§7 and §3 were wrong, and the user chose a different fix.** Disabling save-data settings does
+not keep a BYOK key off disk. n8n writes the inbound webhook request, headers included, as part
+of starting the execution, and `DISCARDABLE_DATA_MODES` excludes the `webhook` mode, so the
+settings in §7 only suppress the node run data. Measured, not inferred. The chosen remedy is a
+session-scoped purger: after each call the gateway deletes this workflow's execution rows, scoped
+by `id > max(id) at gateway start` so pre-existing history is never touched, with
+`PRAGMA foreign_keys=ON` so the `execution_data` cascade actually fires.
+
+Evidence, re-queried from `database.sqlite` after roughly 72 live calls made through the gateway:
+
+```
+workflow rows now      = 85      (85 before the session started)
+execution_data rows    = 85
+rows containing nvapi- = 74      (the pre-existing rows, deliberately left alone)
+```
+
+and from `tools/verify-purge.js`, with a canary sent as both key headers: rows containing the
+canary went 1 immediately after the call to 0 nine seconds later, while the legacy count stayed
+74 and the total stayed 85.
+
+**§14's "all 48 texts return the same verdicts" is not achievable as written.** The detector is
+not reproducible run to run. The full 48-text run through the new contract gave accuracy 0.646
+(identical to the baseline) with 0 errors, but precision 0.886 against 0.969, review rate 0.271
+against 0.333, and 4 false positives against 1 — 11 texts changed category.
+
+To find out whether `lane_config` caused that, the 12 texts that moved were run twice more, same
+code path, once with no `lane_config` (env fallback) and once with it:
+
+```
+                 no lane_config      with lane_config
+correct           3/12                4/12
+wrong             hu-004 hu-013       hu-004 hu-010 hu-011
+deferred          7                   5
+```
+
+The two runs disagree with each other on 8 of the 12, in both directions — `hu-004` is wrong
+without the override and correct with it, `hu-015` the other way round. A behavioural change from
+the request shape would not move texts back and forth. This is gray-zone jitter at temperature 0.1
+on the 550B lane; `hu-004` is wrong in three of the four observations and is a hard case, not a
+regression. Aggregate accuracy held.
+
+**Not demonstrated:** a human typing a real key into the BYOK field and reading a verdict from
+the page. The header path with a real key is proven at the contract level
+(`n8n/live-contract-test.js` scenario 6: verdict produced, `key_source: header`, key absent from
+the response), and the page's header behaviour is proven by unit tests, but the two were not
+joined by a hand.
+
 Anything not demonstrated is reported as not demonstrated.
+
+### Result-card fields changed on 2026-10-06 (tie-break policy)
+
+§8 described the payload as `component_scores.model_disagreement` and `weights_used`.
+Those two are gone with the weighted blend. The shipped ensemble node now returns
+`lane_gap` (informational), `decision_mode: "tie_break"`, `deciding_lane` and
+`secondary_decision_threshold`, and the card reads the headline probability as the
+deciding lane's own number rather than an average. `npm test` (28 tests, 3 files) and
+`ng build` pass against the new types; the page was not re-driven in a browser
+for this change.

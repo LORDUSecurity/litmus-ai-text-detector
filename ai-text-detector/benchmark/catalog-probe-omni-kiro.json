@@ -1,0 +1,177 @@
+[
+ {
+  "model": "kiro/claude-haiku-4.5",
+  "http": 200,
+  "ms": 1432,
+  "verdict": "SCORED",
+  "detail": "p=0.92 finish=stop"
+ },
+ {
+  "model": "kiro/claude-haiku-4.5-high",
+  "http": 400,
+  "ms": 747,
+  "verdict": "PROVIDER_ERROR",
+  "detail": "[400]: Invalid model. Please select a different model to continue.",
+  "limit_source": null,
+  "provider": null
+ },
+ {
+  "model": "kiro/claude-haiku-4.5-low",
+  "http": 400,
+  "ms": 528,
+  "verdict": "PROVIDER_ERROR",
+  "detail": "[400]: Invalid model. Please select a different model to continue.",
+  "limit_source": null,
+  "provider": null
+ },
+ {
+  "model": "kiro/claude-haiku-4.5-medium",
+  "http": 400,
+  "ms": 658,
+  "verdict": "PROVIDER_ERROR",
+  "detail": "[400]: Invalid model. Please select a different model to continue.",
+  "limit_source": null,
+  "provider": null
+ },
+ {
+  "model": "kiro/claude-sonnet-4.5",
+  "http": 200,
+  "ms": 2424,
+  "verdict": "SCORED",
+  "detail": "p=0.85 finish=stop"
+ },
+ {
+  "model": "kiro/claude-sonnet-4.5-high",
+  "http": 400,
+  "ms": 532,
+  "verdict": "PROVIDER_ERROR",
+  "detail": "[400]: Invalid model. Please select a different model to continue.",
+  "limit_source": null,
+  "provider": null
+ },
+ {
+  "model": "kiro/claude-sonnet-4.5-low",
+  "http": 400,
+  "ms": 548,
+  "verdict": "PROVIDER_ERROR",
+  "detail": "[400]: Invalid model. Please select a different model to continue.",
+  "limit_source": null,
+  "provider": null
+ },
+ {
+  "model": "kiro/claude-sonnet-4.5-medium",
+  "http": 400,
+  "ms": 561,
+  "verdict": "PROVIDER_ERROR",
+  "detail": "[400]: Invalid model. Please select a different model to continue.",
+  "limit_source": null,
+  "provider": null
+ },
+ {
+  "model": "kiro/claude-sonnet-5",
+  "http": 400,
+  "ms": 1117,
+  "verdict": "PROVIDER_ERROR",
+  "detail": "[400]: Invalid model. Please select a different model to continue.",
+  "limit_source": null,
+  "provider": null
+ },
+ {
+  "model": "kiro/claude-sonnet-5-high",
+  "http": 400,
+  "ms": 1006,
+  "verdict": "PROVIDER_ERROR",
+  "detail": "[400]: Invalid model. Please select a different model to continue.",
+  "limit_source": null,
+  "provider": null
+ },
+ {
+  "model": "kiro/claude-sonnet-5-low",
+  "http": 400,
+  "ms": 1047,
+  "verdict": "PROVIDER_ERROR",
+  "detail": "[400]: Invalid model. Please select a different model to continue.",
+  "limit_source": null,
+  "provider": null
+ },
+ {
+  "model": "kiro/claude-sonnet-5-medium",
+  "http": 400,
+  "ms": 1082,
+  "verdict": "PROVIDER_ERROR",
+  "detail": "[400]: Invalid model. Please select a different model to continue.",
+  "limit_source": null,
+  "provider": null
+ },
+ {
+  "model": "kiro/claude-sonnet-5-xhigh",
+  "http": 400,
+  "ms": 1173,
+  "verdict": "PROVIDER_ERROR",
+  "detail": "[400]: Invalid model. Please select a different model to continue.",
+  "limit_source": null,
+  "provider": null
+ },
+ {
+  "model": "kiro/deepseek-3.2",
+  "http": 200,
+  "ms": 3224,
+  "verdict": "SCORED",
+  "detail": "p=0.28 finish=stop"
+ },
+ {
+  "model": "kiro/glm-5",
+  "http": 200,
+  "ms": 1133,
+  "verdict": "SCORED",
+  "detail": "p=0.55 finish=stop"
+ },
+ {
+  "model": "kiro/gpt-5.6-luna",
+  "http": 400,
+  "ms": 573,
+  "verdict": "PROVIDER_ERROR",
+  "detail": "[400]: Invalid model. Please select a different model to continue.",
+  "limit_source": null,
+  "provider": null
+ },
+ {
+  "model": "kiro/gpt-5.6-sol",
+  "http": 400,
+  "ms": 559,
+  "verdict": "PROVIDER_ERROR",
+  "detail": "[400]: Invalid model. Please select a different model to continue.",
+  "limit_source": null,
+  "provider": null
+ },
+ {
+  "model": "kiro/gpt-5.6-terra",
+  "http": 400,
+  "ms": 671,
+  "verdict": "PROVIDER_ERROR",
+  "detail": "[400]: Invalid model. Please select a different model to continue.",
+  "limit_source": null,
+  "provider": null
+ },
+ {
+  "model": "kiro/minimax-m2.1",
+  "http": 200,
+  "ms": 4156,
+  "verdict": "SCORED",
+  "detail": "p=0.75 finish=stop"
+ },
+ {
+  "model": "kiro/minimax-m2.5",
+  "http": 200,
+  "ms": 3772,
+  "verdict": "SCORED",
+  "detail": "p=0.82 finish=stop"
+ },
+ {
+  "model": "kiro/qwen3-coder-next",
+  "http": 200,
+  "ms": 979,
+  "verdict": "SCORED",
+  "detail": "p=0.15 finish=stop"
+ }
+]

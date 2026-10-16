@@ -1,0 +1,5 @@
+flask>=3.0
+cryptography>=42.0
+# POST /extract reads .pdf; .txt/.md/.docx need nothing extra (stdlib zip+xml).
+# PyMuPDF ("import fitz") is an automatic fallback if pypdf can't parse a file.
+pypdf>=4.0

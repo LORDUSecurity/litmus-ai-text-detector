@@ -1,0 +1,86 @@
+[
+ {
+  "id": "hu-000",
+  "label": "HUMAN",
+  "config": "finance",
+  "len": 1266,
+  "file": "gz-s-hu-000.txt"
+ },
+ {
+  "id": "hu-004",
+  "label": "HUMAN",
+  "config": "wiki_csai",
+  "len": 426,
+  "file": "gz-s-hu-004.txt"
+ },
+ {
+  "id": "hu-008",
+  "label": "HUMAN",
+  "config": "reddit_eli5",
+  "len": 812,
+  "file": "gz-s-hu-008.txt"
+ },
+ {
+  "id": "hu-012",
+  "label": "HUMAN",
+  "config": "open_qa",
+  "len": 428,
+  "file": "gz-s-hu-012.txt"
+ },
+ {
+  "id": "hu-016",
+  "label": "HUMAN",
+  "config": "medicine",
+  "len": 358,
+  "file": "gz-s-hu-016.txt"
+ },
+ {
+  "id": "hu-020",
+  "label": "HUMAN",
+  "config": "finance",
+  "len": 944,
+  "file": "gz-s-hu-020.txt"
+ },
+ {
+  "id": "ai-002",
+  "label": "AI",
+  "config": "open_qa",
+  "len": 539,
+  "file": "gz-s-ai-002.txt"
+ },
+ {
+  "id": "ai-006",
+  "label": "AI",
+  "config": "medicine",
+  "len": 1290,
+  "file": "gz-s-ai-006.txt"
+ },
+ {
+  "id": "ai-010",
+  "label": "AI",
+  "config": "finance",
+  "len": 1280,
+  "file": "gz-s-ai-010.txt"
+ },
+ {
+  "id": "ai-014",
+  "label": "AI",
+  "config": "wiki_csai",
+  "len": 1223,
+  "file": "gz-s-ai-014.txt"
+ },
+ {
+  "id": "ai-018",
+  "label": "AI",
+  "config": "reddit_eli5",
+  "len": 1299,
+  "file": "gz-s-ai-018.txt"
+ },
+ {
+  "id": "ai-022",
+  "label": "AI",
+  "config": "open_qa",
+  "len": 501,
+  "file": "gz-s-ai-022.txt"
+ }
+]

@@ -4,7 +4,22 @@
 const fs = require('fs');
 const path = require('path');
 
-const URL = 'http://localhost:5678/webhook/ai-detect-ai';
+const URL = process.env.DETECT_URL || 'http://localhost:5678/webhook/ai-detect-ai';
+// UI_CONTRACT=1 sends exactly what the Angular page sends: an explicit
+// lane_config carrying the calibrated host and model pair. The verdicts must
+// then match the env-fallback run, which is what benchmark/results-*.jsonl scored.
+// If they drift, the request shape changed behaviour.
+const UI_CONTRACT = process.env.UI_CONTRACT === '1';
+const UI_LANE_CONFIG = {
+  primary: {
+    base_url: 'https://integrate.api.nvidia.com/v1',
+    model: 'nvidia/nemotron-3-ultra-550b-a55b',
+  },
+  secondary: {
+    base_url: 'https://integrate.api.nvidia.com/v1',
+    model: 'google/diffusiongemma-26b-a4b-it',
+  },
+};
 const CONCURRENCY = parseInt(process.env.CONCURRENCY || '1', 10);
 const QUIET = process.env.QUIET === '1';
 const corpus = new Map(JSON.parse(fs.readFileSync(path.join(__dirname, 'corpus.json'), 'utf8')).map((c) => [c.id, c]));
@@ -16,10 +31,12 @@ async function post(id) {
   const item = corpus.get(id);
   if (!item) throw new Error('no corpus entry for ' + id);
   const t0 = Date.now();
+  const payload = { text: item.text, source: 'hc3-live-test', text_id: id };
+  if (UI_CONTRACT) payload.lane_config = UI_LANE_CONFIG;
   const res = await fetch(URL, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ text: item.text, source: 'hc3-live-test', text_id: id }),
+    body: JSON.stringify(payload),
   });
   const body = await res.json();
   const ms = Date.now() - t0;
@@ -32,8 +49,9 @@ async function post(id) {
   console.log('\n=== ' + id + '  true_label=' + item.label + '  (' + item.text.length + ' chars, ' + ms + 'ms, HTTP ' + res.status + ')');
   console.log('  classification = ' + body.classification + '   method = ' + body.method);
   console.log('  ai_probability = ' + body.ai_probability + '   confidence = ' + body.confidence +
-    '   disagreement = ' + (cs.model_disagreement === null || cs.model_disagreement === undefined ? 'n/a' : cs.model_disagreement));
-  console.log('  secondary_called = ' + cs.secondary_called + '   weights = ' + JSON.stringify(cs.weights_used) +
+    '   lane_gap = ' + (cs.lane_gap === null || cs.lane_gap === undefined ? 'n/a' : cs.lane_gap) +
+    '   decided_by = ' + (cs.deciding_lane || 'n/a'));
+  console.log('  secondary_called = ' + cs.secondary_called + '   tie-break cut = ' + cs.secondary_decision_threshold +
     '   threshold_version = ' + ((body.versions || {}).thresholds));
   console.log('  review_required = ' + body.review_required);
   const models = e.models || [];
@@ -42,7 +60,7 @@ async function post(id) {
   if (body.warnings && body.warnings.length) console.log('  warnings: ' + JSON.stringify(body.warnings));
   const verdict = verdictFor(item.label, body.classification);
   console.log('  --> ' + verdict);
-  return { id, label: item.label, cls: body.classification, method: body.method, verdict };
+  return { id, label: item.label, cls: body.classification, method: body.method, verdict, sec: cs.secondary_called };
 }
 
 function verdictFor(label, cls) {
@@ -81,6 +99,10 @@ async function main() {
   const ai = out.filter((r) => r.label === 'AI');
   const hu = out.filter((r) => r.label === 'HUMAN');
   const secCalls = out.filter((r) => r.sec === true).length;
+  const byMethod = {};
+  for (const r of out) byMethod[r.method || 'REQUEST_FAILED'] = (byMethod[r.method || 'REQUEST_FAILED'] || 0) + 1;
+  console.log('  secondary lane called = ' + secCalls + '/' + n);
+  console.log('  methods  = ' + JSON.stringify(byMethod));
   console.log('\nLIVE END-TO-END over ' + n + ' texts in ' + secs + 's (concurrency ' + CONCURRENCY + ')');
   console.log('  accuracy (all)        = ' + (correct / n).toFixed(3) + '   (' + correct + '/' + n + ')');
   console.log('  precision (decided)   = ' + (dec.length ? (correct / dec.length).toFixed(3) : 'n/a') + '   (' + correct + '/' + dec.length + ')');

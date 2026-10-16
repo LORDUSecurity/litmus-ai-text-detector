@@ -1,6 +1,8 @@
-// Offline ensemble simulation using the paired per-text scores already measured for both
-// models. No API calls: it answers whether blending the weak 120B into the strong 550B
-// helps or hurts, and what the adaptive gray-zone policy is worth.
+// Simulator for the RETIRED weighted-blend policy (score = w*primary + (1-w)*secondary).
+// The AI-only workflow stopped blending across lanes on 2026-10-06; run
+// `node ../n8n/test-ensemble.js replay <primary> <secondary>` to replay the policy that
+// actually ships. This file is kept because the blend's failure is the evidence the
+// tie-break design rests on, and it needs no API calls.
 //
 // Usage: node ensemble-sim.js results-ultra550.jsonl results-baseline.jsonl
 
@@ -18,8 +20,8 @@ function load(f) {
   }
   return m;
 }
-const A = load(fileA);   // strong model (550B)
-const B = load(fileB);   // weak model (120B)
+const A = load(fileA);   // primary lane
+const B = load(fileB);   // secondary lane
 const ids = [...A.keys()].filter((id) => B.has(id));
 
 console.log('='.repeat(76));
@@ -50,7 +52,7 @@ function bestAcc(items) {
 const base = ids.map((id) => ({ id, isAI: A.get(id).label === 'AI', a: A.get(id).ai_probability, b: B.get(id).ai_probability }));
 
 console.log('\nSingle-model reference:');
-for (const [nm, key] of [['A (550B)', 'a'], ['B (120B)', 'b']]) {
+for (const [nm, key] of [['A ' + fileA, 'a'], ['B ' + fileB, 'b']]) {
   const items = base.map((x) => ({ isAI: x.isAI, score: x[key] }));
   const ba = bestAcc(items);
   console.log('  ' + nm.padEnd(9) + ' AUC=' + String(auc(items)).padEnd(8) + ' bestAcc=' + ba.acc.toFixed(3) + ' @t=' + ba.t.toFixed(2) +
@@ -58,14 +60,14 @@ for (const [nm, key] of [['A (550B)', 'a'], ['B (120B)', 'b']]) {
     ' meanHUMAN=' + mean(items.filter((i) => !i.isAI).map((i) => i.score)).toFixed(3));
 }
 
-console.log('\nWeighted blend  score = w*A + (1-w)*B   (w = PRIMARY_MODEL_WEIGHT):');
+console.log('\nWeighted blend  score = w*A + (1-w)*B   (w was PRIMARY_MODEL_WEIGHT, now retired):');
 console.log('  w      AUC      bestAcc  @t     meanAI  meanHUMAN  gap');
 for (const w of [1.0, 0.9, 0.8, 0.7, 0.6, 0.5, 0.4, 0.3, 0.0]) {
   const items = base.map((x) => ({ isAI: x.isAI, score: w * x.a + (1 - w) * x.b }));
   const ba = bestAcc(items);
   const ai = mean(items.filter((i) => i.isAI).map((i) => i.score));
   const hu = mean(items.filter((i) => !i.isAI).map((i) => i.score));
-  const mark = Math.abs(w - 0.6) < 1e-9 ? '   <-- shipped weight' : '';
+  const mark = Math.abs(w - 0.9) < 1e-9 ? "   <- last shipped weight (0.9/0.1)" : "";
   console.log('  ' + w.toFixed(1) + '    ' + String(auc(items)).padEnd(9) + ba.acc.toFixed(3).padEnd(9) +
     ba.t.toFixed(2).padEnd(7) + ai.toFixed(3).padEnd(8) + hu.toFixed(3).padEnd(11) + (ai - hu).toFixed(3) + mark);
 }

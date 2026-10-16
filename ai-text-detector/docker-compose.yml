@@ -1,0 +1,142 @@
+# Production stack for the AI text detector.
+#
+#   docker compose up -d --build
+#   # then open http://localhost:8080  (sign in with ADMIN_USERNAME / ADMIN_PASSWORD)
+#
+# Three services on one bridge network:
+#   web      nginx serving the built Angular SPA + same-origin /api reverse proxy
+#   backend  Flask (gunicorn) + SQLite; owns auth, ranking, history, BYOK and the purger
+#   n8n      the AI-only detection workflow the backend forwards each verdict request to
+#
+# Compose interpolates ${VAR} from the .env file in THIS directory (the repo root). The
+# lane API keys, models and thresholds already live there. The deploy-specific vars
+# (ADMIN_PASSWORD, SECRET_KEY, WEB_PORT, USE_SECURE_COOKIES) are documented in
+# docker/DEPLOY.md and default to safe-but-must-change values below.
+#
+# NOTE: this file supersedes the old docker/docker-compose.yml (Postgres + Redis + the
+# removed detector/ service). That file is kept only as a pointer.
+name: ai-text-detector
+
+services:
+  backend:
+    build:
+      context: .
+      dockerfile: backend/Dockerfile
+    image: ai-text-detector-backend:latest
+    restart: unless-stopped
+    environment:
+      BACKEND_HOST: "0.0.0.0"
+      BACKEND_PORT: "8787"
+      # Session-signing secret. Leave empty to fall back to the persisted Fernet key file
+      # in backend_data (stable across restarts). Set a long random string for a
+      # multi-replica deploy so every replica signs cookies identically.
+      SECRET_KEY: "${SECRET_KEY:-}"
+      # First-boot administrator, seeded by create_app(). CHANGE THESE before exposing
+      # the stack to anyone.
+      ADMIN_USERNAME: "${ADMIN_USERNAME:-admin}"
+      ADMIN_PASSWORD: "${ADMIN_PASSWORD:-changeme-admin}"
+      # Backend -> n8n over the compose network, and the purger's path to n8n's SQLite.
+      N8N_URL: "http://n8n:5678"
+      WEBHOOK_PATH: "/webhook/ai-detect-ai"
+      N8N_DB: "/n8n/.n8n/database.sqlite"
+      DETECTOR_WORKFLOW_ID: "ai-detection-ai-only"
+      # Lane-override allowlist + BYOK switch. Seeded into settings and admin-editable in
+      # the UI. To let users bring a Google key, add generativelanguage.googleapis.com.
+      ALLOWED_LLM_HOSTS: "${ALLOWED_LLM_HOSTS:-localhost,127.0.0.1,::1,integrate.api.nvidia.com,openrouter.ai}"
+      ALLOW_BYOK: "${ALLOW_BYOK:-true}"
+      # Set true once nginx terminates TLS, so the session cookie is HTTPS-only.
+      USE_SECURE_COOKIES: "${USE_SECURE_COOKIES:-false}"
+      GUNICORN_WORKERS: "${GUNICORN_WORKERS:-2}"
+      GUNICORN_THREADS: "${GUNICORN_THREADS:-8}"
+      GUNICORN_TIMEOUT: "${GUNICORN_TIMEOUT:-180}"
+    volumes:
+      # seed.py reads the lane keys/models/thresholds from this FILE, not from env, so it
+      # is bind-mounted read-only rather than copied into the image.
+      - ./.env:/app/.env:ro
+      # SQLite DB + Fernet master key persist here across redeploys.
+      - backend_data:/app/backend/data
+      # Shared with n8n so the purger can delete execution rows that carry BYOK headers.
+      # This is the real no-persist guarantee: n8n writes the inbound webhook record
+      # before its run-data-saving settings take effect (measured 2026-10-06).
+      - n8n_data:/n8n/.n8n
+    depends_on:
+      n8n:
+        condition: service_started
+    networks:
+      - detector
+
+  web:
+    build:
+      context: .
+      dockerfile: frontend/Dockerfile
+    image: ai-text-detector-web:latest
+    restart: unless-stopped
+    ports:
+      # Host port is configurable; 8080 avoids clashing with anything already on :80.
+      # Put a TLS terminator in front for a public deploy and set USE_SECURE_COOKIES=true.
+      - "${WEB_PORT:-8080}:80"
+    depends_on:
+      backend:
+        condition: service_healthy
+    networks:
+      - detector
+
+  n8n:
+    image: n8nio/n8n:latest
+    restart: unless-stopped
+    environment:
+      N8N_HOST: "0.0.0.0"
+      N8N_PORT: "5678"
+      N8N_PROTOCOL: "http"
+      GENERIC_TIMEZONE: "UTC"
+      # The workflow's Code nodes read provider config from $env; this MUST stay false.
+      N8N_BLOCK_ENV_ACCESS_IN_NODE: "false"
+      NODE_FUNCTION_ALLOW_BUILTIN: "crypto"
+      # n8n 2.x runs Code nodes in a task runner; internal mode needs no extra broker.
+      N8N_RUNNERS_ENABLED: "true"
+      N8N_RUNNERS_MODE: "internal"
+      # SQLite on the shared volume -- no Postgres/Redis in this stack.
+      DB_TYPE: "sqlite"
+      # Belt-and-suspenders; the purger (backend service) is the real guarantee.
+      EXECUTIONS_DATA_SAVE_ON_SUCCESS: "none"
+      EXECUTIONS_DATA_SAVE_ON_ERROR: "none"
+      EXECUTIONS_DATA_SAVE_ON_PROGRESS: "false"
+      EXECUTIONS_DATA_SAVE_MANUAL_EXECUTIONS: "false"
+      # LLM lanes the workflow calls, interpolated from the root .env.
+      PRIMARY_BASE_URL: "${PRIMARY_BASE_URL:-https://integrate.api.nvidia.com/v1}"
+      PRIMARY_API_KEY: "${PRIMARY_API_KEY:-}"
+      PRIMARY_MODEL: "${PRIMARY_MODEL:-z-ai/glm-5.3-flash}"
+      SECONDARY_BASE_URL: "${SECONDARY_BASE_URL:-https://integrate.api.nvidia.com/v1}"
+      SECONDARY_API_KEY: "${SECONDARY_API_KEY:-}"
+      SECONDARY_MODEL: "${SECONDARY_MODEL:-google/diffusiongemma-26b-a4b-it}"
+      # Off by default, same as the shipped seed and .env.example: round 25c measured the lane
+      # asked 3 texts on the promoted primary and answering all 3 wrongly. A compose fallback
+      # that says true re-imposes an operating point nobody chose on any deploy whose .env omits
+      # the line -- and test_seed.py fails if these two files ever disagree.
+      SECONDARY_ENABLED: "${SECONDARY_ENABLED:-false}"
+      LLM_TIMEOUT_MS: "${LLM_TIMEOUT_MS:-90000}"
+      # Decision thresholds (the workflow's baked defaults match the calibrated bands).
+      AI_PROBABILITY_THRESHOLD: "${AI_PROBABILITY_THRESHOLD:-0.69}"
+      AI_CONFIDENCE_THRESHOLD: "${AI_CONFIDENCE_THRESHOLD:-0.60}"
+      HUMAN_PROBABILITY_THRESHOLD: "${HUMAN_PROBABILITY_THRESHOLD:-0.40}"
+      HUMAN_CONFIDENCE_THRESHOLD: "${HUMAN_CONFIDENCE_THRESHOLD:-0.60}"
+      SECONDARY_DECISION_THRESHOLD: "${SECONDARY_DECISION_THRESHOLD:-0.90}"
+      SINGLE_MODEL_CONFIDENCE_PENALTY: "${SINGLE_MODEL_CONFIDENCE_PENALTY:-1.0}"
+      ALLOWED_LLM_HOSTS: "${ALLOWED_LLM_HOSTS:-localhost,127.0.0.1,::1,integrate.api.nvidia.com,openrouter.ai}"
+      ALLOW_BYOK: "${ALLOW_BYOK:-true}"
+    ports:
+      - "${N8N_PORT:-5678}:5678"
+    volumes:
+      - n8n_data:/home/node/.n8n
+      # The workflow JSON, for the one-time import (see docker/DEPLOY.md).
+      - ./n8n:/n8n-workflows:ro
+    networks:
+      - detector
+
+volumes:
+  backend_data:
+  n8n_data:
+
+networks:
+  detector:
+    driver: bridge

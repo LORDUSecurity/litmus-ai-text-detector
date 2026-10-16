@@ -1,0 +1,436 @@
+[
+ {
+  "model": "models/antigravity-preview-05-2026",
+  "http": 400,
+  "ms": 402,
+  "verdict": "UNEXPECTED_BODY",
+  "detail": "[{\n  \"error\": {\n    \"code\": 400,\n    \"message\": \"Developer instruction is not enabled for models/antigravity-preview-05-"
+ },
+ {
+  "model": "models/antigravity-preview-09-2026",
+  "http": 400,
+  "ms": 534,
+  "verdict": "UNEXPECTED_BODY",
+  "detail": "[{\n  \"error\": {\n    \"code\": 400,\n    \"message\": \"Developer instruction is not enabled for models/antigravity-preview-09-"
+ },
+ {
+  "model": "models/antigravity-preview-latest",
+  "http": 400,
+  "ms": 475,
+  "verdict": "UNEXPECTED_BODY",
+  "detail": "[{\n  \"error\": {\n    \"code\": 400,\n    \"message\": \"Developer instruction is not enabled for models/antigravity-preview-lat"
+ },
+ {
+  "model": "models/aqa",
+  "http": 404,
+  "ms": 194,
+  "verdict": "UNEXPECTED_BODY",
+  "detail": "[{\n  \"error\": {\n    \"code\": 404,\n    \"message\": \"models/aqa is not found for API version v1main, or is not supported for"
+ },
+ {
+  "model": "models/deep-research-max-preview-04-2026",
+  "http": 429,
+  "ms": 190,
+  "verdict": "UNEXPECTED_BODY",
+  "detail": "[{\n  \"error\": {\n    \"code\": 429,\n    \"message\": \"You exceeded your current quota, please check your plan and billing det"
+ },
+ {
+  "model": "models/deep-research-preview-04-2026",
+  "http": 429,
+  "ms": 166,
+  "verdict": "UNEXPECTED_BODY",
+  "detail": "[{\n  \"error\": {\n    \"code\": 429,\n    \"message\": \"You exceeded your current quota, please check your plan and billing det"
+ },
+ {
+  "model": "models/deep-research-pro-preview-12-2025",
+  "http": 429,
+  "ms": 189,
+  "verdict": "UNEXPECTED_BODY",
+  "detail": "[{\n  \"error\": {\n    \"code\": 429,\n    \"message\": \"You exceeded your current quota, please check your plan and billing det"
+ },
+ {
+  "model": "models/gemini-2.5-computer-use-preview-10-2025",
+  "http": 429,
+  "ms": 195,
+  "verdict": "UNEXPECTED_BODY",
+  "detail": "[{\n  \"error\": {\n    \"code\": 429,\n    \"message\": \"You exceeded your current quota, please check your plan and billing det"
+ },
+ {
+  "model": "models/gemini-2.5-flash",
+  "http": 429,
+  "ms": 268,
+  "verdict": "UNEXPECTED_BODY",
+  "detail": "[{\n  \"error\": {\n    \"code\": 429,\n    \"message\": \"You exceeded your current quota, please check your plan and billing det"
+ },
+ {
+  "model": "models/gemini-2.5-flash-image",
+  "http": 429,
+  "ms": 189,
+  "verdict": "UNEXPECTED_BODY",
+  "detail": "[{\n  \"error\": {\n    \"code\": 429,\n    \"message\": \"You exceeded your current quota, please check your plan and billing det"
+ },
+ {
+  "model": "models/gemini-2.5-flash-lite",
+  "http": 404,
+  "ms": 146,
+  "verdict": "UNEXPECTED_BODY",
+  "detail": "[{\n  \"error\": {\n    \"code\": 404,\n    \"message\": \"This model models/gemini-2.5-flash-lite is no longer available to new u"
+ },
+ {
+  "model": "models/gemini-2.5-flash-native-audio-latest",
+  "http": 400,
+  "ms": 172,
+  "verdict": "UNEXPECTED_BODY",
+  "detail": "[{\n  \"error\": {\n    \"code\": 400,\n    \"message\": \"models/gemini-2.5-flash-native-audio-latest only supports real-time bid"
+ },
+ {
+  "model": "models/gemini-2.5-flash-native-audio-preview-09-2025",
+  "http": 400,
+  "ms": 185,
+  "verdict": "UNEXPECTED_BODY",
+  "detail": "[{\n  \"error\": {\n    \"code\": 400,\n    \"message\": \"models/gemini-2.5-flash-native-audio-preview-09-2025 only supports real"
+ },
+ {
+  "model": "models/gemini-2.5-flash-native-audio-preview-12-2025",
+  "http": 400,
+  "ms": 175,
+  "verdict": "UNEXPECTED_BODY",
+  "detail": "[{\n  \"error\": {\n    \"code\": 400,\n    \"message\": \"models/gemini-2.5-flash-native-audio-preview-12-2025 only supports real"
+ },
+ {
+  "model": "models/gemini-2.5-flash-preview-tts",
+  "http": 400,
+  "ms": 502,
+  "verdict": "UNEXPECTED_BODY",
+  "detail": "[{\n  \"error\": {\n    \"code\": 400,\n    \"message\": \"The requested combination of response modalities (TEXT) is not supporte"
+ },
+ {
+  "model": "models/gemini-2.5-pro",
+  "http": 404,
+  "ms": 200,
+  "verdict": "UNEXPECTED_BODY",
+  "detail": "[{\n  \"error\": {\n    \"code\": 404,\n    \"message\": \"This model models/gemini-2.5-pro is no longer available to new users. P"
+ },
+ {
+  "model": "models/gemini-2.5-pro-preview-tts",
+  "http": 429,
+  "ms": 184,
+  "verdict": "UNEXPECTED_BODY",
+  "detail": "[{\n  \"error\": {\n    \"code\": 429,\n    \"message\": \"You exceeded your current quota, please check your plan and billing det"
+ },
+ {
+  "model": "models/gemini-3-flash-preview",
+  "http": 429,
+  "ms": 162,
+  "verdict": "UNEXPECTED_BODY",
+  "detail": "[{\n  \"error\": {\n    \"code\": 429,\n    \"message\": \"You exceeded your current quota, please check your plan and billing det"
+ },
+ {
+  "model": "models/gemini-3-pro-image",
+  "http": 429,
+  "ms": 176,
+  "verdict": "UNEXPECTED_BODY",
+  "detail": "[{\n  \"error\": {\n    \"code\": 429,\n    \"message\": \"You exceeded your current quota, please check your plan and billing det"
+ },
+ {
+  "model": "models/gemini-3-pro-image-preview",
+  "http": 429,
+  "ms": 184,
+  "verdict": "UNEXPECTED_BODY",
+  "detail": "[{\n  \"error\": {\n    \"code\": 429,\n    \"message\": \"You exceeded your current quota, please check your plan and billing det"
+ },
+ {
+  "model": "models/gemini-3.1-flash-image",
+  "http": 429,
+  "ms": 180,
+  "verdict": "UNEXPECTED_BODY",
+  "detail": "[{\n  \"error\": {\n    \"code\": 429,\n    \"message\": \"You exceeded your current quota, please check your plan and billing det"
+ },
+ {
+  "model": "models/gemini-3.1-flash-image-preview",
+  "http": 429,
+  "ms": 180,
+  "verdict": "UNEXPECTED_BODY",
+  "detail": "[{\n  \"error\": {\n    \"code\": 429,\n    \"message\": \"You exceeded your current quota, please check your plan and billing det"
+ },
+ {
+  "model": "models/gemini-3.1-flash-lite",
+  "http": 200,
+  "ms": 6119,
+  "verdict": "SCORED",
+  "detail": "p=0.92 finish=stop"
+ },
+ {
+  "model": "models/gemini-3.1-flash-lite-image",
+  "http": 429,
+  "ms": 201,
+  "verdict": "UNEXPECTED_BODY",
+  "detail": "[{\n  \"error\": {\n    \"code\": 429,\n    \"message\": \"You exceeded your current quota, please check your plan and billing det"
+ },
+ {
+  "model": "models/gemini-3.1-flash-lite-preview",
+  "http": 200,
+  "ms": 9916,
+  "verdict": "SCORED",
+  "detail": "p=0.92 finish=stop"
+ },
+ {
+  "model": "models/gemini-3.1-flash-live-preview",
+  "http": 400,
+  "ms": 208,
+  "verdict": "UNEXPECTED_BODY",
+  "detail": "[{\n  \"error\": {\n    \"code\": 400,\n    \"message\": \"models/gemini-3.1-flash-live-preview only supports real-time bidirectio"
+ },
+ {
+  "model": "models/gemini-3.1-flash-tts-preview",
+  "http": 400,
+  "ms": 563,
+  "verdict": "UNEXPECTED_BODY",
+  "detail": "[{\n  \"error\": {\n    \"code\": 400,\n    \"message\": \"Developer instruction is not enabled for this model\",\n    \"status\": \"IN"
+ },
+ {
+  "model": "models/gemini-3.1-pro-preview",
+  "http": 429,
+  "ms": 192,
+  "verdict": "UNEXPECTED_BODY",
+  "detail": "[{\n  \"error\": {\n    \"code\": 429,\n    \"message\": \"You exceeded your current quota, please check your plan and billing det"
+ },
+ {
+  "model": "models/gemini-3.1-pro-preview-customtools",
+  "http": 429,
+  "ms": 187,
+  "verdict": "UNEXPECTED_BODY",
+  "detail": "[{\n  \"error\": {\n    \"code\": 429,\n    \"message\": \"You exceeded your current quota, please check your plan and billing det"
+ },
+ {
+  "model": "models/gemini-3.5-flash",
+  "http": 200,
+  "ms": 1782,
+  "verdict": "SCORED",
+  "detail": "p=0.92 finish=stop"
+ },
+ {
+  "model": "models/gemini-3.5-flash-lite",
+  "http": 200,
+  "ms": 685,
+  "verdict": "SCORED",
+  "detail": "p=0.99 finish=stop"
+ },
+ {
+  "model": "models/gemini-3.5-live-translate-preview",
+  "http": 400,
+  "ms": 185,
+  "verdict": "UNEXPECTED_BODY",
+  "detail": "[{\n  \"error\": {\n    \"code\": 400,\n    \"message\": \"models/gemini-3.5-live-translate-preview only supports real-time bidire"
+ },
+ {
+  "model": "models/gemini-3.5-transcribe",
+  "http": 400,
+  "ms": 561,
+  "verdict": "UNEXPECTED_BODY",
+  "detail": "[{\n  \"error\": {\n    \"code\": 400,\n    \"message\": \"Developer instruction is not enabled for this model\",\n    \"status\": \"IN"
+ },
+ {
+  "model": "models/gemini-3.5-transcribe-live",
+  "http": 400,
+  "ms": 186,
+  "verdict": "UNEXPECTED_BODY",
+  "detail": "[{\n  \"error\": {\n    \"code\": 400,\n    \"message\": \"models/gemini-3.5-transcribe-live only supports real-time bidirectional"
+ },
+ {
+  "model": "models/gemini-3.6-flash",
+  "http": 200,
+  "ms": 2369,
+  "verdict": "SCORED",
+  "detail": "p=0.92 finish=stop"
+ },
+ {
+  "model": "models/gemini-3.7-flash",
+  "http": 200,
+  "ms": 2359,
+  "verdict": "SCORED",
+  "detail": "p=0.85 finish=stop"
+ },
+ {
+  "model": "models/gemini-3.8-flash",
+  "http": 200,
+  "ms": 2524,
+  "verdict": "SCORED",
+  "detail": "p=0.88 finish=stop"
+ },
+ {
+  "model": "models/gemini-3.8-flash-lite-tts",
+  "http": 400,
+  "ms": 572,
+  "verdict": "UNEXPECTED_BODY",
+  "detail": "[{\n  \"error\": {\n    \"code\": 400,\n    \"message\": \"Developer instruction is not enabled for this model\",\n    \"status\": \"IN"
+ },
+ {
+  "model": "models/gemini-3.8-flash-tts",
+  "http": 400,
+  "ms": 532,
+  "verdict": "UNEXPECTED_BODY",
+  "detail": "[{\n  \"error\": {\n    \"code\": 400,\n    \"message\": \"Developer instruction is not enabled for this model\",\n    \"status\": \"IN"
+ },
+ {
+  "model": "models/gemini-3.8-live",
+  "http": 400,
+  "ms": 190,
+  "verdict": "UNEXPECTED_BODY",
+  "detail": "[{\n  \"error\": {\n    \"code\": 400,\n    \"message\": \"models/gemini-3.8-live only supports real-time bidirectional streaming "
+ },
+ {
+  "model": "models/gemini-3.8-live-extended-thinking",
+  "http": 400,
+  "ms": 183,
+  "verdict": "UNEXPECTED_BODY",
+  "detail": "[{\n  \"error\": {\n    \"code\": 400,\n    \"message\": \"models/gemini-3.8-live-extended-thinking only supports real-time bidire"
+ },
+ {
+  "model": "models/gemini-embedding-001",
+  "http": 404,
+  "ms": 200,
+  "verdict": "UNEXPECTED_BODY",
+  "detail": "[{\n  \"error\": {\n    \"code\": 404,\n    \"message\": \"models/gemini-embedding-001 is not found for API version v1main, or is "
+ },
+ {
+  "model": "models/gemini-embedding-2",
+  "http": 404,
+  "ms": 182,
+  "verdict": "UNEXPECTED_BODY",
+  "detail": "[{\n  \"error\": {\n    \"code\": 404,\n    \"message\": \"models/gemini-embedding-2 is not found for API version v1main, or is no"
+ },
+ {
+  "model": "models/gemini-embedding-2-preview",
+  "http": 404,
+  "ms": 184,
+  "verdict": "UNEXPECTED_BODY",
+  "detail": "[{\n  \"error\": {\n    \"code\": 404,\n    \"message\": \"models/gemini-embedding-2-preview is not found for API version v1main, "
+ },
+ {
+  "model": "models/gemini-flash-latest",
+  "http": 503,
+  "ms": 2485,
+  "verdict": "UNEXPECTED_BODY",
+  "detail": "[{\n  \"error\": {\n    \"code\": 503,\n    \"message\": \"This model is currently experiencing high demand. Spikes in demand are "
+ },
+ {
+  "model": "models/gemini-flash-lite-latest",
+  "http": 200,
+  "ms": 821,
+  "verdict": "SCORED",
+  "detail": "p=0.98 finish=stop"
+ },
+ {
+  "model": "models/gemini-nano-banana-2.1",
+  "http": 429,
+  "ms": 211,
+  "verdict": "UNEXPECTED_BODY",
+  "detail": "[{\n  \"error\": {\n    \"code\": 429,\n    \"message\": \"You exceeded your current quota, please check your plan and billing det"
+ },
+ {
+  "model": "models/gemini-omni-1.1-flash",
+  "http": 429,
+  "ms": 173,
+  "verdict": "UNEXPECTED_BODY",
+  "detail": "[{\n  \"error\": {\n    \"code\": 429,\n    \"message\": \"You exceeded your current quota, please check your plan and billing det"
+ },
+ {
+  "model": "models/gemini-omni-flash-preview",
+  "http": 429,
+  "ms": 187,
+  "verdict": "UNEXPECTED_BODY",
+  "detail": "[{\n  \"error\": {\n    \"code\": 429,\n    \"message\": \"You exceeded your current quota, please check your plan and billing det"
+ },
+ {
+  "model": "models/gemini-pro-latest",
+  "http": 429,
+  "ms": 171,
+  "verdict": "UNEXPECTED_BODY",
+  "detail": "[{\n  \"error\": {\n    \"code\": 429,\n    \"message\": \"You exceeded your current quota, please check your plan and billing det"
+ },
+ {
+  "model": "models/gemini-robotics-er-2-preview",
+  "http": 200,
+  "ms": 1974,
+  "verdict": "SCORED",
+  "detail": "p=0.95 finish=stop"
+ },
+ {
+  "model": "models/gemini-robotics-er-2-streaming-preview",
+  "http": 400,
+  "ms": 179,
+  "verdict": "UNEXPECTED_BODY",
+  "detail": "[{\n  \"error\": {\n    \"code\": 400,\n    \"message\": \"models/gemini-robotics-er-2-streaming-preview only supports real-time b"
+ },
+ {
+  "model": "models/gemma-4-26b-a4b-it",
+  "http": 200,
+  "ms": 9678,
+  "verdict": "SCORED",
+  "detail": "p=0.95 finish=stop"
+ },
+ {
+  "model": "models/gemma-4-31b-it",
+  "http": 200,
+  "ms": 28437,
+  "verdict": "SCORED",
+  "detail": "p=0.98 finish=stop"
+ },
+ {
+  "model": "models/lyria-3-clip-preview",
+  "http": 429,
+  "ms": 151,
+  "verdict": "UNEXPECTED_BODY",
+  "detail": "[{\n  \"error\": {\n    \"code\": 429,\n    \"message\": \"You exceeded your current quota, please check your plan and billing det"
+ },
+ {
+  "model": "models/lyria-3-pro-preview",
+  "http": 429,
+  "ms": 188,
+  "verdict": "UNEXPECTED_BODY",
+  "detail": "[{\n  \"error\": {\n    \"code\": 429,\n    \"message\": \"You exceeded your current quota, please check your plan and billing det"
+ },
+ {
+  "model": "models/lyria-3.5",
+  "http": 429,
+  "ms": 175,
+  "verdict": "UNEXPECTED_BODY",
+  "detail": "[{\n  \"error\": {\n    \"code\": 429,\n    \"message\": \"You exceeded your current quota, please check your plan and billing det"
+ },
+ {
+  "model": "models/lyria-realtime-exp",
+  "http": 400,
+  "ms": 155,
+  "verdict": "UNEXPECTED_BODY",
+  "detail": "[{\n  \"error\": {\n    \"code\": 400,\n    \"message\": \"models/lyria-realtime-exp only supports real-time bidirectional streami"
+ },
+ {
+  "model": "models/nano-banana-pro-preview",
+  "http": 429,
+  "ms": 160,
+  "verdict": "UNEXPECTED_BODY",
+  "detail": "[{\n  \"error\": {\n    \"code\": 429,\n    \"message\": \"You exceeded your current quota, please check your plan and billing det"
+ },
+ {
+  "model": "models/veo-3.1-fast-generate-preview",
+  "http": 404,
+  "ms": 178,
+  "verdict": "UNEXPECTED_BODY",
+  "detail": "[{\n  \"error\": {\n    \"code\": 404,\n    \"message\": \"models/veo-3.1-fast-generate-preview is not found for API version v1mai"
+ },
+ {
+  "model": "models/veo-3.1-generate-preview",
+  "http": 404,
+  "ms": 185,
+  "verdict": "UNEXPECTED_BODY",
+  "detail": "[{\n  \"error\": {\n    \"code\": 404,\n    \"message\": \"models/veo-3.1-generate-preview is not found for API version v1main, or"
+ },
+ {
+  "model": "models/veo-3.1-lite-generate-preview",
+  "http": 404,
+  "ms": 176,
+  "verdict": "UNEXPECTED_BODY",
+  "detail": "[{\n  \"error\": {\n    \"code\": 404,\n    \"message\": \"models/veo-3.1-lite-generate-preview is not found for API version v1mai"
+ }
+]

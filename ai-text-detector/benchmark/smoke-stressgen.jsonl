@@ -1,0 +1,3 @@
+{"source_model":"nvidia/nemotron-3.5-lightning-30b-a3b","prompt_index":0,"text":"","chars":0,"finish_reason":null,"truncated":false,"short":true,"latency_ms":30550,"error":"fetch_failed: empty choices"}
+{"source_model":"google/gemma-4-31b-it","prompt_index":0,"text":"","chars":0,"finish_reason":null,"truncated":false,"short":true,"latency_ms":302501,"error":"fetch_failed: HTTP 504: "}
+{"source_model":"deepseek-ai/deepseek-v4.1-flash","prompt_index":0,"text":"","chars":0,"finish_reason":null,"truncated":false,"short":true,"latency_ms":302386,"error":"fetch_failed: HTTP 504: "}

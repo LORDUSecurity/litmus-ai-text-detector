@@ -1,0 +1,219 @@
+<section class="panel">
+  <header class="panel-head">
+    <h2>
+      <svg class="ico" viewBox="0 0 24 24" aria-hidden="true">
+        <path d="M4 7h10M18 7h2M4 17h2M10 17h10" />
+        <circle cx="16" cy="7" r="2.2" /><circle cx="8" cy="17" r="2.2" />
+      </svg>
+      Detection lanes
+    </h2>
+    <div class="panel-actions">
+      <button type="button" class="ghost" (click)="resetLanes()">Reset lanes to benchmarked pair</button>
+      <button type="button" class="ghost" (click)="clearKeys()">Clear keys</button>
+    </div>
+  </header>
+
+  @if (!secondaryEnabled()) {
+    <p class="notice">
+      <strong>Single-lane mode.</strong> Every text gets one model call; answers in the gray zone
+      (between the human and AI cuts) come back as REVIEW instead of a tie-break verdict.
+      Turn the switch below to expand the second lane.
+    </p>
+  } @else if (!pairIsBenchmarked()) {
+    <p class="notice">
+      The thresholds were calibrated for <code>{{ benchmarkedPair.primary }}</code> over
+      <code>{{ benchmarkedPair.secondary }}</code>. With this pair the verdict is indicative only.
+    </p>
+  }
+
+  <div class="lanes" [class.one-lane]="!secondaryEnabled()">
+    @for (lane of lanes(); track lane.name) {
+      <article class="lane" [class.lane-enter]="true">
+        <h3>
+          @if (lane.name === 'primary') {
+            <svg class="ico" viewBox="0 0 24 24" aria-hidden="true">
+              <path d="M12 3l7 4v5c0 4.4-3 7.7-7 9-4-1.3-7-4.6-7-9V7l7-4z" />
+              <path d="M9 12l2 2 4-4" />
+            </svg>
+          } @else {
+            <svg class="ico" viewBox="0 0 24 24" aria-hidden="true">
+              <path d="M8 12h8M12 8v8" /><circle cx="12" cy="12" r="9" />
+            </svg>
+          }
+          {{ lane.title }}
+        </h3>
+        <p class="hint">{{ lane.hint }}</p>
+
+        <label class="field">
+          <span>Provider</span>
+          <select
+            [ngModel]="lane.state.provider()"
+            (ngModelChange)="onProvider(lane.state, $event)"
+            [attr.name]="'provider-' + lane.name">
+            @for (p of providers; track p.id) {
+              <option [value]="p.id">{{ p.label }}</option>
+            }
+            <option value="custom">Custom</option>
+          </select>
+        </label>
+
+        <div class="field-row">
+          <label class="field narrow">
+            <span>Scheme</span>
+            <select
+              [ngModel]="lane.state.scheme()"
+              (ngModelChange)="lane.state.scheme.set($event); save()"
+              [attr.name]="'scheme-' + lane.name">
+              <option value="http">http</option>
+              <option value="https">https</option>
+            </select>
+          </label>
+
+          <label class="field grow">
+            <span>Host</span>
+            <input
+              type="text"
+              spellcheck="false"
+              autocomplete="off"
+              placeholder="localhost"
+              [ngModel]="lane.state.host()"
+              (ngModelChange)="lane.state.host.set($event); save()"
+              [attr.name]="'host-' + lane.name" />
+          </label>
+
+          <label class="field narrow">
+            <span>Port</span>
+            <input
+              type="text"
+              inputmode="numeric"
+              spellcheck="false"
+              autocomplete="off"
+              placeholder="20128"
+              [ngModel]="lane.state.port()"
+              (ngModelChange)="lane.state.port.set($event); save()"
+              [attr.name]="'port-' + lane.name" />
+          </label>
+
+          <label class="field narrow">
+            <span>Path</span>
+            <input
+              type="text"
+              spellcheck="false"
+              autocomplete="off"
+              placeholder="/v1"
+              [ngModel]="lane.state.path()"
+              (ngModelChange)="lane.state.path.set($event); save()"
+              [attr.name]="'path-' + lane.name" />
+          </label>
+        </div>
+
+        <p class="computed">
+          <code>{{ lane.state.baseUrl() }}</code>
+          <span class="muted">&nbsp;· {{ hostLabel(lane.state) }}</span>
+        </p>
+
+        @if (lane.warnHost) {
+          <p class="warn">
+            Not a recognised provider host. The workflow checks its own
+            <code>ALLOWED_LLM_HOSTS</code> and may reject this — that answer is the
+            authoritative one.
+          </p>
+        }
+
+        <label class="field">
+          <span>Model</span>
+          <input
+            type="text"
+            [attr.list]="'models-' + lane.name"
+            spellcheck="false"
+            autocomplete="off"
+            placeholder="any model id the endpoint accepts"
+            [class.bad]="modelError(lane.state)"
+            [ngModel]="lane.state.model()"
+            (ngModelChange)="lane.state.model.set($event); save()"
+            [attr.name]="'model-' + lane.name" />
+          @if (modelError(lane.state); as err) {
+            <em class="field-error">{{ err }}</em>
+          }
+          <datalist [attr.id]="'models-' + lane.name">
+            @for (m of lane.state.models(); track m.id) {
+              <option [value]="m.id">{{ m.note }}</option>
+            }
+          </datalist>
+        </label>
+
+        <label class="field">
+          <span>API key (BYOK, optional)</span>
+          <input
+            type="password"
+            autocomplete="off"
+            spellcheck="false"
+            placeholder="leave empty to use the key already in n8n's environment"
+            [class.bad]="keyError(lane.key())"
+            [ngModel]="lane.key()"
+            (ngModelChange)="lane.key.set($event)"
+            [attr.name]="'key-' + lane.name" />
+          @if (keyError(lane.key()); as err) {
+            <em class="field-error">{{ err }} — nothing is sent until it is clean.</em>
+          }
+        </label>
+
+        @if (lane.name === 'primary') {
+          <div class="lane-switch" [class.on]="secondaryEnabled()">
+            <label class="switch">
+              <input
+                type="checkbox"
+                name="secondary-enabled"
+                [ngModel]="secondaryEnabled()"
+                (ngModelChange)="toggleSecondary($event)" />
+              <span class="track" aria-hidden="true"><span class="thumb"></span></span>
+            </label>
+            <div class="lane-switch-copy">
+              <h4>
+                Second opinion (tie-break lane)
+                <span class="tag" [class.good]="secondaryEnabled()">
+                  {{ secondaryEnabled() ? 'on' : 'off' }}
+                </span>
+              </h4>
+              <p class="hint">
+                {{ secondaryEnabled()
+                  ? 'On for every user of this install: one extra call, only for gray-zone answers — expanded below.'
+                  : 'Off for every user of this install (the shipped default): one call per text and gray-zone answers become REVIEW. Turn it on to expand the lane.' }}
+              </p>
+              @if (laneSwitchFailed()) {
+                <p class="hint">
+                  The shared switch did not save — this install still has no enabled tie-break row
+                  to write, or the request failed. Detections keep the server's state either way.
+                </p>
+              }
+            </div>
+          </div>
+        }
+      </article>
+    }
+  </div>
+
+  <p class="muted small">{{ modelIdNote }}</p>
+
+  <footer class="purge-status">
+    @if (health(); as h) {
+      @if (h.purge_enabled) {
+        <span class="ok-dot" title="execution rows are being deleted"></span>
+        Purge gateway active — rows deleted since start: {{ h.rows_purged ?? 0 }}.
+        This page talks to n8n only through it, so a key cannot sit on disk from a call
+        made here.
+      } @else {
+        <span class="bad-dot"></span>
+        Purge gateway is reachable but reports <code>purge_enabled=false</code>. A BYOK key
+        would remain in n8n's execution database.
+      }
+    } @else if (healthFailed()) {
+      <span class="bad-dot"></span>
+      Cannot reach the backend on <code>/api/gateway-health</code>. Start it with
+      <code>python -m backend.app</code> (port 8787) before sending a BYOK key — without it
+      nothing purges n8n's execution rows.
+    } @else {
+      <span class="muted">Checking the backend…</span>
+    }
+  </footer>
+</section>

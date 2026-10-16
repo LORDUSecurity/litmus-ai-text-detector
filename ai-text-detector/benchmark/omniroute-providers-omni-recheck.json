@@ -1,0 +1,704 @@
+{
+  "generated": "2026-10-11T22:34:33.943Z",
+  "base_url": "http://localhost:20128/v1",
+  "catalogue_total": 1589,
+  "in_scope": 1249,
+  "per_prefix": 2,
+  "summary": [
+    {
+      "prefix": "aihorde",
+      "models_listed": 166,
+      "probed": 2,
+      "scored": 0,
+      "status": "PROVIDER_ERROR",
+      "reason": "Model 'aihorde/2DN' is an image-generation model and cannot be used on /v1/chat/completions. Use POST /v1/images/generations instead.",
+      "sample_model": "aihorde/2DN"
+    },
+    {
+      "prefix": "dv",
+      "models_listed": 125,
+      "probed": 2,
+      "scored": 0,
+      "status": "PROVIDER_ERROR",
+      "reason": "[devin-cli/swe-1-7-lightning] Devin CLI exited with code 1 (reset after 5s)",
+      "sample_model": "dv/swe-1-7-lightning"
+    },
+    {
+      "prefix": "devin-cli",
+      "models_listed": 125,
+      "probed": 2,
+      "scored": 0,
+      "status": "PROVIDER_ERROR",
+      "reason": "[devin-cli/swe-1-7-lightning] Devin CLI exited with code 1 (reset after 5s)",
+      "sample_model": "devin-cli/swe-1-7-lightning"
+    },
+    {
+      "prefix": "dva",
+      "models_listed": 125,
+      "probed": 2,
+      "scored": 0,
+      "status": "PROVIDER_ERROR",
+      "reason": "[500]: DEVIN_AGENTIC_HOME must be an absolute path inside the bridge sandbox",
+      "sample_model": "dva/swe-1-7-lightning"
+    },
+    {
+      "prefix": "oc",
+      "models_listed": 95,
+      "probed": 2,
+      "scored": 0,
+      "status": "PROVIDER_ERROR",
+      "reason": "Model 'muse-spark-1.2' is not available in the active live catalog for provider 'opencode'.",
+      "sample_model": "oc/muse-spark-1.2"
+    },
+    {
+      "prefix": "opencode",
+      "models_listed": 92,
+      "probed": 2,
+      "scored": 0,
+      "status": "PROVIDER_ERROR",
+      "reason": "[402]: This model requires an opencode API key — add one in Settings → Providers.",
+      "sample_model": "opencode/claude-fable-5"
+    },
+    {
+      "prefix": "lmarena",
+      "models_listed": 86,
+      "probed": 2,
+      "scored": 0,
+      "status": "PROVIDER_ERROR",
+      "reason": "[401]: User not found",
+      "sample_model": "lmarena/amazon.nova-pro-v1:0"
+    },
+    {
+      "prefix": "vertex",
+      "models_listed": 65,
+      "probed": 2,
+      "scored": 0,
+      "status": "PROVIDER_ERROR",
+      "reason": "[vertex] All 1 connection(s) authentication expired — please reconnect in the dashboard",
+      "sample_model": "vertex/gemini-3.1-pro-preview"
+    },
+    {
+      "prefix": "gemini",
+      "models_listed": 59,
+      "probed": 2,
+      "scored": 0,
+      "status": "PROVIDER_ERROR",
+      "reason": "Model 'gemini-3.7-flash' is not available in the active live catalog for provider 'gemini'.",
+      "sample_model": "gemini/gemini-3.7-flash"
+    },
+    {
+      "prefix": "lma",
+      "models_listed": 59,
+      "probed": 2,
+      "scored": 0,
+      "status": "PROVIDER_ERROR",
+      "reason": "[401]: User not found",
+      "sample_model": "lma/amazon.nova-pro-v1:0"
+    },
+    {
+      "prefix": "bm",
+      "models_listed": 47,
+      "probed": 2,
+      "scored": 0,
+      "status": "PROVIDER_ERROR",
+      "reason": "Model 'gpt-4o' is not available in the active live catalog for provider 'bluesminds'.",
+      "sample_model": "bm/gpt-4o"
+    },
+    {
+      "prefix": "bluesminds",
+      "models_listed": 47,
+      "probed": 2,
+      "scored": 0,
+      "status": "PROVIDER_ERROR",
+      "reason": "Model 'gpt-4o' is not available in the active live catalog for provider 'bluesminds'.",
+      "sample_model": "bluesminds/gpt-4o"
+    },
+    {
+      "prefix": "aug",
+      "models_listed": 28,
+      "probed": 2,
+      "scored": 0,
+      "status": "PROVIDER_ERROR",
+      "reason": "[502]: Auggie CLI exited with code 1: 'auggie' is not recognized as an internal or external command,\r",
+      "sample_model": "aug/sonnet4.6"
+    },
+    {
+      "prefix": "tllm",
+      "models_listed": 26,
+      "probed": 2,
+      "scored": 0,
+      "status": "PROVIDER_ERROR",
+      "reason": "[403]: The Old LLM is blocked by Vercel for this server egress IP. Configure a residential provider or global proxy for 'theoldllm' and retry.",
+      "sample_model": "tllm/GPT_5_4"
+    },
+    {
+      "prefix": "cxa",
+      "models_listed": 26,
+      "probed": 2,
+      "scored": 0,
+      "status": "PROVIDER_ERROR",
+      "reason": "[503]: Codex app-server transport is not configured (missing url or token)",
+      "sample_model": "cxa/gpt-5.6-sol"
+    },
+    {
+      "prefix": "cfp",
+      "models_listed": 20,
+      "probed": 2,
+      "scored": 0,
+      "status": "PROVIDER_ERROR",
+      "reason": "[502]: Cloudflare Playground browser session failed: browserType.launch: Executable doesn't exist at C:\\Users\\adam\\AppData\\Local\\ms-playwright\\chromium_headless",
+      "sample_model": "cfp/zai-org/glm-5.2"
+    },
+    {
+      "prefix": "zc",
+      "models_listed": 13,
+      "probed": 2,
+      "scored": 0,
+      "status": "PROVIDER_ERROR",
+      "reason": "[502]: spawn zcode ENOENT",
+      "sample_model": "zc/glm-5.3"
+    },
+    {
+      "prefix": "if",
+      "models_listed": 9,
+      "probed": 2,
+      "scored": 0,
+      "status": "PROVIDER_ERROR",
+      "reason": "[qoder/qwen3.8-max-preview] [502]: 'qodercli' is not recognized as an internal or external command,\r (reset after 3s)",
+      "sample_model": "if/qwen3.8-max-preview"
+    },
+    {
+      "prefix": "qoder",
+      "models_listed": 9,
+      "probed": 2,
+      "scored": 0,
+      "status": "PROVIDER_ERROR",
+      "reason": "[qoder/qwen3.8-max-preview] [502]: 'qodercli' is not recognized as an internal or external command,\r (reset after 3s)",
+      "sample_model": "qoder/qwen3.8-max-preview"
+    },
+    {
+      "prefix": "ddgw",
+      "models_listed": 6,
+      "probed": 2,
+      "scored": 0,
+      "status": "PROVIDER_ERROR",
+      "reason": "[400]: DuckDuckGo AI Chat error: ERR_BAD_REQUEST",
+      "sample_model": "ddgw/gpt-5.4-mini"
+    },
+    {
+      "prefix": "felo",
+      "models_listed": 5,
+      "probed": 2,
+      "scored": 0,
+      "status": "PROVIDER_ERROR",
+      "reason": "[400]: Felo thread creation failed with HTTP 400",
+      "sample_model": "felo/felo-chat"
+    },
+    {
+      "prefix": "moonshot",
+      "models_listed": 4,
+      "probed": 2,
+      "scored": 0,
+      "status": "PROVIDER_ERROR",
+      "reason": "Model 'kimi-k3' is not available in the active live catalog for provider 'moonshot'.",
+      "sample_model": "moonshot/kimi-k3"
+    },
+    {
+      "prefix": "gemini-web",
+      "models_listed": 4,
+      "probed": 2,
+      "scored": 0,
+      "status": "PROVIDER_ERROR",
+      "reason": "[gemini-web/gemini-3.1-pro] [503]: Gemini Web requires the Playwright Chromium browser, which is not installed. Run `npx playwright install chromium` on the hos",
+      "sample_model": "gemini-web/gemini-3.1-pro"
+    },
+    {
+      "prefix": "qwen-web",
+      "models_listed": 4,
+      "probed": 2,
+      "scored": 0,
+      "status": "PROVIDER_ERROR",
+      "reason": "Model 'qwen3.7-max' is not available in the active live catalog for provider 'qwen-web'.",
+      "sample_model": "qwen-web/qwen3.7-max"
+    },
+    {
+      "prefix": "gweb",
+      "models_listed": 3,
+      "probed": 2,
+      "scored": 0,
+      "status": "PROVIDER_ERROR",
+      "reason": "[gemini-web/gemini-3.1-pro] [503]: Gemini Web requires the Playwright Chromium browser, which is not installed. Run `npx playwright install chromium` on the hos",
+      "sample_model": "gweb/gemini-3.1-pro"
+    },
+    {
+      "prefix": "pepper",
+      "models_listed": 1,
+      "probed": 1,
+      "scored": 0,
+      "status": "PROVIDER_ERROR",
+      "reason": "[502]: Amelia init failed: 404",
+      "sample_model": "pepper/pepper-1"
+    }
+  ],
+  "probes": [
+    {
+      "model": "aihorde/2DN",
+      "started": "2026-10-11T22:32:55.514Z",
+      "http": 400,
+      "verdict": "PROVIDER_ERROR",
+      "detail": "Model 'aihorde/2DN' is an image-generation model and cannot be used on /v1/chat/completions. Use POST /v1/images/generations instead.",
+      "ms": 27,
+      "prefix": "aihorde"
+    },
+    {
+      "model": "aihorde/526Mix-Animated",
+      "started": "2026-10-11T22:32:55.518Z",
+      "http": 400,
+      "verdict": "PROVIDER_ERROR",
+      "detail": "Model 'aihorde/526Mix-Animated' is an image-generation model and cannot be used on /v1/chat/completions. Use POST /v1/images/generations instead.",
+      "ms": 37,
+      "prefix": "aihorde"
+    },
+    {
+      "model": "dv/swe-1-7-lightning",
+      "started": "2026-10-11T22:32:55.542Z",
+      "http": 502,
+      "verdict": "PROVIDER_ERROR",
+      "detail": "[devin-cli/swe-1-7-lightning] Devin CLI exited with code 1 (reset after 5s)",
+      "ms": 17883,
+      "prefix": "dv"
+    },
+    {
+      "model": "dv/swe-1-7",
+      "started": "2026-10-11T22:32:55.555Z",
+      "http": 503,
+      "verdict": "PROVIDER_ERROR",
+      "detail": "Provider devin-cli circuit breaker is open",
+      "ms": 77,
+      "prefix": "dv"
+    },
+    {
+      "model": "devin-cli/swe-1-7-lightning",
+      "started": "2026-10-11T22:32:55.632Z",
+      "http": 502,
+      "verdict": "PROVIDER_ERROR",
+      "detail": "[devin-cli/swe-1-7-lightning] Devin CLI exited with code 1 (reset after 5s)",
+      "ms": 17796,
+      "prefix": "devin-cli"
+    },
+    {
+      "model": "devin-cli/swe-1-7",
+      "started": "2026-10-11T22:33:13.426Z",
+      "http": 502,
+      "verdict": "PROVIDER_ERROR",
+      "detail": "[devin-cli/swe-1-7] Devin CLI exited with code 1 (reset after 5s)",
+      "ms": 18300,
+      "prefix": "devin-cli"
+    },
+    {
+      "model": "dva/swe-1-7-lightning",
+      "started": "2026-10-11T22:33:13.429Z",
+      "http": 500,
+      "verdict": "PROVIDER_ERROR",
+      "detail": "[500]: DEVIN_AGENTIC_HOME must be an absolute path inside the bridge sandbox",
+      "ms": 58,
+      "prefix": "dva"
+    },
+    {
+      "model": "dva/swe-1-7",
+      "started": "2026-10-11T22:33:13.487Z",
+      "http": 500,
+      "verdict": "PROVIDER_ERROR",
+      "detail": "[500]: DEVIN_AGENTIC_HOME must be an absolute path inside the bridge sandbox",
+      "ms": 42,
+      "prefix": "dva"
+    },
+    {
+      "model": "oc/muse-spark-1.2",
+      "started": "2026-10-11T22:33:13.529Z",
+      "http": 400,
+      "verdict": "PROVIDER_ERROR",
+      "detail": "Model 'muse-spark-1.2' is not available in the active live catalog for provider 'opencode'.",
+      "ms": 197,
+      "prefix": "oc"
+    },
+    {
+      "model": "oc/muse-spark-1.2-contributor-free",
+      "started": "2026-10-11T22:33:13.727Z",
+      "http": 400,
+      "verdict": "PROVIDER_ERROR",
+      "detail": "Model 'muse-spark-1.2-contributor-free' is not available in the active live catalog for provider 'opencode'.",
+      "ms": 54,
+      "prefix": "oc"
+    },
+    {
+      "model": "opencode/claude-fable-5",
+      "started": "2026-10-11T22:33:13.782Z",
+      "http": 402,
+      "verdict": "PROVIDER_ERROR",
+      "detail": "[402]: This model requires an opencode API key — add one in Settings → Providers.",
+      "ms": 81,
+      "prefix": "opencode"
+    },
+    {
+      "model": "opencode/claude-opus-5",
+      "started": "2026-10-11T22:33:13.864Z",
+      "http": 402,
+      "verdict": "PROVIDER_ERROR",
+      "detail": "[402]: This model requires an opencode API key — add one in Settings → Providers.",
+      "ms": 41,
+      "prefix": "opencode"
+    },
+    {
+      "model": "lmarena/amazon.nova-pro-v1:0",
+      "started": "2026-10-11T22:33:13.905Z",
+      "http": 401,
+      "verdict": "PROVIDER_ERROR",
+      "detail": "[401]: User not found",
+      "ms": 648,
+      "prefix": "lmarena"
+    },
+    {
+      "model": "lmarena/claude-haiku-4-5-20251001",
+      "started": "2026-10-11T22:33:14.553Z",
+      "http": 401,
+      "verdict": "PROVIDER_ERROR",
+      "detail": "[401]: User not found",
+      "ms": 660,
+      "prefix": "lmarena"
+    },
+    {
+      "model": "vertex/gemini-3.1-pro-preview",
+      "started": "2026-10-11T22:33:15.214Z",
+      "http": 401,
+      "verdict": "PROVIDER_ERROR",
+      "detail": "[vertex] All 1 connection(s) authentication expired — please reconnect in the dashboard",
+      "ms": 71,
+      "prefix": "vertex"
+    },
+    {
+      "model": "vertex/gemini-3.1-flash-lite",
+      "started": "2026-10-11T22:33:15.285Z",
+      "http": 401,
+      "verdict": "PROVIDER_ERROR",
+      "detail": "[vertex] All 1 connection(s) authentication expired — please reconnect in the dashboard",
+      "ms": 54,
+      "prefix": "vertex"
+    },
+    {
+      "model": "gemini/gemini-3.7-flash",
+      "started": "2026-10-11T22:33:15.339Z",
+      "http": 400,
+      "verdict": "PROVIDER_ERROR",
+      "detail": "Model 'gemini-3.7-flash' is not available in the active live catalog for provider 'gemini'.",
+      "ms": 44,
+      "prefix": "gemini"
+    },
+    {
+      "model": "gemini/gemini-2.5-flash",
+      "started": "2026-10-11T22:33:15.383Z",
+      "http": 401,
+      "verdict": "PROVIDER_ERROR",
+      "detail": "[401]: Request had invalid authentication credentials. Expected OAuth 2 access token, login cookie or other valid authentication credential. See https://develop",
+      "ms": 3315,
+      "prefix": "gemini"
+    },
+    {
+      "model": "lma/amazon.nova-pro-v1:0",
+      "started": "2026-10-11T22:33:18.698Z",
+      "http": 401,
+      "verdict": "PROVIDER_ERROR",
+      "detail": "[401]: User not found",
+      "ms": 628,
+      "prefix": "lma"
+    },
+    {
+      "model": "lma/claude-haiku-4-5-20251001",
+      "started": "2026-10-11T22:33:19.326Z",
+      "http": 401,
+      "verdict": "PROVIDER_ERROR",
+      "detail": "[401]: User not found",
+      "ms": 580,
+      "prefix": "lma"
+    },
+    {
+      "model": "bm/gpt-4o",
+      "started": "2026-10-11T22:33:19.907Z",
+      "http": 400,
+      "verdict": "PROVIDER_ERROR",
+      "detail": "Model 'gpt-4o' is not available in the active live catalog for provider 'bluesminds'.",
+      "ms": 55,
+      "prefix": "bm"
+    },
+    {
+      "model": "bm/gpt-4o-mini",
+      "started": "2026-10-11T22:33:19.962Z",
+      "http": 400,
+      "verdict": "PROVIDER_ERROR",
+      "detail": "Model 'gpt-4o-mini' is not available in the active live catalog for provider 'bluesminds'.",
+      "ms": 56,
+      "prefix": "bm"
+    },
+    {
+      "model": "bluesminds/gpt-4o",
+      "started": "2026-10-11T22:33:20.018Z",
+      "http": 400,
+      "verdict": "PROVIDER_ERROR",
+      "detail": "Model 'gpt-4o' is not available in the active live catalog for provider 'bluesminds'.",
+      "ms": 42,
+      "prefix": "bluesminds"
+    },
+    {
+      "model": "bluesminds/gpt-4o-mini",
+      "started": "2026-10-11T22:33:20.060Z",
+      "http": 400,
+      "verdict": "PROVIDER_ERROR",
+      "detail": "Model 'gpt-4o-mini' is not available in the active live catalog for provider 'bluesminds'.",
+      "ms": 51,
+      "prefix": "bluesminds"
+    },
+    {
+      "model": "aug/sonnet4.6",
+      "started": "2026-10-11T22:33:20.111Z",
+      "http": 502,
+      "verdict": "PROVIDER_ERROR",
+      "detail": "[502]: Auggie CLI exited with code 1: 'auggie' is not recognized as an internal or external command,\r",
+      "ms": 2349,
+      "prefix": "aug"
+    },
+    {
+      "model": "aug/fable-5",
+      "started": "2026-10-11T22:33:22.460Z",
+      "http": 502,
+      "verdict": "PROVIDER_ERROR",
+      "detail": "[502]: Auggie CLI exited with code 1: 'auggie' is not recognized as an internal or external command,\r",
+      "ms": 2362,
+      "prefix": "aug"
+    },
+    {
+      "model": "tllm/GPT_5_4",
+      "started": "2026-10-11T22:33:24.823Z",
+      "http": 403,
+      "verdict": "PROVIDER_ERROR",
+      "detail": "[403]: The Old LLM is blocked by Vercel for this server egress IP. Configure a residential provider or global proxy for 'theoldllm' and retry.",
+      "ms": 3360,
+      "prefix": "tllm"
+    },
+    {
+      "model": "tllm/GPT_5_3",
+      "started": "2026-10-11T22:33:28.184Z",
+      "http": 403,
+      "verdict": "PROVIDER_ERROR",
+      "detail": "[403]: The Old LLM is blocked by Vercel for this server egress IP. Configure a residential provider or global proxy for 'theoldllm' and retry.",
+      "ms": 3269,
+      "prefix": "tllm"
+    },
+    {
+      "model": "cxa/gpt-5.6-sol",
+      "started": "2026-10-11T22:33:31.454Z",
+      "http": 503,
+      "verdict": "PROVIDER_ERROR",
+      "detail": "[503]: Codex app-server transport is not configured (missing url or token)",
+      "ms": 2196,
+      "prefix": "cxa"
+    },
+    {
+      "model": "cxa/gpt-5.6-sol-ultra",
+      "started": "2026-10-11T22:33:31.726Z",
+      "http": 503,
+      "verdict": "PROVIDER_ERROR",
+      "detail": "[503]: Codex app-server transport is not configured (missing url or token)",
+      "ms": 2994,
+      "prefix": "cxa"
+    },
+    {
+      "model": "cfp/zai-org/glm-5.2",
+      "started": "2026-10-11T22:33:33.650Z",
+      "http": 502,
+      "verdict": "PROVIDER_ERROR",
+      "detail": "[502]: Cloudflare Playground browser session failed: browserType.launch: Executable doesn't exist at C:\\Users\\adam\\AppData\\Local\\ms-playwright\\chromium_headless",
+      "ms": 2435,
+      "prefix": "cfp"
+    },
+    {
+      "model": "cfp/moonshotai/kimi-k2.7-code",
+      "started": "2026-10-11T22:33:34.720Z",
+      "http": 502,
+      "verdict": "PROVIDER_ERROR",
+      "detail": "[502]: Cloudflare Playground browser session failed: browserType.launch: Executable doesn't exist at C:\\Users\\adam\\AppData\\Local\\ms-playwright\\chromium_headless",
+      "ms": 3065,
+      "prefix": "cfp"
+    },
+    {
+      "model": "zc/glm-5.3",
+      "started": "2026-10-11T22:33:36.085Z",
+      "http": 502,
+      "verdict": "PROVIDER_ERROR",
+      "detail": "[502]: spawn zcode ENOENT",
+      "ms": 2893,
+      "prefix": "zc"
+    },
+    {
+      "model": "zc/glm-5.3-max",
+      "started": "2026-10-11T22:33:37.785Z",
+      "http": 502,
+      "verdict": "PROVIDER_ERROR",
+      "detail": "[502]: spawn zcode ENOENT",
+      "ms": 2407,
+      "prefix": "zc"
+    },
+    {
+      "model": "if/qwen3.8-max-preview",
+      "started": "2026-10-11T22:33:38.978Z",
+      "http": 502,
+      "verdict": "PROVIDER_ERROR",
+      "detail": "[qoder/qwen3.8-max-preview] [502]: 'qodercli' is not recognized as an internal or external command,\r (reset after 3s)",
+      "ms": 12248,
+      "prefix": "if"
+    },
+    {
+      "model": "if/qwen3.7-max",
+      "started": "2026-10-11T22:33:40.192Z",
+      "http": 502,
+      "verdict": "PROVIDER_ERROR",
+      "detail": "[qoder/qwen3.7-max] [502]: 'qodercli' is not recognized as an internal or external command,\r (reset after 3s)",
+      "ms": 11473,
+      "prefix": "if"
+    },
+    {
+      "model": "qoder/qwen3.8-max-preview",
+      "started": "2026-10-11T22:33:51.226Z",
+      "http": 502,
+      "verdict": "PROVIDER_ERROR",
+      "detail": "[qoder/qwen3.8-max-preview] [502]: 'qodercli' is not recognized as an internal or external command,\r (reset after 3s)",
+      "ms": 13143,
+      "prefix": "qoder"
+    },
+    {
+      "model": "qoder/qwen3.7-max",
+      "started": "2026-10-11T22:33:51.665Z",
+      "http": 502,
+      "verdict": "PROVIDER_ERROR",
+      "detail": "[qoder/qwen3.7-max] [502]: 'qodercli' is not recognized as an internal or external command,\r (reset after 3s)",
+      "ms": 12183,
+      "prefix": "qoder"
+    },
+    {
+      "model": "ddgw/gpt-5.4-mini",
+      "started": "2026-10-11T22:34:03.848Z",
+      "http": 400,
+      "verdict": "PROVIDER_ERROR",
+      "detail": "[400]: DuckDuckGo AI Chat error: ERR_BAD_REQUEST",
+      "ms": 1678,
+      "prefix": "ddgw"
+    },
+    {
+      "model": "ddgw/gpt-5.4-nano",
+      "started": "2026-10-11T22:34:04.369Z",
+      "http": 400,
+      "verdict": "PROVIDER_ERROR",
+      "detail": "[400]: DuckDuckGo AI Chat error: ERR_BAD_REQUEST",
+      "ms": 659,
+      "prefix": "ddgw"
+    },
+    {
+      "model": "felo/felo-chat",
+      "started": "2026-10-11T22:34:05.028Z",
+      "http": 400,
+      "verdict": "PROVIDER_ERROR",
+      "detail": "[400]: Felo thread creation failed with HTTP 400",
+      "ms": 618,
+      "prefix": "felo"
+    },
+    {
+      "model": "felo/felo-search",
+      "started": "2026-10-11T22:34:05.526Z",
+      "http": 400,
+      "verdict": "PROVIDER_ERROR",
+      "detail": "[400]: Felo thread creation failed with HTTP 400",
+      "ms": 535,
+      "prefix": "felo"
+    },
+    {
+      "model": "moonshot/kimi-k3",
+      "started": "2026-10-11T22:34:05.646Z",
+      "http": 400,
+      "verdict": "PROVIDER_ERROR",
+      "detail": "Model 'kimi-k3' is not available in the active live catalog for provider 'moonshot'.",
+      "ms": 50,
+      "prefix": "moonshot"
+    },
+    {
+      "model": "moonshot/kimi-k2.7-code-highspeed",
+      "started": "2026-10-11T22:34:05.696Z",
+      "http": 400,
+      "verdict": "PROVIDER_ERROR",
+      "detail": "Model 'kimi-k2.7-code-highspeed' is not available in the active live catalog for provider 'moonshot'.",
+      "ms": 31,
+      "prefix": "moonshot"
+    },
+    {
+      "model": "gemini-web/gemini-3.1-pro",
+      "started": "2026-10-11T22:34:05.728Z",
+      "http": 503,
+      "verdict": "PROVIDER_ERROR",
+      "detail": "[gemini-web/gemini-3.1-pro] [503]: Gemini Web requires the Playwright Chromium browser, which is not installed. Run `npx playwright install chromium` on the hos",
+      "ms": 12560,
+      "prefix": "gemini-web"
+    },
+    {
+      "model": "gemini-web/gemini-3.7-flash",
+      "started": "2026-10-11T22:34:06.061Z",
+      "http": 503,
+      "verdict": "PROVIDER_ERROR",
+      "detail": "[gemini-web/gemini-3.7-flash] [503]: Gemini Web requires the Playwright Chromium browser, which is not installed. Run `npx playwright install chromium` on the h",
+      "ms": 11861,
+      "prefix": "gemini-web"
+    },
+    {
+      "model": "qwen-web/qwen3.7-max",
+      "started": "2026-10-11T22:34:17.923Z",
+      "http": 400,
+      "verdict": "PROVIDER_ERROR",
+      "detail": "Model 'qwen3.7-max' is not available in the active live catalog for provider 'qwen-web'.",
+      "ms": 33,
+      "prefix": "qwen-web"
+    },
+    {
+      "model": "qwen-web/qwen3.6-plus",
+      "started": "2026-10-11T22:34:17.956Z",
+      "http": 400,
+      "verdict": "PROVIDER_ERROR",
+      "detail": "Model 'qwen3.6-plus' is not available in the active live catalog for provider 'qwen-web'.",
+      "ms": 20,
+      "prefix": "qwen-web"
+    },
+    {
+      "model": "gweb/gemini-3.1-pro",
+      "started": "2026-10-11T22:34:17.976Z",
+      "http": 503,
+      "verdict": "PROVIDER_ERROR",
+      "detail": "[gemini-web/gemini-3.1-pro] [503]: Gemini Web requires the Playwright Chromium browser, which is not installed. Run `npx playwright install chromium` on the hos",
+      "ms": 12268,
+      "prefix": "gweb"
+    },
+    {
+      "model": "gweb/gemini-3.7-flash",
+      "started": "2026-10-11T22:34:18.288Z",
+      "http": 503,
+      "verdict": "PROVIDER_ERROR",
+      "detail": "[gemini-web/gemini-3.7-flash] [503]: Gemini Web requires the Playwright Chromium browser, which is not installed. Run `npx playwright install chromium` on the h",
+      "ms": 12276,
+      "prefix": "gweb"
+    },
+    {
+      "model": "pepper/pepper-1",
+      "started": "2026-10-11T22:34:30.245Z",
+      "http": 502,
+      "verdict": "PROVIDER_ERROR",
+      "detail": "[502]: Amelia init failed: 404",
+      "ms": 3693,
+      "prefix": "pepper"
+    }
+  ]
+}

@@ -1,0 +1,1283 @@
+[
+ {
+  "row_id": 1,
+  "model": "nvidia/nemotron-3-ultra-550b-a55b",
+  "ai_cut": 0.85,
+  "human_cut": 0.4,
+  "conf_gate": 0.65,
+  "wrong_all": 0,
+  "decided_all": 113,
+  "fp_all": 0,
+  "per_corpus": {
+   "train": {
+    "ultra550": {
+     "correct": 29,
+     "wrong": 0,
+     "review": 19,
+     "fp": 0,
+     "fn": 0,
+     "decided": 29
+    },
+    "clean550-hc3": {
+     "correct": 19,
+     "wrong": 0,
+     "review": 27,
+     "fp": 0,
+     "fn": 0,
+     "decided": 19
+    }
+   },
+   "val": {
+    "clean550-holdout": {
+     "correct": 19,
+     "wrong": 0,
+     "review": 28,
+     "fp": 0,
+     "fn": 0,
+     "decided": 19
+    },
+    "bookultra550": {
+     "correct": 46,
+     "wrong": 0,
+     "review": 0,
+     "fp": 0,
+     "fn": 0,
+     "decided": 46
+    }
+   }
+  }
+ },
+ {
+  "row_id": 1,
+  "model": "nvidia/nemotron-3-ultra-550b-a55b",
+  "ai_cut": 0.85,
+  "human_cut": 0.35,
+  "conf_gate": 0,
+  "wrong_all": 0,
+  "decided_all": 112,
+  "fp_all": 0,
+  "per_corpus": {
+   "train": {
+    "ultra550": {
+     "correct": 28,
+     "wrong": 0,
+     "review": 20,
+     "fp": 0,
+     "fn": 0,
+     "decided": 28
+    },
+    "clean550-hc3": {
+     "correct": 19,
+     "wrong": 0,
+     "review": 27,
+     "fp": 0,
+     "fn": 0,
+     "decided": 19
+    }
+   },
+   "val": {
+    "clean550-holdout": {
+     "correct": 19,
+     "wrong": 0,
+     "review": 28,
+     "fp": 0,
+     "fn": 0,
+     "decided": 19
+    },
+    "bookultra550": {
+     "correct": 46,
+     "wrong": 0,
+     "review": 0,
+     "fp": 0,
+     "fn": 0,
+     "decided": 46
+    }
+   }
+  }
+ },
+ {
+  "row_id": 1,
+  "model": "nvidia/nemotron-3-ultra-550b-a55b",
+  "ai_cut": 0.85,
+  "human_cut": 0.35,
+  "conf_gate": 0.5,
+  "wrong_all": 0,
+  "decided_all": 112,
+  "fp_all": 0,
+  "per_corpus": {
+   "train": {
+    "ultra550": {
+     "correct": 28,
+     "wrong": 0,
+     "review": 20,
+     "fp": 0,
+     "fn": 0,
+     "decided": 28
+    },
+    "clean550-hc3": {
+     "correct": 19,
+     "wrong": 0,
+     "review": 27,
+     "fp": 0,
+     "fn": 0,
+     "decided": 19
+    }
+   },
+   "val": {
+    "clean550-holdout": {
+     "correct": 19,
+     "wrong": 0,
+     "review": 28,
+     "fp": 0,
+     "fn": 0,
+     "decided": 19
+    },
+    "bookultra550": {
+     "correct": 46,
+     "wrong": 0,
+     "review": 0,
+     "fp": 0,
+     "fn": 0,
+     "decided": 46
+    }
+   }
+  }
+ },
+ {
+  "row_id": 2,
+  "model": "google/diffusiongemma-26b-a4b-it",
+  "ai_cut": 0.9,
+  "human_cut": 0.3,
+  "conf_gate": 0,
+  "wrong_all": 10,
+  "decided_all": 156,
+  "fp_all": 10,
+  "per_corpus": {
+   "train": {
+    "diffgemma26b": {
+     "correct": 35,
+     "wrong": 4,
+     "review": 9,
+     "fp": 4,
+     "fn": 0,
+     "decided": 39
+    },
+    "cleandiff-hc3": {
+     "correct": 36,
+     "wrong": 4,
+     "review": 7,
+     "fp": 4,
+     "fn": 0,
+     "decided": 40
+    }
+   },
+   "val": {
+    "cleandiff-holdout": {
+     "correct": 29,
+     "wrong": 2,
+     "review": 5,
+     "fp": 2,
+     "fn": 0,
+     "decided": 31
+    },
+    "bookdiffgemma": {
+     "correct": 46,
+     "wrong": 0,
+     "review": 0,
+     "fp": 0,
+     "fn": 0,
+     "decided": 46
+    }
+   }
+  }
+ },
+ {
+  "row_id": 2,
+  "model": "google/diffusiongemma-26b-a4b-it",
+  "ai_cut": 0.9,
+  "human_cut": 0.3,
+  "conf_gate": 0.5,
+  "wrong_all": 10,
+  "decided_all": 156,
+  "fp_all": 10,
+  "per_corpus": {
+   "train": {
+    "diffgemma26b": {
+     "correct": 35,
+     "wrong": 4,
+     "review": 9,
+     "fp": 4,
+     "fn": 0,
+     "decided": 39
+    },
+    "cleandiff-hc3": {
+     "correct": 36,
+     "wrong": 4,
+     "review": 7,
+     "fp": 4,
+     "fn": 0,
+     "decided": 40
+    }
+   },
+   "val": {
+    "cleandiff-holdout": {
+     "correct": 29,
+     "wrong": 2,
+     "review": 5,
+     "fp": 2,
+     "fn": 0,
+     "decided": 31
+    },
+    "bookdiffgemma": {
+     "correct": 46,
+     "wrong": 0,
+     "review": 0,
+     "fp": 0,
+     "fn": 0,
+     "decided": 46
+    }
+   }
+  }
+ },
+ {
+  "row_id": 2,
+  "model": "google/diffusiongemma-26b-a4b-it",
+  "ai_cut": 0.9,
+  "human_cut": 0.3,
+  "conf_gate": 0.55,
+  "wrong_all": 10,
+  "decided_all": 156,
+  "fp_all": 10,
+  "per_corpus": {
+   "train": {
+    "diffgemma26b": {
+     "correct": 35,
+     "wrong": 4,
+     "review": 9,
+     "fp": 4,
+     "fn": 0,
+     "decided": 39
+    },
+    "cleandiff-hc3": {
+     "correct": 36,
+     "wrong": 4,
+     "review": 7,
+     "fp": 4,
+     "fn": 0,
+     "decided": 40
+    }
+   },
+   "val": {
+    "cleandiff-holdout": {
+     "correct": 29,
+     "wrong": 2,
+     "review": 5,
+     "fp": 2,
+     "fn": 0,
+     "decided": 31
+    },
+    "bookdiffgemma": {
+     "correct": 46,
+     "wrong": 0,
+     "review": 0,
+     "fp": 0,
+     "fn": 0,
+     "decided": 46
+    }
+   }
+  }
+ },
+ {
+  "row_id": 4,
+  "model": "nvidia/nemotron-3-ultra-550b-a55b:free",
+  "ai_cut": 0.9,
+  "human_cut": 0.3,
+  "conf_gate": 0.75,
+  "wrong_all": 0,
+  "decided_all": 17,
+  "fp_all": 0,
+  "per_corpus": {
+   "train": {
+    "orfull-nvidia-nemotron-3-ultra-550b-a55b-free": {
+     "correct": 9,
+     "wrong": 0,
+     "review": 39,
+     "fp": 0,
+     "fn": 0,
+     "decided": 9
+    },
+    "clean-orfull-nemotron-ultra-free": {
+     "correct": 8,
+     "wrong": 0,
+     "review": 40,
+     "fp": 0,
+     "fn": 0,
+     "decided": 8
+    }
+   },
+   "val": {}
+  }
+ },
+ {
+  "row_id": 4,
+  "model": "nvidia/nemotron-3-ultra-550b-a55b:free",
+  "ai_cut": 0.9,
+  "human_cut": 0.35,
+  "conf_gate": 0.75,
+  "wrong_all": 0,
+  "decided_all": 17,
+  "fp_all": 0,
+  "per_corpus": {
+   "train": {
+    "orfull-nvidia-nemotron-3-ultra-550b-a55b-free": {
+     "correct": 9,
+     "wrong": 0,
+     "review": 39,
+     "fp": 0,
+     "fn": 0,
+     "decided": 9
+    },
+    "clean-orfull-nemotron-ultra-free": {
+     "correct": 8,
+     "wrong": 0,
+     "review": 40,
+     "fp": 0,
+     "fn": 0,
+     "decided": 8
+    }
+   },
+   "val": {}
+  }
+ },
+ {
+  "row_id": 4,
+  "model": "nvidia/nemotron-3-ultra-550b-a55b:free",
+  "ai_cut": 0.9,
+  "human_cut": 0.4,
+  "conf_gate": 0.75,
+  "wrong_all": 0,
+  "decided_all": 17,
+  "fp_all": 0,
+  "per_corpus": {
+   "train": {
+    "orfull-nvidia-nemotron-3-ultra-550b-a55b-free": {
+     "correct": 9,
+     "wrong": 0,
+     "review": 39,
+     "fp": 0,
+     "fn": 0,
+     "decided": 9
+    },
+    "clean-orfull-nemotron-ultra-free": {
+     "correct": 8,
+     "wrong": 0,
+     "review": 40,
+     "fp": 0,
+     "fn": 0,
+     "decided": 8
+    }
+   },
+   "val": {}
+  }
+ },
+ {
+  "row_id": 10,
+  "model": "inclusionai/ling-3.1-flash",
+  "ai_cut": 0.75,
+  "human_cut": 0.5,
+  "conf_gate": 0,
+  "wrong_all": 0,
+  "decided_all": 72,
+  "fp_all": 0,
+  "per_corpus": {
+   "train": {
+    "orfull-ling-3-1-flash": {
+     "correct": 36,
+     "wrong": 0,
+     "review": 12,
+     "fp": 0,
+     "fn": 0,
+     "decided": 36
+    },
+    "clean-orfull-ling-3-1-flash": {
+     "correct": 36,
+     "wrong": 0,
+     "review": 11,
+     "fp": 0,
+     "fn": 0,
+     "decided": 36
+    }
+   },
+   "val": {}
+  }
+ },
+ {
+  "row_id": 10,
+  "model": "inclusionai/ling-3.1-flash",
+  "ai_cut": 0.75,
+  "human_cut": 0.5,
+  "conf_gate": 0.5,
+  "wrong_all": 0,
+  "decided_all": 72,
+  "fp_all": 0,
+  "per_corpus": {
+   "train": {
+    "orfull-ling-3-1-flash": {
+     "correct": 36,
+     "wrong": 0,
+     "review": 12,
+     "fp": 0,
+     "fn": 0,
+     "decided": 36
+    },
+    "clean-orfull-ling-3-1-flash": {
+     "correct": 36,
+     "wrong": 0,
+     "review": 11,
+     "fp": 0,
+     "fn": 0,
+     "decided": 36
+    }
+   },
+   "val": {}
+  }
+ },
+ {
+  "row_id": 10,
+  "model": "inclusionai/ling-3.1-flash",
+  "ai_cut": 0.75,
+  "human_cut": 0.5,
+  "conf_gate": 0.55,
+  "wrong_all": 0,
+  "decided_all": 72,
+  "fp_all": 0,
+  "per_corpus": {
+   "train": {
+    "orfull-ling-3-1-flash": {
+     "correct": 36,
+     "wrong": 0,
+     "review": 12,
+     "fp": 0,
+     "fn": 0,
+     "decided": 36
+    },
+    "clean-orfull-ling-3-1-flash": {
+     "correct": 36,
+     "wrong": 0,
+     "review": 11,
+     "fp": 0,
+     "fn": 0,
+     "decided": 36
+    }
+   },
+   "val": {}
+  }
+ },
+ {
+  "row_id": 21,
+  "model": "google/gemma-4-31b-it",
+  "ai_cut": 0.9,
+  "human_cut": 0.35,
+  "conf_gate": 0,
+  "wrong_all": 6,
+  "decided_all": 47,
+  "fp_all": 6,
+  "per_corpus": {
+   "train": {
+    "nvfull-gemma-4-31b-it": {
+     "correct": 41,
+     "wrong": 6,
+     "review": 1,
+     "fp": 6,
+     "fn": 0,
+     "decided": 47
+    }
+   },
+   "val": {}
+  }
+ },
+ {
+  "row_id": 21,
+  "model": "google/gemma-4-31b-it",
+  "ai_cut": 0.9,
+  "human_cut": 0.35,
+  "conf_gate": 0.5,
+  "wrong_all": 6,
+  "decided_all": 47,
+  "fp_all": 6,
+  "per_corpus": {
+   "train": {
+    "nvfull-gemma-4-31b-it": {
+     "correct": 41,
+     "wrong": 6,
+     "review": 1,
+     "fp": 6,
+     "fn": 0,
+     "decided": 47
+    }
+   },
+   "val": {}
+  }
+ },
+ {
+  "row_id": 21,
+  "model": "google/gemma-4-31b-it",
+  "ai_cut": 0.9,
+  "human_cut": 0.35,
+  "conf_gate": 0.55,
+  "wrong_all": 6,
+  "decided_all": 47,
+  "fp_all": 6,
+  "per_corpus": {
+   "train": {
+    "nvfull-gemma-4-31b-it": {
+     "correct": 41,
+     "wrong": 6,
+     "review": 1,
+     "fp": 6,
+     "fn": 0,
+     "decided": 47
+    }
+   },
+   "val": {}
+  }
+ },
+ {
+  "row_id": 22,
+  "model": "z-ai/glm-5.3",
+  "ai_cut": 0.65,
+  "human_cut": 0.3,
+  "conf_gate": 0.55,
+  "wrong_all": 0,
+  "decided_all": 135,
+  "fp_all": 0,
+  "per_corpus": {
+   "train": {
+    "nvfull-glm-5-3": {
+     "correct": 45,
+     "wrong": 0,
+     "review": 3,
+     "fp": 0,
+     "fn": 0,
+     "decided": 45
+    }
+   },
+   "val": {
+    "oos-nv-glm-5-3": {
+     "correct": 44,
+     "wrong": 0,
+     "review": 4,
+     "fp": 0,
+     "fn": 0,
+     "decided": 44
+    },
+    "book-nv-glm-5-3": {
+     "correct": 46,
+     "wrong": 0,
+     "review": 0,
+     "fp": 0,
+     "fn": 0,
+     "decided": 46
+    }
+   }
+  }
+ },
+ {
+  "row_id": 22,
+  "model": "z-ai/glm-5.3",
+  "ai_cut": 0.7,
+  "human_cut": 0.3,
+  "conf_gate": 0,
+  "wrong_all": 0,
+  "decided_all": 135,
+  "fp_all": 0,
+  "per_corpus": {
+   "train": {
+    "nvfull-glm-5-3": {
+     "correct": 45,
+     "wrong": 0,
+     "review": 3,
+     "fp": 0,
+     "fn": 0,
+     "decided": 45
+    }
+   },
+   "val": {
+    "oos-nv-glm-5-3": {
+     "correct": 44,
+     "wrong": 0,
+     "review": 4,
+     "fp": 0,
+     "fn": 0,
+     "decided": 44
+    },
+    "book-nv-glm-5-3": {
+     "correct": 46,
+     "wrong": 0,
+     "review": 0,
+     "fp": 0,
+     "fn": 0,
+     "decided": 46
+    }
+   }
+  }
+ },
+ {
+  "row_id": 22,
+  "model": "z-ai/glm-5.3",
+  "ai_cut": 0.7,
+  "human_cut": 0.3,
+  "conf_gate": 0.5,
+  "wrong_all": 0,
+  "decided_all": 135,
+  "fp_all": 0,
+  "per_corpus": {
+   "train": {
+    "nvfull-glm-5-3": {
+     "correct": 45,
+     "wrong": 0,
+     "review": 3,
+     "fp": 0,
+     "fn": 0,
+     "decided": 45
+    }
+   },
+   "val": {
+    "oos-nv-glm-5-3": {
+     "correct": 44,
+     "wrong": 0,
+     "review": 4,
+     "fp": 0,
+     "fn": 0,
+     "decided": 44
+    },
+    "book-nv-glm-5-3": {
+     "correct": 46,
+     "wrong": 0,
+     "review": 0,
+     "fp": 0,
+     "fn": 0,
+     "decided": 46
+    }
+   }
+  }
+ },
+ {
+  "row_id": 23,
+  "model": "z-ai/glm-5.3-flash",
+  "ai_cut": 0.9,
+  "human_cut": 0.35,
+  "conf_gate": 0.65,
+  "wrong_all": 0,
+  "decided_all": 117,
+  "fp_all": 0,
+  "per_corpus": {
+   "train": {
+    "nvfull-glm-5-3-flash": {
+     "correct": 33,
+     "wrong": 0,
+     "review": 15,
+     "fp": 0,
+     "fn": 0,
+     "decided": 33
+    },
+    "clean-nvfull-glm-5-3-flash": {
+     "correct": 33,
+     "wrong": 0,
+     "review": 15,
+     "fp": 0,
+     "fn": 0,
+     "decided": 33
+    }
+   },
+   "val": {
+    "ooslong-glm-5-3-flash": {
+     "correct": 44,
+     "wrong": 0,
+     "review": 4,
+     "fp": 0,
+     "fn": 0,
+     "decided": 44
+    },
+    "oosshort-glm-5-3-flash": {
+     "correct": 7,
+     "wrong": 0,
+     "review": 17,
+     "fp": 0,
+     "fn": 0,
+     "decided": 7
+    }
+   }
+  }
+ },
+ {
+  "row_id": 23,
+  "model": "z-ai/glm-5.3-flash",
+  "ai_cut": 0.9,
+  "human_cut": 0.4,
+  "conf_gate": 0.65,
+  "wrong_all": 0,
+  "decided_all": 117,
+  "fp_all": 0,
+  "per_corpus": {
+   "train": {
+    "nvfull-glm-5-3-flash": {
+     "correct": 33,
+     "wrong": 0,
+     "review": 15,
+     "fp": 0,
+     "fn": 0,
+     "decided": 33
+    },
+    "clean-nvfull-glm-5-3-flash": {
+     "correct": 33,
+     "wrong": 0,
+     "review": 15,
+     "fp": 0,
+     "fn": 0,
+     "decided": 33
+    }
+   },
+   "val": {
+    "ooslong-glm-5-3-flash": {
+     "correct": 44,
+     "wrong": 0,
+     "review": 4,
+     "fp": 0,
+     "fn": 0,
+     "decided": 44
+    },
+    "oosshort-glm-5-3-flash": {
+     "correct": 7,
+     "wrong": 0,
+     "review": 17,
+     "fp": 0,
+     "fn": 0,
+     "decided": 7
+    }
+   }
+  }
+ },
+ {
+  "row_id": 23,
+  "model": "z-ai/glm-5.3-flash",
+  "ai_cut": 0.9,
+  "human_cut": 0.45,
+  "conf_gate": 0.65,
+  "wrong_all": 0,
+  "decided_all": 117,
+  "fp_all": 0,
+  "per_corpus": {
+   "train": {
+    "nvfull-glm-5-3-flash": {
+     "correct": 33,
+     "wrong": 0,
+     "review": 15,
+     "fp": 0,
+     "fn": 0,
+     "decided": 33
+    },
+    "clean-nvfull-glm-5-3-flash": {
+     "correct": 33,
+     "wrong": 0,
+     "review": 15,
+     "fp": 0,
+     "fn": 0,
+     "decided": 33
+    }
+   },
+   "val": {
+    "ooslong-glm-5-3-flash": {
+     "correct": 44,
+     "wrong": 0,
+     "review": 4,
+     "fp": 0,
+     "fn": 0,
+     "decided": 44
+    },
+    "oosshort-glm-5-3-flash": {
+     "correct": 7,
+     "wrong": 0,
+     "review": 17,
+     "fp": 0,
+     "fn": 0,
+     "decided": 7
+    }
+   }
+  }
+ },
+ {
+  "row_id": 24,
+  "model": "nvidia/nemotron-3.5-lightning-30b-a3b",
+  "ai_cut": 0.5,
+  "human_cut": 0.1,
+  "conf_gate": 0,
+  "wrong_all": 0,
+  "decided_all": 3,
+  "fp_all": 0,
+  "per_corpus": {
+   "train": {
+    "nvfull-nemotron-3-5-lightning-30b": {
+     "correct": 1,
+     "wrong": 0,
+     "review": 14,
+     "fp": 0,
+     "fn": 0,
+     "decided": 1
+    },
+    "clean-nvfull-nemotron-3-5-lightning": {
+     "correct": 2,
+     "wrong": 0,
+     "review": 13,
+     "fp": 0,
+     "fn": 0,
+     "decided": 2
+    }
+   },
+   "val": {}
+  }
+ },
+ {
+  "row_id": 24,
+  "model": "nvidia/nemotron-3.5-lightning-30b-a3b",
+  "ai_cut": 0.5,
+  "human_cut": 0.1,
+  "conf_gate": 0.5,
+  "wrong_all": 0,
+  "decided_all": 3,
+  "fp_all": 0,
+  "per_corpus": {
+   "train": {
+    "nvfull-nemotron-3-5-lightning-30b": {
+     "correct": 1,
+     "wrong": 0,
+     "review": 14,
+     "fp": 0,
+     "fn": 0,
+     "decided": 1
+    },
+    "clean-nvfull-nemotron-3-5-lightning": {
+     "correct": 2,
+     "wrong": 0,
+     "review": 13,
+     "fp": 0,
+     "fn": 0,
+     "decided": 2
+    }
+   },
+   "val": {}
+  }
+ },
+ {
+  "row_id": 24,
+  "model": "nvidia/nemotron-3.5-lightning-30b-a3b",
+  "ai_cut": 0.5,
+  "human_cut": 0.1,
+  "conf_gate": 0.55,
+  "wrong_all": 0,
+  "decided_all": 3,
+  "fp_all": 0,
+  "per_corpus": {
+   "train": {
+    "nvfull-nemotron-3-5-lightning-30b": {
+     "correct": 1,
+     "wrong": 0,
+     "review": 14,
+     "fp": 0,
+     "fn": 0,
+     "decided": 1
+    },
+    "clean-nvfull-nemotron-3-5-lightning": {
+     "correct": 2,
+     "wrong": 0,
+     "review": 13,
+     "fp": 0,
+     "fn": 0,
+     "decided": 2
+    }
+   },
+   "val": {}
+  }
+ },
+ {
+  "row_id": 26,
+  "model": "moonshotai/kimi-k3",
+  "ai_cut": 0.65,
+  "human_cut": 0.55,
+  "conf_gate": 0,
+  "wrong_all": 0,
+  "decided_all": 141,
+  "fp_all": 0,
+  "per_corpus": {
+   "train": {
+    "nvfull-kimi-k3": {
+     "correct": 47,
+     "wrong": 0,
+     "review": 1,
+     "fp": 0,
+     "fn": 0,
+     "decided": 47
+    }
+   },
+   "val": {
+    "nvholdout-kimi-k3": {
+     "correct": 47,
+     "wrong": 0,
+     "review": 1,
+     "fp": 0,
+     "fn": 0,
+     "decided": 47
+    },
+    "nvholdout2-kimi-k3": {
+     "correct": 47,
+     "wrong": 0,
+     "review": 1,
+     "fp": 0,
+     "fn": 0,
+     "decided": 47
+    }
+   }
+  }
+ },
+ {
+  "row_id": 26,
+  "model": "moonshotai/kimi-k3",
+  "ai_cut": 0.65,
+  "human_cut": 0.55,
+  "conf_gate": 0.5,
+  "wrong_all": 0,
+  "decided_all": 141,
+  "fp_all": 0,
+  "per_corpus": {
+   "train": {
+    "nvfull-kimi-k3": {
+     "correct": 47,
+     "wrong": 0,
+     "review": 1,
+     "fp": 0,
+     "fn": 0,
+     "decided": 47
+    }
+   },
+   "val": {
+    "nvholdout-kimi-k3": {
+     "correct": 47,
+     "wrong": 0,
+     "review": 1,
+     "fp": 0,
+     "fn": 0,
+     "decided": 47
+    },
+    "nvholdout2-kimi-k3": {
+     "correct": 47,
+     "wrong": 0,
+     "review": 1,
+     "fp": 0,
+     "fn": 0,
+     "decided": 47
+    }
+   }
+  }
+ },
+ {
+  "row_id": 26,
+  "model": "moonshotai/kimi-k3",
+  "ai_cut": 0.65,
+  "human_cut": 0.6,
+  "conf_gate": 0,
+  "wrong_all": 0,
+  "decided_all": 141,
+  "fp_all": 0,
+  "per_corpus": {
+   "train": {
+    "nvfull-kimi-k3": {
+     "correct": 47,
+     "wrong": 0,
+     "review": 1,
+     "fp": 0,
+     "fn": 0,
+     "decided": 47
+    }
+   },
+   "val": {
+    "nvholdout-kimi-k3": {
+     "correct": 47,
+     "wrong": 0,
+     "review": 1,
+     "fp": 0,
+     "fn": 0,
+     "decided": 47
+    },
+    "nvholdout2-kimi-k3": {
+     "correct": 47,
+     "wrong": 0,
+     "review": 1,
+     "fp": 0,
+     "fn": 0,
+     "decided": 47
+    }
+   }
+  }
+ },
+ {
+  "row_id": 30,
+  "model": "kiro/claude-sonnet-4.5",
+  "ai_cut": 0.9,
+  "human_cut": 0.3,
+  "conf_gate": 0,
+  "wrong_all": 0,
+  "decided_all": 164,
+  "fp_all": 0,
+  "per_corpus": {
+   "train": {
+    "omfull-kiro-claude-sonnet-4-5": {
+     "correct": 33,
+     "wrong": 0,
+     "review": 15,
+     "fp": 0,
+     "fn": 0,
+     "decided": 33
+    },
+    "clean-omfull-kiro-claude-sonnet-4-5": {
+     "correct": 31,
+     "wrong": 0,
+     "review": 17,
+     "fp": 0,
+     "fn": 0,
+     "decided": 31
+    }
+   },
+   "val": {
+    "oos-omkiro-sonnet-4-5": {
+     "correct": 27,
+     "wrong": 0,
+     "review": 21,
+     "fp": 0,
+     "fn": 0,
+     "decided": 27
+    },
+    "clean-oos-omkiro-sonnet-4-5": {
+     "correct": 27,
+     "wrong": 0,
+     "review": 21,
+     "fp": 0,
+     "fn": 0,
+     "decided": 27
+    },
+    "book-omkiro-sonnet-4-5": {
+     "correct": 46,
+     "wrong": 0,
+     "review": 0,
+     "fp": 0,
+     "fn": 0,
+     "decided": 46
+    }
+   }
+  }
+ },
+ {
+  "row_id": 30,
+  "model": "kiro/claude-sonnet-4.5",
+  "ai_cut": 0.9,
+  "human_cut": 0.3,
+  "conf_gate": 0.5,
+  "wrong_all": 0,
+  "decided_all": 164,
+  "fp_all": 0,
+  "per_corpus": {
+   "train": {
+    "omfull-kiro-claude-sonnet-4-5": {
+     "correct": 33,
+     "wrong": 0,
+     "review": 15,
+     "fp": 0,
+     "fn": 0,
+     "decided": 33
+    },
+    "clean-omfull-kiro-claude-sonnet-4-5": {
+     "correct": 31,
+     "wrong": 0,
+     "review": 17,
+     "fp": 0,
+     "fn": 0,
+     "decided": 31
+    }
+   },
+   "val": {
+    "oos-omkiro-sonnet-4-5": {
+     "correct": 27,
+     "wrong": 0,
+     "review": 21,
+     "fp": 0,
+     "fn": 0,
+     "decided": 27
+    },
+    "clean-oos-omkiro-sonnet-4-5": {
+     "correct": 27,
+     "wrong": 0,
+     "review": 21,
+     "fp": 0,
+     "fn": 0,
+     "decided": 27
+    },
+    "book-omkiro-sonnet-4-5": {
+     "correct": 46,
+     "wrong": 0,
+     "review": 0,
+     "fp": 0,
+     "fn": 0,
+     "decided": 46
+    }
+   }
+  }
+ },
+ {
+  "row_id": 30,
+  "model": "kiro/claude-sonnet-4.5",
+  "ai_cut": 0.9,
+  "human_cut": 0.3,
+  "conf_gate": 0.55,
+  "wrong_all": 0,
+  "decided_all": 164,
+  "fp_all": 0,
+  "per_corpus": {
+   "train": {
+    "omfull-kiro-claude-sonnet-4-5": {
+     "correct": 33,
+     "wrong": 0,
+     "review": 15,
+     "fp": 0,
+     "fn": 0,
+     "decided": 33
+    },
+    "clean-omfull-kiro-claude-sonnet-4-5": {
+     "correct": 31,
+     "wrong": 0,
+     "review": 17,
+     "fp": 0,
+     "fn": 0,
+     "decided": 31
+    }
+   },
+   "val": {
+    "oos-omkiro-sonnet-4-5": {
+     "correct": 27,
+     "wrong": 0,
+     "review": 21,
+     "fp": 0,
+     "fn": 0,
+     "decided": 27
+    },
+    "clean-oos-omkiro-sonnet-4-5": {
+     "correct": 27,
+     "wrong": 0,
+     "review": 21,
+     "fp": 0,
+     "fn": 0,
+     "decided": 27
+    },
+    "book-omkiro-sonnet-4-5": {
+     "correct": 46,
+     "wrong": 0,
+     "review": 0,
+     "fp": 0,
+     "fn": 0,
+     "decided": 46
+    }
+   }
+  }
+ },
+ {
+  "row_id": 31,
+  "model": "kiro/claude-haiku-4.5",
+  "ai_cut": 0.85,
+  "human_cut": 0.35,
+  "conf_gate": 0,
+  "wrong_all": 0,
+  "decided_all": 35,
+  "fp_all": 0,
+  "per_corpus": {
+   "train": {
+    "omfull-kiro-claude-haiku-4-5": {
+     "correct": 19,
+     "wrong": 0,
+     "review": 28,
+     "fp": 0,
+     "fn": 0,
+     "decided": 19
+    },
+    "clean-omfull-kiro-claude-haiku-4-5": {
+     "correct": 16,
+     "wrong": 0,
+     "review": 32,
+     "fp": 0,
+     "fn": 0,
+     "decided": 16
+    }
+   },
+   "val": {}
+  }
+ },
+ {
+  "row_id": 31,
+  "model": "kiro/claude-haiku-4.5",
+  "ai_cut": 0.85,
+  "human_cut": 0.35,
+  "conf_gate": 0.5,
+  "wrong_all": 0,
+  "decided_all": 35,
+  "fp_all": 0,
+  "per_corpus": {
+   "train": {
+    "omfull-kiro-claude-haiku-4-5": {
+     "correct": 19,
+     "wrong": 0,
+     "review": 28,
+     "fp": 0,
+     "fn": 0,
+     "decided": 19
+    },
+    "clean-omfull-kiro-claude-haiku-4-5": {
+     "correct": 16,
+     "wrong": 0,
+     "review": 32,
+     "fp": 0,
+     "fn": 0,
+     "decided": 16
+    }
+   },
+   "val": {}
+  }
+ },
+ {
+  "row_id": 31,
+  "model": "kiro/claude-haiku-4.5",
+  "ai_cut": 0.85,
+  "human_cut": 0.35,
+  "conf_gate": 0.55,
+  "wrong_all": 0,
+  "decided_all": 35,
+  "fp_all": 0,
+  "per_corpus": {
+   "train": {
+    "omfull-kiro-claude-haiku-4-5": {
+     "correct": 19,
+     "wrong": 0,
+     "review": 28,
+     "fp": 0,
+     "fn": 0,
+     "decided": 19
+    },
+    "clean-omfull-kiro-claude-haiku-4-5": {
+     "correct": 16,
+     "wrong": 0,
+     "review": 32,
+     "fp": 0,
+     "fn": 0,
+     "decided": 16
+    }
+   },
+   "val": {}
+  }
+ }
+]

@@ -1,0 +1,22 @@
+resume: keeping 35 scored row(s), calling 13
+tag=nvholdout-kimi-k3 model=moonshotai/kimi-k3 prompt=direct temp=0.1 top_p=0.95 max_tokens=1400 timeout_s=260 n=13 concurrency=1
+base_url=https://integrate.api.nvidia.com/v1 keys=1
+  [ 1/13] ai-002 AI    open_qa     -> 0.78 conf=0.66 (8682ms)
+  [ 2/13] hu-003 HUMAN reddit_eli5 -> 0.16 conf=0.74 (19928ms)
+  [ 3/13] hu-004 HUMAN wiki_csai   -> 0.25 conf=0.60 (6690ms)
+  [ 4/13] ai-005 AI    finance     -> 0.86 conf=0.78 (13611ms)
+  [ 5/13] ai-008 AI    reddit_eli5 -> 0.90 conf=0.82 (6235ms)
+  [ 6/13] hu-008 HUMAN reddit_eli5 -> 0.32 conf=0.66 (14248ms)
+  [ 7/13] ai-010 AI    finance     -> 0.86 conf=0.78 (10203ms, try2)
+  [ 8/13] ai-011 AI    medicine    -> 0.86 conf=0.78 (8766ms)
+  [ 9/13] ai-017 AI    open_qa     -> 0.72 conf=0.62 (4667ms)
+  [10/13] hu-018 HUMAN reddit_eli5 -> 0.18 conf=0.78 (10978ms)
+  [11/13] ai-019 AI    wiki_csai   -> 0.84 conf=0.72 (6840ms)
+  [12/13] hu-019 HUMAN wiki_csai   -> 0.25 conf=0.72 (15823ms, try2)
+  [13/13] ai-023 AI    reddit_eli5 -> 0.86 conf=0.74 (14638ms)
+
+wrote C:\Users\adam\Desktop\humanizer ultra\ai-text-detector\benchmark\results-nvholdout-kimi-k3.jsonl
+params: {"tag":"nvholdout-kimi-k3","model":"moonshotai/kimi-k3","prompt":"direct","temperature":0.1,"top_p":0.95,"max_tokens":1400,"tries":2,"wait_ms":30000,"timeout_s":260,"concurrency":1,"base_url":"https://integrate.api.nvidia.com/v1","corpus":"corpus-holdout.json","rows":48,"usable":48}
+usable=48/48 salvaged=0 truncated=0 errors=none
+latency ms p50/p90/max: 8577/15823/32256
+wall clock: 201.8s

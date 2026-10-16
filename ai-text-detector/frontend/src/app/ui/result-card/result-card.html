@@ -1,0 +1,288 @@
+<article class="panel result fade-in" [class]="'tone-' + result.classification.toLowerCase()">
+  <header class="result-head">
+    <span class="verdict-badge" aria-hidden="true">
+      @switch (verdictIcon()) {
+        @case ('alert') {
+          <svg viewBox="0 0 24 24"><path d="M12 4.5l8.5 15H3.5l8.5-15z" /><path d="M12 10.2v4.2M12 16.8v.2" /></svg>
+        }
+        @case ('check') {
+          <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.5" /><path d="M8.2 12.2l2.6 2.6 5-5.6" /></svg>
+        }
+        @case ('question') {
+          <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.5" /><path d="M9.6 9.2a2.5 2.5 0 114 2.4c-.9.6-1.6 1-1.6 2.1M12 16.8v.2" /></svg>
+        }
+        @default {
+          <svg viewBox="0 0 24 24"><path d="M8.5 3v5M15.5 3v5M6.5 8h11v3a5.5 5.5 0 01-11 0V8zM12 16.5v4.5" /></svg>
+        }
+      }
+    </span>
+    <div class="verdict-block">
+      <span class="verdict">{{ result.classification }}</span>
+      <span class="method">{{ result.method }}@if (secondaryDisabled()) { · single lane }</span>
+    </div>
+    @if (elapsedSeconds) {
+      <span class="elapsed">{{ elapsedSeconds }}s</span>
+    }
+  </header>
+
+  @if (result.classification === 'DETECTION_UNAVAILABLE') {
+    <p class="strong amber">
+      No usable verdict. Every lane failed — the reasons are listed under lane evidence.
+      @if (result.error) { <em>{{ result.error }}</em> }
+    </p>
+  }
+
+  @if (reviewReason()) {
+    <p class="neutral">{{ reviewReason() }}</p>
+  }
+
+  <div class="scores">
+    <div class="score">
+      <span class="label">AI probability (deciding lane)</span>
+      <span class="value">{{ pct(result.ai_probability) }}</span>
+      <div class="bar"><div class="fill" [style.width]="barWidth(result.ai_probability)"></div></div>
+      @if (scaleNote()) {
+        <span class="scale-note">{{ scaleNote() }}</span>
+      }
+    </div>
+    <div class="score">
+      <span class="label">Confidence</span>
+      <span class="value">{{ pct(result.confidence) }}</span>
+      <div class="bar"><div class="fill soft" [style.width]="barWidth(result.confidence)"></div></div>
+    </div>
+    @if (result.component_scores && !secondaryDisabled()) {
+      <div class="score">
+        <span class="label">Gap between lanes</span>
+        <span class="value">{{ pct(result.component_scores.lane_gap) }}</span>
+        <div class="bar">
+          <div class="fill warn" [style.width]="barWidth(result.component_scores.lane_gap)"></div>
+        </div>
+      </div>
+    }
+  </div>
+
+  @if (result.component_scores; as c) {
+    <table class="kv">
+      <tbody>
+        <tr><th>Primary lane</th><td>{{ pct(c.primary_probability) }} · conf {{ pct(c.primary_confidence) }}</td></tr>
+        <tr>
+          <th>Secondary lane</th>
+          <td>
+            @if (c.secondary_called) {
+              {{ pct(c.secondary_probability) }} · conf {{ pct(c.secondary_confidence) }}
+            } @else if (secondaryDisabled()) {
+              off — tie-break was switched off for this run
+            } @else {
+              not called (the primary decided on its own)
+            }
+          </td>
+        </tr>
+        <tr>
+          <th>Decision</th>
+          <td>
+            {{ c.deciding_lane ?? 'none' }} lane
+            @if (c.deciding_lane === 'secondary') {
+              · tie-break cut {{ pct(c.secondary_decision_threshold) }}
+            }
+          </td>
+        </tr>
+        @if (!secondaryDisabled()) {
+          <tr>
+            <td colspan="2" class="note">
+              The lanes are different models on different probability scales, so their numbers are
+              never averaged: the secondary only answers where the primary defers, against its own
+              cut. The gap above is informational and gates nothing.
+            </td>
+          </tr>
+        }
+      </tbody>
+    </table>
+  }
+
+  @if (showEvidence()) {
+    <details class="fold evidence-fold" open>
+      <summary>
+        <svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 9l6 6 6-6" /></svg>
+        Evidence in the text
+        @if (activeLane()) {
+          <span class="tag good ev-lane">{{ activeLane() }} lane</span>
+        }
+      </summary>
+
+      <div class="ev-legend">
+        <span class="ev-key"><i class="sw" [style.background-color]="color('HUMAN', 0.7)"></i>human</span>
+        <span class="ev-key"><i class="sw" [style.background-color]="color('AI', 0.3)"></i>AI weak</span>
+        <span class="ev-key"><i class="sw" [style.background-color]="color('AI', 0.71)"></i>AI typical</span>
+        <span class="ev-key"><i class="sw" [style.background-color]="color('AI', 0.9)"></i>AI strong</span>
+        <span class="ev-note">hue and depth follow the strength the model reported for each phrase, scaled to the range lanes actually emit (0.30–0.95 measured over 575 quotes)</span>
+      </div>
+
+      @if (activePhrases().length) {
+        <p class="ev-text">@for (s of segments(); track $index) { @if (s.direction === 'HUMAN') { <mark class="ev-hit human" [style.background-color]="color('HUMAN', s.strength)" [title]="'human evidence · strength ' + pct(s.strength)">{{ s.text }}</mark> } @else if (s.direction === 'AI') { <mark class="ev-hit ai" [style.background-color]="color('AI', s.strength)" [title]="'AI evidence · strength ' + pct(s.strength)">{{ s.text }}</mark> } @else { <span class="ev-plain">{{ s.text }}</span> } }</p>
+        @if (unmatchedCount()) {
+          <p class="ev-unmatched">
+            {{ unmatchedCount() }} of {{ activePhrases().length }} quoted phrases could not be found
+            verbatim in the text, so they are not painted above.
+          </p>
+        }
+      } @else {
+        <p class="muted small">
+          The deciding lane returned no verbatim phrases for this run — a truncated or salvaged
+          answer never invents evidence. The score above still stands on its own.
+        </p>
+      }
+    </details>
+  }
+
+  <details class="fold">
+    <summary>
+      <svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 9l6 6 6-6" /></svg>
+      Lane evidence
+    </summary>
+    <div class="attempts">
+      @for (m of models(); track m.lane + $index) {
+        <section class="attempt" [class.bad]="!m.ok">
+          <h4>
+            {{ m.lane }}
+            <code>{{ m.model ?? 'unknown model' }}</code>
+            @if (m.ok) {
+              <span class="tag good">usable</span>
+            } @else if (m.skipped) {
+              <span class="tag">not called</span>
+            } @else {
+              <span class="tag bad">{{ m.error_code ?? 'failed' }}</span>
+            }
+            @if (m.salvaged) { <span class="tag warn">json salvaged</span> }
+            @if (m.truncated) { <span class="tag warn">truncated</span> }
+          </h4>
+
+          @if (m.error_detail) {
+            <p class="provider-error">{{ m.error_detail }}</p>
+          }
+
+          @if (m.result; as r) {
+            <p class="lane-numbers">
+              ai {{ pct(r.ai_probability) }} · confidence {{ pct(r.confidence) }}
+            </p>
+            @if (r.signals.length) {
+              <ul class="signals">
+                @for (s of r.signals; track s.name + $index) {
+                  <li>
+                    <span class="dir" [class.human]="s.direction === 'HUMAN'">{{ s.direction }}</span>
+                    {{ s.name }}
+                    <span class="strength">{{ pct(s.strength) }}</span>
+                  </li>
+                }
+              </ul>
+            } @else {
+              <p class="muted small">The model returned no signals.</p>
+            }
+          }
+        </section>
+      }
+    </div>
+  </details>
+
+  @if (result.config_used) {
+    <details class="fold">
+      <summary>
+        <svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 9l6 6 6-6" /></svg>
+        What actually ran
+      </summary>
+      <table class="kv provenance">
+        <tbody>
+          @for (row of allLanes(); track row.lane) {
+            <tr>
+              <th>{{ row.lane }}</th>
+              <td>
+                <code>{{ row.config.base_url }}</code>
+                <span class="src" [class.from-request]="row.config.base_url_source === 'request'">
+                  host {{ row.config.base_url_source }}
+                </span>
+                @if (row.lane === 'secondary' && secondaryDisabled()) {
+                  <span class="tag">disabled for this run</span>
+                }
+                <br />
+                <code>{{ row.config.model }}</code>
+                <span class="src" [class.from-request]="row.config.model_source === 'request'">
+                  model {{ row.config.model_source }}
+                </span>
+                <br />
+                <span class="src" [class.from-request]="row.config.key_source === 'header'">
+                  key: {{ keySourceLabel(row.config.key_source) }}
+                </span>
+              </td>
+            </tr>
+          }
+          <tr>
+            <th>BYOK on server</th>
+            <td>{{ result.config_used.byok_enabled ? 'allowed' : 'disabled' }}</td>
+          </tr>
+          @if (cutSummary()) {
+            <tr>
+              <th>Decision cuts</th>
+              <td><code>{{ cutSummary() }}</code></td>
+            </tr>
+          }
+          @if (samplingSummary()) {
+            <tr>
+              <th>Sampling</th>
+              <td><code>{{ samplingSummary() }}</code></td>
+            </tr>
+          }
+          @if (appliedTuning().length) {
+            <tr>
+              <th>From your saved model row</th>
+              <td>
+                <code>{{ appliedTuning().join(' · ') }}</code>
+                <p class="hint">
+                  These values were read from the model row in the database and sent with this
+                  request; anything not listed came from the defaults baked into the workflow.
+                </p>
+              </td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    </details>
+  }
+
+  @if (secondaryDisabled()) {
+    <p class="notice">
+      Single-lane run: the gray zone ({{ result.config_used?.thresholds?.human_prob }}–{{
+      result.config_used?.thresholds?.ai_prob }}) is left as REVIEW instead of a tie-break verdict.
+      Fine for a strong lane; enable the second lane in Configuration if REVIEW results bother you.
+    </p>
+  } @else if (!pairIsBenchmarked()) {
+    <p class="notice">
+      These thresholds were calibrated for the 550B / diffusiongemma-26b pair. This run used a
+      different model combination, so the verdict is indicative only.
+    </p>
+  }
+
+  @if (warnings().length) {
+    <details class="fold">
+      <summary>
+        <svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 9l6 6 6-6" /></svg>
+        Warnings ({{ warnings().length }})
+      </summary>
+      <ul class="warnings">
+        @for (w of warnings(); track w) {
+          <li>{{ w }}</li>
+        }
+      </ul>
+    </details>
+  }
+
+  @if (result.warning) {
+    <p class="footnote">{{ result.warning }}</p>
+  }
+
+  @if (result.versions) {
+    <p class="footnote muted small">
+      detector {{ result.versions.detector }} · classifier {{ result.versions.classifier }} ·
+      thresholds {{ result.versions.thresholds }} · mode {{ result.versions.mode }} ·
+      doc {{ result.document_id ?? '—' }}
+    </p>
+  }
+</article>
