@@ -75,7 +75,7 @@ if FROZEN:
 # Now it is safe to import the app (backend.db has captured DB_PATH/SECRET_PATH).
 from werkzeug.serving import run_simple  # noqa: E402
 
-from . import db, seed  # noqa: E402
+from . import db, discovery, seed  # noqa: E402
 from .app import create_app, purger  # noqa: E402
 
 HOST = os.environ.get("BACKEND_HOST", "127.0.0.1")
@@ -216,6 +216,13 @@ def main() -> None:
         purger.start()
     except Exception:
         pass
+    # Same rule for discovery: it spends a user's key on real provider calls, so only a
+    # serving process runs the worker. Without it, verifying a key reports
+    # `discovery.status = "disabled"` instead of quietly queueing work nobody picks up.
+    try:
+        discovery.worker.start()
+    except Exception:
+        pass
 
     wrapper = build_app()
     url = f"http://{HOST}:{PORT}"
@@ -226,6 +233,7 @@ def main() -> None:
     print("  db          =", db.DB_PATH)
     print("  spa         =", spa, "(exists)" if spa.is_dir() else "(MISSING — run `npm run build`)")
     print("  purge       =", "enabled" if purger.enabled else f"disabled ({purger.error})")
+    print("  discovery   =", "enabled" if discovery.worker.running else "disabled")
     print("  (close this window to stop the server)")
 
     threading.Thread(target=_open_browser_when_ready, args=(url,), daemon=True).start()

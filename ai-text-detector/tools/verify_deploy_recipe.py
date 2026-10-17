@@ -247,6 +247,31 @@ def main() -> int:
               f"lane {lane_ceiling_s:.0f}s + 30 = {backend_wait_s:.0f}s wait, gunicorn {gunicorn_s}s")
         check(nginx_s > gunicorn_s, "nginx proxy_read_timeout clears gunicorn",
               f"nginx {nginx_s}s > gunicorn {gunicorn_s}s")
+
+        # One tier further down the same chain, and the nesting bug again, wearing a different
+        # number. A failover request is more than one lane call, and the total is set in app.py
+        # (REQUEST_BUDGET_S), not derived from the lane ceiling -- so nothing above it enforced that
+        # the two actually fit together. On 2026-10-17 the request deadline was computed from the
+        # pool's FIRST row (90 s + 30), which starved the 240 s replacement and turned a correct
+        # switch into two non-answers.
+        from backend.app import REQUEST_BUDGET_S
+        check(REQUEST_BUDGET_S <= backend_wait_s,
+              "a two-attempt request fits inside the backend's own wait",
+              f"REQUEST_BUDGET_S {REQUEST_BUDGET_S:.0f}s vs lane+30 = {backend_wait_s:.0f}s wait")
+
+        # The outermost tier is the browser, and it is the one no server-side file carries, so it
+        # is the one nobody re-derives when a ceiling moves. It was 150 s for /detect while the
+        # chain below it grew to 270 s, and 60 s for a key probe while `probe_timeout_s` grew to
+        # 250 s: the inner tier gave up first, so the user saw "failed" for a request the server
+        # was still honouring -- and the verdict landed in History behind the error message.
+        budget = (REPO / "frontend" / "src" / "app" / "core" / "http-budget.ts") \
+            .read_text(encoding="utf-8", errors="replace")
+        patience = re.search(r"HTTP_PATIENCE_MS\s*=\s*([\d_]+)", budget)
+        check(patience is not None and int(patience.group(1).replace("_", "")) > nginx_s * 1000,
+              "the browser waits longer than the gateway it is waiting on",
+              f"HTTP_PATIENCE_MS="
+              f"{patience.group(1) if patience else 'missing'} vs nginx {nginx_s}s")
+
         # DEPLOY.md is the text an operator follows, and it quotes every one of these numbers. A doc
         # that still says the old ceiling sends someone to change a tier that is already correct.
         deploy = (REPO / "docker/DEPLOY.md").read_text(encoding="utf-8", errors="replace")

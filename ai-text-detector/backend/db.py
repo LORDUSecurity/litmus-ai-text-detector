@@ -19,7 +19,7 @@ DATA_DIR = BACKEND_DIR / "data"
 DB_PATH = Path(os.environ.get("DETECTOR_DB", DATA_DIR / "detector.sqlite3"))
 SECRET_PATH = Path(os.environ.get("DETECTOR_SECRET", DATA_DIR / "backend-secret.key"))
 
-SCHEMA_VERSION = 3
+SCHEMA_VERSION = 4
 _lock = threading.Lock()
 
 SCHEMA = """
@@ -162,10 +162,63 @@ CREATE TABLE IF NOT EXISTS catalog_models (
     UNIQUE (provider, model_id)
 );
 
+-- v4: one user's ordered "using pool". position is the user's own ranking and is
+-- authoritative; `source` records who put the row there ('user' dragged it in, 'auto'
+-- discovery added it) so an auto-added row can be demoted without ever overtaking a
+-- position the user set by hand. There is no global pool: two users bring different keys.
+CREATE TABLE IF NOT EXISTS user_model_pool (
+    id        INTEGER PRIMARY KEY,
+    user_id   INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    provider  TEXT NOT NULL,
+    model_id  TEXT NOT NULL,
+    position  INTEGER NOT NULL DEFAULT 0,
+    source    TEXT NOT NULL DEFAULT 'user' CHECK (source IN ('user','auto')),
+    added_at  TEXT NOT NULL DEFAULT (datetime('now')),
+    UNIQUE (user_id, provider, model_id)
+);
+
+-- v4: does this model still answer? Fed from evidence.models[] on every detection, so a
+-- lane that starts 404ing or timing out is measured from real traffic rather than polled.
+-- Keyed by (provider, model_id) rather than models.id: the whole point is to notice a
+-- model that has no tuned row yet, and a delisted row may be deleted while its history
+-- of failures still matters.
+CREATE TABLE IF NOT EXISTS model_health (
+    id                   INTEGER PRIMARY KEY,
+    provider             TEXT NOT NULL,
+    model_id             TEXT NOT NULL,
+    state                TEXT NOT NULL DEFAULT 'ok' CHECK (state IN ('ok','degraded','down')),
+    consecutive_failures INTEGER NOT NULL DEFAULT 0,
+    last_ok_at           TEXT,
+    last_failure_at      TEXT,
+    last_error           TEXT NOT NULL DEFAULT '',
+    UNIQUE (provider, model_id)
+);
+
+-- v4: an auto-discovery run, so the UI can poll progress instead of holding a request open
+-- for the minutes a catalogue fetch + screen costs. One row per (user, provider) attempt.
+CREATE TABLE IF NOT EXISTS discovery_jobs (
+    id          INTEGER PRIMARY KEY,
+    user_id     INTEGER REFERENCES users(id) ON DELETE CASCADE,
+    provider    TEXT NOT NULL,
+    status      TEXT NOT NULL DEFAULT 'queued'
+                CHECK (status IN ('queued','running','done','failed')),
+    stage       TEXT NOT NULL DEFAULT '',
+    n_listed    INTEGER NOT NULL DEFAULT 0,
+    n_screened  INTEGER NOT NULL DEFAULT 0,
+    n_usable    INTEGER NOT NULL DEFAULT 0,
+    error       TEXT NOT NULL DEFAULT '',
+    started_at  TEXT,
+    finished_at TEXT,
+    created_at  TEXT NOT NULL DEFAULT (datetime('now'))
+);
+
 CREATE INDEX IF NOT EXISTS idx_detections_created ON detections(id DESC);
 CREATE INDEX IF NOT EXISTS idx_results_run ON benchmark_results(run_id);
 CREATE INDEX IF NOT EXISTS idx_keys_provider ON api_keys(provider_id);
 CREATE INDEX IF NOT EXISTS idx_user_keys_user ON user_api_keys(user_id);
+CREATE INDEX IF NOT EXISTS idx_pool_user ON user_model_pool(user_id, position);
+CREATE INDEX IF NOT EXISTS idx_health_model ON model_health(model_id);
+CREATE INDEX IF NOT EXISTS idx_discovery_user ON discovery_jobs(user_id, id DESC);
 """
 
 
@@ -403,4 +456,132 @@ def user_key_for_provider(conn: sqlite3.Connection, user_id: int, provider_id: i
         return decrypt_key(row["key_cipher"])
     except ValueError:
         return None
+
+
+# ------------------------------------------------------- per-user model pool (v4)
+
+def pool_list(conn: sqlite3.Connection, user_id: int) -> list[sqlite3.Row]:
+    """The caller's using-pool in stored order. Order is re-derived by pool.rerank();
+    this is the raw read."""
+    return conn.execute(
+        """SELECT p.*, h.state AS health_state, h.consecutive_failures AS health_failures,
+                  h.last_error AS health_error, h.last_ok_at AS health_last_ok_at
+           FROM user_model_pool p
+           LEFT JOIN model_health h ON h.model_id = p.model_id AND h.provider = p.provider
+           WHERE p.user_id = ? ORDER BY p.position, p.id""",
+        (user_id,),
+    ).fetchall()
+
+
+def pool_add(conn: sqlite3.Connection, user_id: int, provider: str, model_id: str,
+             source: str = "user") -> None:
+    """Append to the end of the caller's pool. An existing row is left where the user put
+    it: re-adding a model must not silently reshuffle an order they set by hand."""
+    nxt = conn.execute("SELECT COALESCE(MAX(position), -1) + 1 AS n FROM user_model_pool WHERE user_id = ?",
+                       (user_id,)).fetchone()["n"]
+    conn.execute(
+        """INSERT INTO user_model_pool (user_id, provider, model_id, position, source)
+           VALUES (?,?,?,?,?)
+           ON CONFLICT(user_id, provider, model_id) DO NOTHING""",
+        (user_id, provider, model_id, nxt, source),
+    )
+
+
+def pool_remove(conn: sqlite3.Connection, user_id: int, provider: str, model_id: str) -> int:
+    cur = conn.execute(
+        "DELETE FROM user_model_pool WHERE user_id = ? AND provider = ? AND model_id = ?",
+        (user_id, provider, model_id),
+    )
+    return cur.rowcount
+
+
+def pool_set_positions(conn: sqlite3.Connection, user_id: int, ordered: list[tuple[str, str]]) -> None:
+    """Write an explicit order. `ordered` is [(provider, model_id), ...] in the wanted
+    sequence; anything the caller's own pool holds that is absent from the list keeps its
+    row and is appended after, so a drag that names only part of the pool cannot delete
+    the rest."""
+    seen = set()
+    for i, (prov, mid) in enumerate(ordered):
+        conn.execute(
+            """UPDATE user_model_pool SET position = ?, source = 'user'
+               WHERE user_id = ? AND provider = ? AND model_id = ?""",
+            (i, user_id, prov, mid),
+        )
+        seen.add((prov, mid))
+    tail = len(ordered)
+    for row in conn.execute(
+            "SELECT provider, model_id FROM user_model_pool WHERE user_id = ? ORDER BY position, id",
+            (user_id,)).fetchall():
+        if (row["provider"], row["model_id"]) in seen:
+            continue
+        conn.execute(
+            "UPDATE user_model_pool SET position = ? WHERE user_id = ? AND provider = ? AND model_id = ?",
+            (tail, user_id, row["provider"], row["model_id"]),
+        )
+        tail += 1
+
+
+def health_get(conn: sqlite3.Connection, provider: str, model_id: str) -> sqlite3.Row | None:
+    return conn.execute(
+        "SELECT * FROM model_health WHERE provider = ? AND model_id = ?", (provider, model_id)
+    ).fetchone()
+
+
+def health_note(conn: sqlite3.Connection, provider: str, model_id: str, ok: bool,
+                error: str = "", state_down_after: int = 3) -> str:
+    """Record one real answer (or non-answer) and return the resulting state.
+
+    A success clears the streak -- health is "is it answering *now*", not a lifetime
+    record, so a model that recovers stops being demoted without anyone editing a table.
+    `state_down_after` is the streak length at which a model is called down; one failure
+    only degrades it, because a single 504 on a congested free pool is not a delisting.
+    """
+    if ok:
+        conn.execute(
+            """INSERT INTO model_health (provider, model_id, state, consecutive_failures, last_ok_at, last_error)
+               VALUES (?,?, 'ok', 0, datetime('now'), '')
+               ON CONFLICT(provider, model_id) DO UPDATE SET
+                 state = 'ok', consecutive_failures = 0,
+                 last_ok_at = datetime('now'), last_error = ''""",
+            (provider, model_id),
+        )
+        return "ok"
+    conn.execute(
+        """INSERT INTO model_health (provider, model_id, state, consecutive_failures,
+                                     last_failure_at, last_error)
+           VALUES (?,?, 'degraded', 1, datetime('now'), ?)
+           ON CONFLICT(provider, model_id) DO UPDATE SET
+             consecutive_failures = consecutive_failures + 1,
+             last_failure_at = datetime('now'),
+             last_error = excluded.last_error,
+             state = CASE WHEN consecutive_failures + 1 >= ? THEN 'down' ELSE 'degraded' END""",
+        (provider, model_id, str(error)[:400], state_down_after),
+    )
+    row = conn.execute(
+        "SELECT state FROM model_health WHERE provider = ? AND model_id = ?", (provider, model_id)
+    ).fetchone()
+    return row["state"] if row else "degraded"
+
+
+def discovery_job(conn: sqlite3.Connection, user_id: int | None, provider: str) -> int:
+    cur = conn.execute(
+        "INSERT INTO discovery_jobs (user_id, provider, status, stage) VALUES (?,?, 'queued', 'queued')",
+        (user_id, provider),
+    )
+    return int(cur.lastrowid)
+
+
+def discovery_update(conn: sqlite3.Connection, job_id: int, **fields) -> None:
+    allowed = {"status", "stage", "n_listed", "n_screened", "n_usable", "error",
+               "started_at", "finished_at"}
+    sets, vals = [], []
+    for k, v in fields.items():
+        if k not in allowed:
+            raise ValueError(f"discovery_update: unknown field {k!r}")
+        sets.append(f"{k} = ?")
+        vals.append(v)
+    if not sets:
+        return
+    conn.execute(f"UPDATE discovery_jobs SET {', '.join(sets)} WHERE id = ?", (*vals, job_id))
+
 

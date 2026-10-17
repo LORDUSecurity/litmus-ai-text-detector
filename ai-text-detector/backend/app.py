@@ -23,7 +23,7 @@ from pathlib import Path
 
 from flask import Flask, g, jsonify, request
 
-from . import auth, db, extract
+from . import auth, db, discovery, extract, pool
 from .purge import N8N_DB, Purger, WORKFLOW_ID
 
 PORT = int(os.environ.get("BACKEND_PORT", "8787"))
@@ -318,6 +318,40 @@ def host_allowed(base_url: str) -> bool:
     return host_of(base_url) in allow
 
 
+def provider_name_for_base_url(base_url: str) -> str:
+    """The provider *name* that owns an endpoint, or "" when no enabled provider does.
+
+    Health and the using-pool are keyed by (provider name, model id) rather than by a models
+    row id, because the whole point is to notice a model that has no tuned row yet -- and
+    because the same model id can be served from two endpoints (OpenRouter's `:free` mirrors)
+    whose fates are independent. An unknown host gets no name and therefore no health row:
+    a name this app cannot resolve is a name it cannot key on, and inventing one from the
+    hostname would let a caller's arbitrary base_url plant rows in a table the pool trusts.
+    """
+    want = host_of(base_url or "")
+    if not want:
+        return ""
+    for p in conn().execute("SELECT name, base_url FROM providers WHERE enabled = 1"):
+        if host_of(p["base_url"]) == want:
+            return p["name"]
+    return ""
+
+
+def provider_base_url_by_name(name: str) -> str:
+    """The endpoint of an enabled provider, by name. "" when there is none.
+
+    The pool stores a provider *name* (portable across re-seeds, and the key model_health
+    already uses); calling it needs the endpoint back. A disabled provider yields nothing,
+    so an admin switching an endpoint off takes its pooled models out of circulation without
+    anyone having to edit a user's ranking.
+    """
+    if not name:
+        return ""
+    row = conn().execute("SELECT base_url FROM providers WHERE name = ? AND enabled = 1",
+                         (name,)).fetchone()
+    return row["base_url"] if row else ""
+
+
 def lane_config_invalid(lane: str):
     """The one shape a rejected lane endpoint is reported in, whichever path built it."""
     return jsonify({
@@ -437,6 +471,130 @@ def _lane_view(lane: dict | None) -> dict:
                                  "key_source") if lane.get(k) is not None}
 
 
+# ---- failover: when a second model may be tried, and how far ------------------
+
+# One switch, plus one more if the second also fails and time remains. Bounded because each
+# attempt is a full detection (up to 270 s on the shipped lane ceiling) and the transport
+# above this gives up at 330 s: an unbounded walk would be a request that can never answer.
+MAX_FAILOVER_ATTEMPTS = 2
+
+# Seconds that must remain on the request's own budget before another model is tried. Below
+# this the retry cannot finish, and starting it converts a clean 502 into a gateway timeout
+# with no verdict at all -- strictly worse for the user than failing immediately.
+FAILOVER_RESERVE_S = 20.0
+
+# The whole time a single /detect may spend across EVERY lane call it makes. This belongs to the
+# request, not to whichever model happens to be at the top of the pool, and the distinction cost
+# a user their verdict on 2026-10-17: a pool of [nemotron-3-ultra (row timeout 90 s),
+# z-ai/glm-5.3-flash (240 s)] refused in 0.7 s, failover correctly decided to switch -- and handed
+# the replacement 109 s, because the deadline had been computed from the *first* model's ceiling.
+# glm needed longer than that on a congested pool, so 120 s bought two non-answers.
+#
+# It is set from the tier above, the same way the rest of the chain is (see verify_deploy_recipe.py:
+# lane ceiling -> backend wait -> gunicorn -> nginx). One lane call at the shipped 240 s ceiling
+# already needs 240 + 30 = 270 s, so a two-attempt request has to fit under that 270 s and still
+# leave time to store the row and write the response: 250 s, 20 s clear of gunicorn's 285 s.
+REQUEST_BUDGET_S = 250.0
+
+# Error codes that say the ENGINE or the REQUEST failed, not the model. Retrying another
+# model against a dead engine, a bad text, or a disallowed host spends budget to reproduce
+# the same answer.
+NO_FAILOVER_CODES = frozenset({
+    "ENGINE_UNREACHABLE", "ENGINE_TIMEOUT", "INPUT_REJECTED", "LANE_CONFIG_INVALID",
+    "NO_PRIMARY_MODEL", "PAYLOAD_TOO_LARGE",
+})
+
+
+def no_verdict(status: int, resp) -> bool:
+    """True when this answer carries no classification a user could act on.
+
+    Only that question, and no other. Whether a *different model* could fix it belongs to
+    `engine_level_failure`: the two used to be one check, and the `status >= 500` branch
+    answered first, so the 502s `forward()` produces for a dead or too-slow engine were treated
+    as model failures and bought up to two more full detections to reproduce the same 502 --
+    minutes on Windows, where a dead local port hangs instead of refusing.
+
+    Still deliberately narrow in the other direction: a verdict rescued by the tie-break lane is
+    a real answer (`SINGLE_MODEL_SECONDARY`) and is kept -- the failed primary is marked
+    unhealthy so the pool reorders, but the user is not charged a second full call to replace
+    an answer with maybe-an-answer.
+    """
+    if status >= 500:
+        return True
+    if not isinstance(resp, dict):
+        return True
+    return (resp.get("classification") == "DETECTION_UNAVAILABLE"
+            or resp.get("method") == "ALL_MODELS_FAILED"
+            or resp.get("classification") is None)
+
+
+def engine_level_failure(resp) -> bool:
+    """True when the failure belongs to the engine or to the request, not to the model.
+
+    Retrying another model against a dead engine, a blown ceiling, a rejected text or a
+    disallowed host spends the caller's budget and their remaining request time to reproduce
+    the same answer -- and then stamps `lane_source: failover` and an `auto_switch` onto a body
+    that never carried a verdict, which is an unattributable number of exactly the kind this
+    app has spent rounds removing.
+    """
+    return isinstance(resp, dict) and resp.get("error_code") in NO_FAILOVER_CODES
+
+
+# A credential test is timed like the call it stands in for.
+#
+# `/my/keys/<id>/verify` proves a user's key by asking one model for one word, and it gave up on
+# a bare 45 s. On 2026-10-17 that was a false negative on exactly the model this app promotes
+# because it is thorough: z-ai/glm-5.3-flash did not answer the probe inside 60 s on a congested
+# NVIDIA pool. The user was told a working key was broken -- and because a verified key is the
+# ONLY thing that queues auto-discovery, the whole "enter it, test it, save it, get your models
+# ranked" flow stopped at step one.
+#
+# So the ceiling comes from the row of the model being probed: a probe may take as long as a real
+# detection against that model is allowed to. It is a ceiling, not a wait -- a healthy gateway
+# answers this prompt in a couple of seconds and returns exactly as fast as it always did.
+PROBE_FLOOR_S = 45.0
+
+
+def probe_timeout_s(model_id: str, requested=None, provider_id: int | None = None) -> float:
+    """Seconds a one-word connectivity probe may wait for `model_id` to answer."""
+    if requested is not None:
+        try:
+            return max(1.0, float(requested))
+        except (TypeError, ValueError):
+            return PROBE_FLOOR_S
+    sql, args = "SELECT timeout_ms FROM models WHERE model_id = ?", [model_id]
+    if provider_id is not None:
+        # The same id can live on two endpoints (OpenRouter's `:free` mirrors), and they do not
+        # share a ceiling. Keying on the provider keeps a slow mirror from inheriting a fast
+        # row's patience, or losing it.
+        sql += " AND provider_id = ?"
+        args.append(provider_id)
+    row = conn().execute(sql + " LIMIT 1", args).fetchone()
+    if row is None or not row["timeout_ms"]:
+        return PROBE_FLOOR_S
+    return min(max(float(row["timeout_ms"]) / 1000.0, PROBE_FLOOR_S), REQUEST_BUDGET_S)
+
+
+def leg_failure(resp) -> tuple[str | None, str | None, str | None]:
+    """(model, error_code, error_detail) for the primary leg that did not answer.
+
+    Read from the workflow's own per-lane report rather than from the request's lane_config,
+    because the workflow is what actually called the model and is what knows how it failed.
+    """
+    if not isinstance(resp, dict):
+        return None, None, None
+    for leg in ((resp.get("evidence") or {}).get("models")) or []:
+        if isinstance(leg, dict) and leg.get("lane") == "primary" and not leg.get("ok"):
+            return (str(leg.get("model") or "") or None, leg.get("error_code"),
+                    leg.get("error_detail"))
+    return None, resp.get("error_code"), resp.get("error")
+
+
+def _pid_by_name(name: str) -> int | None:
+    row = conn().execute("SELECT id FROM providers WHERE name = ? AND enabled = 1", (name,)).fetchone()
+    return int(row["id"]) if row else None
+
+
 def record_detection(body: dict, status: int, latency_ms: float, primary_model: str | None,
                      secondary_model: str | None, text_length: int | None = None,
                      secondary_off: bool = False) -> int:
@@ -483,6 +641,16 @@ def record_detection(body: dict, status: int, latency_ms: float, primary_model: 
          json.dumps(body.get("warnings") or []), json.dumps(payload), user_id),
     )
     conn().commit()
+    # Fold this attempt into model_health. It reads the workflow's own per-lane report, so a
+    # model that has started 404ing or timing out is measured from traffic the app was already
+    # making -- no poll, no extra budget, and no second opinion about what "did not answer"
+    # means. Committed separately: a health write is a side-effect of the detection, and a
+    # failure to record it must not roll back the history row the user is about to be shown.
+    try:
+        pool.note_detection(conn(), body, provider_name_for_base_url)
+        conn().commit()
+    except sqlite3.Error:
+        conn().rollback()
     return int(cur.lastrowid)
 
 
@@ -662,6 +830,32 @@ def register_routes(app: Flask) -> None:
                 return None
             return db.user_key_for_provider(conn(), user["id"], provider_id)
 
+        # ---- the caller's using-pool -------------------------------------------------
+        #
+        # Precedence: an explicit lane_config in the request > the signed-in user's ordered
+        # pool > the admin's deployed default lane. The pool is the user's own ranking of
+        # models they can pay for, so it outranks a default chosen for everyone -- but it
+        # never outranks what this request asked for, because "use this model" on the Ranking
+        # tab is an explicit choice for one detection.
+        #
+        # The order used here is pool.effective_order(), not the stored one: a model marked
+        # `down` by three consecutive non-answers sinks to the back for this request without
+        # anyone editing the user's ranking, and comes back when it answers again.
+        pool_rows: list = []
+        pool_used = False
+        if user is not None:
+            pool_rows = pool.effective_order(db.pool_list(conn(), user["id"]))
+        if not lane_config and pool_rows:
+            top = pool_rows[0]
+            base = provider_base_url_by_name(top["provider"])
+            if base and host_allowed(base):
+                # Synthesised as a plain lane_config and then handled by the same branch a
+                # caller-named primary takes, so the tie-break policy, the base_url fill, the
+                # BYOK-first key pick and the tuning resolution stay one code path instead of
+                # growing a parallel one that can drift from it.
+                lane_config = {"primary": {"base_url": base, "model": top["model_id"]}}
+                pool_used = True
+
         if not lane_config:
             if primary is None:
                 return jsonify({
@@ -776,17 +970,131 @@ def register_routes(app: Flask) -> None:
             tuning = caller_tuning if isinstance(caller_tuning, dict) else tuning_block(
                 model_by_id(primary_model), model_by_id(secondary_model))
 
-        payload = {k: v for k, v in body.items() if k not in ("lane_config", "tuning")}
-        payload["lane_config"] = lane_config
-        if tuning:
-            payload["tuning"] = tuning
-        payload.setdefault("document_id", body.get("document_id"))
-
         url = setting("n8n_url", "http://localhost:5678").rstrip("/") + \
             setting("webhook_path", "/webhook/ai-detect-ai")
+
+        def build_payload(lane_cfg: dict, tune: dict) -> dict:
+            p = {k: v for k, v in body.items() if k not in ("lane_config", "tuning")}
+            p["lane_config"] = lane_cfg
+            if tune:
+                p["tuning"] = tune
+            p.setdefault("document_id", body.get("document_id"))
+            return p
+
         timeout = float(tuning.get("request_timeout_ms")
                         or (primary["timeout_ms"] if primary else 90000)) / 1000.0 + 30.0
+        # The first attempt keeps its OWN lane ceiling; the request keeps the budget. Deriving the
+        # deadline from `timeout` made whichever row sits on top of the pool size every later
+        # attempt, which is how a 0.7 s refusal left a 240 s replacement with 109 s. max(), not
+        # min(): a single lane at the shipped 240 s ceiling is what the 270 s -> 285 s -> 330 s
+        # chain above is derived from, so the budget must never cut that call short.
+        deadline = time.time() + max(timeout, REQUEST_BUDGET_S)
+        payload = build_payload(lane_config, tuning)
         status, resp, latency = forward(url, payload, headers, timeout)
+
+        # ---- failover: the next model in the caller's own order ------------------------
+        #
+        # "Auto switching if the model stops responding" happens here, in the backend, rather
+        # than in the workflow: the engine has two lanes and no concept of a third candidate,
+        # and teaching it an N-model walk would mean rebuilding the shipped, measured
+        # two-lane graph. Retrying here reuses it unchanged.
+        #
+        # Three limits, each of which is a real cost rather than a taste:
+        #   * only when the answer carries NO verdict. A detection the tie-break lane rescued
+        #     is a verdict the user already paid for; throwing it away to try a different
+        #     primary would spend a second full call to replace an answer with maybe an answer.
+        #     The failed primary is still marked unhealthy, so the pool reorders next time.
+        #   * never on ENGINE_UNREACHABLE / ENGINE_TIMEOUT / INPUT_REJECTED and the rest of
+        #     NO_FAILOVER_CODES. Those say the engine or the ceiling or the request failed, not
+        #     the model, and a second model would fail the same way. This is its own guard
+        #     (`engine_level_failure`) and not a clause inside `no_verdict`, because the two
+        #     502s `forward()` synthesises are both "no verdict" AND "unfixable by another
+        #     model", and one check cannot say both.
+        #   * only while there is time left. The chain above this is 270 s wait -> 285 s
+        #     gunicorn -> 330 s nginx, so a retry started with 5 s on the clock cannot
+        #     finish; it would turn a clean 502 into a gateway timeout with no answer.
+        failover: list[dict] = []
+        switched_to = None
+        tried = {m for m in (primary_model,) if m}
+        if user is not None and no_verdict(status, resp) and not engine_level_failure(resp):
+            failed_model, failed_code, failed_detail = leg_failure(resp)
+            failed_provider = provider_name_for_base_url(
+                (lane_config.get("primary") or {}).get("base_url") or "")
+            if failed_model and failed_provider:
+                # The health row for the model that just failed. record_detection can only
+                # read the FINAL body, whose evidence describes the model that answered.
+                pool.note_attempt(conn(), failed_provider, failed_model, False,
+                                  failed_code, failed_detail)
+                conn().commit()
+            for cand in pool.next_candidates(conn(), user["id"], tried):
+                if len(failover) >= MAX_FAILOVER_ATTEMPTS:
+                    break
+                left = deadline - time.time()
+                base = provider_base_url_by_name(cand["provider"])
+                entry = {"from": primary_model, "to": cand["model"],
+                         "provider": cand["provider"]}
+                if left < FAILOVER_RESERVE_S:
+                    entry["skipped"] = (f"no time left in this request's budget "
+                                        f"({left:.0f}s < {FAILOVER_RESERVE_S:.0f}s)")
+                    failover.append(entry)
+                    break
+                if not base or not host_allowed(base):
+                    entry["skipped"] = "endpoint is not in allowed_llm_hosts"
+                    failover.append(entry)
+                    continue
+                tried.add(cand["model"])
+                cand_row = model_by_id(cand["model"])
+                cand_tuning = caller_tuning if isinstance(caller_tuning, dict) else tuning_block(
+                    cand_row, model_by_id(secondary_model))
+                cand_cfg = {"primary": {"base_url": base, "model": cand["model"]}}
+                cand_cfg["secondary"] = lane_config.get("secondary") or {"enabled": False}
+                cand_headers = {k: v for k, v in headers.items() if k != "x-primary-api-key"}
+                cand_key = (db.user_key_for_provider(conn(), user["id"], _pid_by_name(cand["provider"]))
+                            if user else None) or active_key(_pid_by_name(cand["provider"]), "primary")
+                if cand_key:
+                    cand_headers["x-primary-api-key"] = cand_key
+                cand_timeout = float(cand_tuning.get("request_timeout_ms") or 90000) / 1000.0 + 30.0
+                payload = build_payload(cand_cfg, cand_tuning)
+                status, resp, latency = forward(url, payload, cand_headers,
+                                                min(cand_timeout, left))
+                lane_config, tuning, primary_model = cand_cfg, cand_tuning, cand["model"]
+                entry["ok"] = not no_verdict(status, resp)
+                entry["error_code"] = None if entry["ok"] else (
+                    (resp.get("error_code") if isinstance(resp, dict) else None) or f"http_{status}")
+                failover.append(entry)
+                if entry["ok"]:
+                    switched_to = cand["model"]
+                    break
+                if engine_level_failure(resp):
+                    # The engine went away mid-request. Every remaining candidate would be
+                    # dialled against the same dead URL, so stop here and let the 502 reach the
+                    # caller with the attempts that were really made attached to it.
+                    break
+        if switched_to and isinstance(resp, dict):
+            # Say so out loud, in the response and in the stored row: a verdict that silently
+            # came from a different model than the one the page says it used is exactly the
+            # kind of unattributable number this app has spent rounds removing.
+            resp["auto_switch"] = {
+                "from": failover[0]["from"] if failover else None, "to": switched_to,
+                "reason": "the first model returned no usable verdict",
+                "attempts": failover,
+            }
+            warns = resp.get("warnings")
+            note = (f"Auto-switched to {switched_to}: "
+                    f"{failover[0]['from'] if failover else 'the first model'} did not answer.")
+            resp["warnings"] = (warns if isinstance(warns, list) else []) + [note]
+        elif failover and isinstance(resp, dict):
+            resp["failover"] = {"attempts": failover, "switched_to": None}
+        if isinstance(resp, dict):
+            # Which authority picked the model that answered. The workflow's own
+            # `model_source` says "request" for all four cases, because from its side they are
+            # identical -- the distinction only exists here, and without it a user cannot tell
+            # whether a verdict came from the admin's deployed lane, from their own pool, or
+            # from a failover they did not ask for.
+            resp["lane_source"] = (
+                "failover" if switched_to else
+                "request" if body.get("lane_config") else
+                "user-pool" if pool_used else "deployed-default")
 
         # record_detection fills any lane the caller did not name from the workflow's own
         # config_used, so an overridden primary does not leave the tie-break lane unattributed.
@@ -1074,7 +1382,9 @@ def register_routes(app: Flask) -> None:
         req.add_header(prov["auth_header"] or "Authorization",
                        f"{prov['auth_prefix'] or ''}{key}")
         try:
-            with urllib.request.urlopen(req, timeout=float(b.get("timeout_seconds", 45))) as resp:
+            with urllib.request.urlopen(
+                    req, timeout=probe_timeout_s(model_id, b.get("timeout_seconds"),
+                                                 prov["id"])) as resp:
                 raw = resp.read()
                 status, err = resp.status, None
         except urllib.error.HTTPError as exc:
@@ -1147,12 +1457,18 @@ def register_routes(app: Flask) -> None:
         verified = False
         model_id = (b.get("model_id") or "").strip()
         if model_id and MODEL_PATTERN.match(model_id):
-            res = _probe_with_key(prov, model_id, plain, float(b.get("timeout_seconds", 45)))
+            res = _probe_with_key(prov, model_id, plain,
+                                  probe_timeout_s(model_id, b.get("timeout_seconds"), prov["id"]))
             verified = bool(res.get("ok"))
             db.set_user_key_verified(conn(), kid, user["id"], verified)
         row = db.get_user_key(conn(), kid, user["id"])
         d = db.user_key_public(row)
         d["provider_name"] = prov["name"]
+        if verified:
+            # Same trigger as the explicit verify route: saving a key with a model_id probes
+            # it inline, and a key that just answered is the moment its budget can be spent
+            # on finding out what else that endpoint serves.
+            d["discovery"] = enqueue_discovery(user, prov, plain, "key saved and verified")
         return jsonify(d), 201
 
     @app.route("/my/keys/<int:kid>", methods=["DELETE"])
@@ -1184,9 +1500,181 @@ def register_routes(app: Flask) -> None:
             key = db.decrypt_key(row["key_cipher"])
         except ValueError:
             return jsonify(ok=False, error_code="KEY_UNREADABLE"), 500
-        res = _probe_with_key(prov, model_id, key, float(b.get("timeout_seconds", 45)))
+        res = _probe_with_key(prov, model_id, key,
+                              probe_timeout_s(model_id, b.get("timeout_seconds"), prov["id"]))
         db.set_user_key_verified(conn(), kid, user["id"], bool(res.get("ok")))
-        return jsonify({**res, "provider": prov["name"], "model": model_id})
+        out = {**res, "provider": prov["name"], "model": model_id}
+        if res.get("ok"):
+            # A key that just proved it works is the only trustworthy moment to spend its
+            # budget on discovery: before this the app cannot tell an unusable model from an
+            # unusable credential, and screening on a broken key would mark good models dead.
+            out["discovery"] = enqueue_discovery(user, prov, key, "key verified")
+        return jsonify(out)
+
+    # ---- auto-discovery: bring the provider's free models in, screen them, rank them ----
+
+    def _int_setting(key: str, default: int, lo: int, hi: int) -> int:
+        """An admin-tunable integer, clamped. A hand-edited settings row must not be able to
+        set the screen limit to 500 (an hour of the user's budget) or the timeout to 0."""
+        try:
+            v = int(setting(key, "") or default)
+        except (TypeError, ValueError):
+            return default
+        return max(lo, min(hi, v))
+
+    def enqueue_discovery(user, prov, key: str, reason: str) -> dict:
+        """Queue one discovery job for this caller + provider, or report the one in flight.
+
+        De-duplicated on (user, provider) because the trigger is a key verification and a
+        user re-checking a key three times must not queue three identical screens.
+
+        Refuses when the worker thread is not running in this process. The entry points start
+        it; a Flask test client does not, and queuing a job there would launch real provider
+        calls against a throwaway database the next test deletes. Saying so out loud (rather
+        than silently dropping it) is what keeps the refusal from looking like a success.
+        """
+        if not discovery.worker.running:
+            return {"job_id": None, "queued": False, "status": "disabled",
+                    "reason": "the discovery worker is not running in this process"}
+        busy = conn().execute(
+            """SELECT id, status, stage FROM discovery_jobs
+               WHERE user_id = ? AND provider = ? AND status IN ('queued','running')
+               ORDER BY id DESC LIMIT 1""", (user["id"], prov["name"])).fetchone()
+        if busy:
+            return {"job_id": busy["id"], "queued": False, "status": busy["status"],
+                    "stage": busy["stage"], "reason": "a discovery run is already in flight"}
+        job_id = db.discovery_job(conn(), user["id"], prov["name"])
+        conn().commit()
+        discovery.worker.enqueue({
+            "job_id": job_id, "user_id": user["id"], "provider_id": prov["id"],
+            "provider_name": prov["name"], "base_url": prov["base_url"], "key": key,
+            "auth_header": prov["auth_header"] or "Authorization",
+            "auth_prefix": prov["auth_prefix"] if prov["auth_prefix"] is not None else "Bearer ",
+            "screen_limit": _int_setting("discovery_screen_limit",
+                                         discovery.DEFAULT_SCREEN_LIMIT, 0, 24),
+            "screen_timeout_ms": _int_setting("discovery_screen_timeout_ms",
+                                              discovery.DEFAULT_SCREEN_TIMEOUT_MS, 5_000, 300_000),
+        })
+        return {"job_id": job_id, "queued": True, "status": "queued", "reason": reason}
+
+    @app.route("/my/discover", methods=["POST"])
+    def my_discover():
+        """Screen a provider's free models on the caller's own key, on demand.
+
+        Requires a stored key for that endpoint -- discovery spends the caller's budget, so
+        it uses the caller's credential and never the admin's shared one.
+        """
+        user = auth.current_user()
+        if user is None:
+            return jsonify(error="authentication required", error_code="AUTH_REQUIRED"), 401
+        b = request.get_json(silent=True) or {}
+        prov = _resolve_provider(b.get("provider_id"), b.get("base_url"))
+        if prov is None:
+            return jsonify(error="that endpoint is not one this app supports",
+                           error_code="PROVIDER_NOT_SUPPORTED"), 400
+        if not host_allowed(prov["base_url"]):
+            return jsonify(error="that endpoint host is not allowed",
+                           error_code="HOST_NOT_ALLOWED"), 400
+        key = db.user_key_for_provider(conn(), user["id"], prov["id"])
+        if not key:
+            return jsonify({
+                "ok": False, "error_code": "NO_USER_KEY",
+                "error": "discovery runs on your own key for that endpoint; add and verify one first",
+            }), 409
+        out = enqueue_discovery(user, prov, key, "requested")
+        if not out.get("queued") and out.get("status") == "disabled":
+            return jsonify({"ok": False, "error_code": "DISCOVERY_DISABLED", **out}), 503
+        return jsonify({"ok": True, **out}), 202
+
+    @app.route("/my/discover", methods=["GET"])
+    def my_discover_status():
+        user = auth.current_user()
+        if user is None:
+            return jsonify(error="authentication required", error_code="AUTH_REQUIRED"), 401
+        rows = conn().execute(
+            """SELECT id, provider, status, stage, n_listed, n_screened, n_usable, error,
+                      started_at, finished_at, created_at
+               FROM discovery_jobs WHERE user_id = ? ORDER BY id DESC LIMIT 20""",
+            (user["id"],)).fetchall()
+        return jsonify({"jobs": [dict(r) for r in rows],
+                        "screen_texts": discovery.SCREEN_CORPUS,
+                        "note": "each screened model is judged on 2 real texts through the "
+                                "shipped engine path, so it lands in the ranking's probe tier "
+                                "and cannot outrank a full capture"})
+
+    # ---- the caller's ordered using-pool ---------------------------------------------
+
+    @app.route("/my/pool", methods=["GET"])
+    def my_pool():
+        user = auth.current_user()
+        if user is None:
+            return jsonify(error="authentication required", error_code="AUTH_REQUIRED"), 401
+        return jsonify({
+            "pool": pool.pool_view(conn(), user["id"]),
+            "note": "your order is authoritative; a model marked down (three consecutive "
+                    "non-answers) is served last until it answers again, and your rank is "
+                    "restored untouched when it does",
+        })
+
+    @app.route("/my/pool", methods=["POST"])
+    def my_pool_add():
+        user = auth.current_user()
+        if user is None:
+            return jsonify(error="authentication required", error_code="AUTH_REQUIRED"), 401
+        b = request.get_json(silent=True) or {}
+        model_id = (b.get("model") or "").strip()
+        provider = (b.get("provider") or "").strip()
+        if not model_id or not MODEL_PATTERN.match(model_id):
+            return jsonify(error="model required and must match ^[A-Za-z0-9._:/@+-]+$"), 400
+        if not provider or len(provider) > 60:
+            return jsonify(error="provider required (its name, e.g. nvidia)"), 400
+        base = provider_base_url_by_name(provider)
+        if not base:
+            return jsonify(error="no enabled provider by that name",
+                           error_code="PROVIDER_NOT_SUPPORTED"), 400
+        if not host_allowed(base):
+            return jsonify(error="that endpoint host is not allowed",
+                           error_code="HOST_NOT_ALLOWED"), 400
+        db.pool_add(conn(), user["id"], provider, model_id,
+                    source="user" if b.get("source") != "auto" else "auto")
+        conn().commit()
+        return jsonify({"pool": pool.pool_view(conn(), user["id"])}), 201
+
+    @app.route("/my/pool", methods=["DELETE"])
+    def my_pool_remove():
+        user = auth.current_user()
+        if user is None:
+            return jsonify(error="authentication required", error_code="AUTH_REQUIRED"), 401
+        b = request.get_json(silent=True) or {}
+        n = db.pool_remove(conn(), user["id"], (b.get("provider") or "").strip(),
+                           (b.get("model") or "").strip())
+        conn().commit()
+        if not n:
+            return jsonify(error="that model is not in your pool"), 404
+        return jsonify({"pool": pool.pool_view(conn(), user["id"])})
+
+    @app.route("/my/pool/order", methods=["POST"])
+    def my_pool_order():
+        """Write the caller's drag order. This is the only route that changes `position`,
+        and it can only ever change the caller's own rows."""
+        user = auth.current_user()
+        if user is None:
+            return jsonify(error="authentication required", error_code="AUTH_REQUIRED"), 401
+        b = request.get_json(silent=True) or {}
+        order = b.get("order")
+        if not isinstance(order, list) or len(order) > 100:
+            return jsonify(error="order must be a list of <= 100 {provider, model} objects"), 400
+        pairs = []
+        for it in order:
+            if not isinstance(it, dict):
+                return jsonify(error="each order entry must be an object"), 400
+            prov, mid = (it.get("provider") or "").strip(), (it.get("model") or "").strip()
+            if not prov or not mid or not MODEL_PATTERN.match(mid):
+                return jsonify(error="each order entry needs provider and model"), 400
+            pairs.append((prov, mid))
+        db.pool_set_positions(conn(), user["id"], pairs)
+        conn().commit()
+        return jsonify({"pool": pool.pool_view(conn(), user["id"])})
 
     # ---- public config: paper link, key guides, supported endpoints --------
 
@@ -1227,6 +1715,10 @@ def register_routes(app: Flask) -> None:
         "paper_url", "paper_title", "api_key_guides", "allowed_llm_hosts",
         "n8n_url", "webhook_path", "ai_prob_threshold", "human_prob_threshold",
         "secondary_decision_threshold",
+        # Auto-discovery budget. Both are clamped on read (_int_setting), so a bad value here
+        # degrades to the default rather than being trusted: the limit is how many of the
+        # caller's own free-tier calls one verification may spend.
+        "discovery_screen_limit", "discovery_screen_timeout_ms",
     )
 
     @app.route("/settings", methods=["GET"])
@@ -1259,6 +1751,16 @@ def register_routes(app: Flask) -> None:
             if not value.lower().startswith(("http://", "https://")) or not host_of(value):
                 return (f"{label} ({key}) must be an absolute http(s) URL with a host, "
                         f"e.g. http://localhost:5678 or https://zenodo.org/doi/10.5281/zenodo.x")
+        if key in ("discovery_screen_limit", "discovery_screen_timeout_ms"):
+            lo, hi = (0, 24) if key == "discovery_screen_limit" else (5_000, 300_000)
+            label = ("models screened per discovery run" if key == "discovery_screen_limit"
+                     else "per-text screen timeout in ms")
+            try:
+                n = int(value)
+            except ValueError:
+                return f"{label} ({key}) must be a whole number between {lo} and {hi}"
+            if not lo <= n <= hi:
+                return f"{label} ({key}) must be between {lo} and {hi} (got {n})"
         return None
 
     @app.route("/settings", methods=["POST"])
@@ -1386,8 +1888,24 @@ def register_routes(app: Flask) -> None:
                                 -(e["accuracy"] or 0), -(e["coverage"] or 0)))
         for i, e in enumerate(out):
             e["rank"] = i + 1
+        # Health and pool membership, so the page can show why a model that measured well is
+        # being served last: the ranking is a measurement, the health column is availability,
+        # and a model can be the best judge on the corpus and still have stopped answering.
+        health = {r["model_id"]: r["state"] for r in conn().execute(
+            "SELECT model_id, state FROM model_health")}
+        pool_rows = pool.pool_view(conn(), user["id"]) if user else []
+        in_pool = {(r["provider"], r["model"]): r for r in pool_rows}
+        for e in out:
+            key = (e.get("provider_name") or e.get("provider") or "", e["model"])
+            hit = in_pool.get(key)
+            e["in_pool"] = hit is not None
+            e["pool_position"] = hit["position"] if hit else None
+            e["your_rank"] = hit["your_rank"] if hit else None
+            e["health"] = (hit["health"] if hit else health.get(e["model"])) or "unknown"
+            e["consecutive_failures"] = hit["consecutive_failures"] if hit else 0
         return jsonify({
             "ranked": out,
+            "pool": pool_rows,
             "paper_url": setting("paper_url", ""),
             "note": f"full captures (>= {MEASURED_MIN_TEXTS} texts) ranked first, then probes; "
                     f"each model at its own saved band, wrong-first then coverage",
@@ -1679,10 +2197,14 @@ def main() -> None:
     # Started here, not at import: a test client or `flask run` must not spin up a
     # thread that deletes rows from the live n8n database.
     purger.start()
+    # Same rule, different hazard: the discovery worker makes real provider calls on a
+    # user's key, so only a serving process may run one.
+    discovery.worker.start()
     print("detector backend (flask)")
     print("  listen      =", f"http://{HOST}:{PORT}")
     print("  db          =", db.DB_PATH)
     print("  purge       =", "enabled" if purger.enabled else f"DISABLED ({purger.error})")
+    print("  discovery   =", "enabled" if discovery.worker.running else "DISABLED")
     app.run(host=HOST, port=PORT, threaded=True, use_reloader=False)
 
 
