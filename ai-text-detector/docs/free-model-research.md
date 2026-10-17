@@ -3765,3 +3765,190 @@ its 156-decided/3-wrong score and the tie-break-off comparison table; the transp
 (575 quotes, 0.30–0.95) and the uncapped control (McNemar p = 1.0000, 0 discordant) all appear with
 their corpora named. The §6 table now carries the two correction marks instead of a prose caveat, and
 the old "no free lane verified through a live webhook" limitation is closed by the 12-of-12 run above.
+
+
+## Round 28: the shortest fuse in the timeout chain was inside the browser, and the catalogue that screened 0/4 (2026-10-17)
+
+Three of the brief's promises were driven against their own artifacts this round — auto-discovery,
+auto-switching to the second-best model, and "enter your key, test it, get your models ranked". Each
+broke on the same class of mistake: a limit written at one tier without reading the tier outside it.
+All three are now measured, and one live run proves all three at once
+(`tools/verify_pool_failover.py`, **45/45 checks**, a real NVIDIA key, a throwaway account, a copy of
+the dev database).
+
+**The chain, as it stood before this round.** Every number below was in a shipped file:
+
+```
+one lane call       240 s   seed.LANE_TIMEOUT_MS (the shipped primary's ceiling)
+the backend waits   270 s   lane + 30 s of grace (app.py)
+a whole request     250 s   REQUEST_BUDGET_S; app.py takes max(lane + 30, this)
+gunicorn            285 s   docker/backend-entrypoint.sh
+nginx               330 s   docker/nginx.conf proxy_read_timeout
+the browser    150 s for /detect, 60 s for a key probe   <-- the smallest number in the chain
+```
+
+The outermost tier was the one with no patience, which produced two user-visible lies. A detection
+that the server was still honouring was reported as failed at 150 s — and then carried on behind the
+abort and landed in History, so the row and the panel disagreed about whether the text had been judged.
+Worse, the key probe's 60 s ceiling reproduced exactly the false negative `probe_timeout_s` was written
+to remove: on a congested pool `z-ai/glm-5.3-flash` does not answer a one-word probe inside 60 s, so
+the app told a user their **working key was broken**. Because a verified key is the only thing that
+queues auto-discovery, the whole flow the brief asks for — enter it, test it, save it, get his models
+ranked — stopped at step one, silently, with a red label the user had no way to doubt.
+
+The fix is one constant, `HTTP_PATIENCE_MS = 360_000`, in a file that exists to make the chain
+readable: `frontend/src/app/core/http-budget.ts` carries the table above in its doc-comment and is
+imported by the detection request and by every model-bearing call in `backend.service.ts`. 360 s
+clears nginx's 330 s, so a timeout now means what a timeout should mean — the browser itself is stuck
+— and the answer the user gets is the one the *server* decided: a verdict, a named `ENGINE_TIMEOUT`,
+or a gateway 504. It is not a blanket 360 s: the control-plane reads keep their own short waits
+(pool GET/POST and discovery status 8 s, catalogue 15 s), and a spec asserts the difference, because
+"make everything patient" would also have made a stuck settings panel look alive for six minutes.
+
+```
+PASS  the stored key verifies live against the provider  [nvidia/z-ai/glm-5.3-flash latency=68413ms]
+```
+
+68,413 ms — eight seconds past the ceiling that would have called that key dead. The worst probe
+measured anywhere in this session, 81,812 ms, is now a named constant in `backend.service.spec.ts`
+(`MEASURED_SLOW_PROBE_MS`), so the ceiling is anchored to an observed reply rather than to a guess,
+and `verify_deploy_recipe.py` fails if any server-side tier grows past the browser's number. The
+preflight went 38 → 40 checks and both new guards were proven red by temporary edits before being
+proven green by revert.
+
+**A budget belongs to the request, not to whichever model is on top of the pool.** The failover
+worked; its arithmetic did not. A pool of `[nemotron-3-ultra (row timeout 90 s), z-ai/glm-5.3-flash
+(240 s)]` refused in 0.7 s, failover correctly decided to switch — and handed the replacement 109 s,
+because the deadline had been computed from the *first* model's ceiling. glm needed longer than that
+on a congested pool, so 120 s bought two non-answers and no verdict. `REQUEST_BUDGET_S = 250 s` is now
+the request's own ceiling and `deadline = time.time() + max(timeout, REQUEST_BUDGET_S)`; the first
+attempt still keeps its lane's ceiling (`max()`, not `min()` — a single lane at 240 s is what the
+tiers above are derived from), and only the *leftover* for a retry comes from the request, with
+`FAILOVER_RESERVE_S = 20 s` required before a second call may start. Below that reserve the retry
+cannot finish, and starting one converts a clean 502 into a gateway timeout with no verdict at all.
+
+The live sequence, with a model that returns HTTP 410 (`moonshotai/kimi-k3`, delisted 2026-10-15)
+dragged to rank 1 on purpose:
+
+```
+PASS  detection 1 still returns a real verdict  [REVIEW_REQUIRED in 75.1s]
+PASS  the verdict names the switch, from the model that refused to the one that answered
+      [{"from": "moonshotai/kimi-k3", "to": "z-ai/glm-5.3-flash",
+        "reason": "the first model returned no usable verdict"}]
+PASS  ONE refusal does not reorder the pool (a blip is not a delisting)
+      [health=degraded failures=1 position=1 your_rank=1]
+PASS  three consecutive refusals mark the model down  [failures=3 last=no_choices]
+PASS  the auto-rearrange moves the served order and keeps the user's rank
+      [your_rank=1 served=2 demoted=True]
+PASS  detection 4 answers  [REVIEW_REQUIRED in 85.8s]
+PASS  no failover was needed: the pool's own reordering picked the live model first
+      [lane_source=user-pool auto_switch=False]
+PASS  the history row names the model that answered, not the one the user ranked first
+PASS  the ranking page carries the same health the pool does
+      [{"health": "down", "your_rank": 1, "position": 2}]
+```
+
+The two orders on that last pair of lines are deliberate and are the design answer to "auto rerange
+of the ones brought into the using pool": the **ranking page** orders by *measurement* — kimi-k3 stays
+#1 on its 48-text capture even though it currently 410s, because that capture is a dated fact — while
+the **pool** orders by *health*, and the health marker is shown on the ranking card too, so a user can
+see why his #1 is not being called. `your_rank` is stored and never rewritten by the machine; only
+`position` moves.
+
+**The screening walk, which is what "bring his models" actually has to mean.** The 2026-10-17 failure
+being repaired is quoted in `backend/tests/test_discovery.py`: the live job for nvidia listed 81 ids,
+screened the first four in catalogue order (`01-ai/yi-large`, `adept/fuyu-8b`, `ai21labs/jamba-1.5-large-instruct`,
+`aisingapore/sea-lion-7b-instruct`) and wrote `0/4 usable`. A provider's catalogue is **alphabetical**,
+and the delisted legacy models sort first, so "screen the first four" means "spend the user's budget on
+the four oldest ids". The walk now separates *trying* from *buying*: the first screen text doubles as
+triage — a candidate that refuses text 1 has already told us it is no use, so giving it a second text
+spends money on a 404 — and the walk continues past refusals up to `DEFAULT_TRIAGE_CAP = 24`, while
+`discovery_screen_limit` (admin setting, 0-24, default 4) still bounds how many full 2-text **screens**
+get bought. A refusal writes only a `catalog_models` row; it never becomes a `benchmark_runs` row, a
+`models` row, a rank, or a pool entry, and `needs_screen` skips a `dead` id for `DEAD_RETRY_DAYS = 7` so
+a delisting that was really an outage is still noticed.
+
+The same live run, start to finish, on the real 81-id catalogue:
+
+```
+PASS  discovery is refused without the caller's own key  [http 409 NO_USER_KEY]
+PASS  saving a verified key queues discovery on its own  [job 1 (key verified)]
+   [   0.0s] running: fetching catalogue
+   [   4.0s] running: triage 8/24, screen 0/4: deepseek-ai/deepseek-v4.1-flash
+   [ 185.0s] running: triage 11/24, screen 0/4: google/deplot
+   [ 189.0s] running: triage 17/24, screen 0/4: ibm/granite-3.0-8b-instruct
+   [ 193.0s] running: triage 21/24, screen 0/4: meta/llama-3.2-11b-vision-instruct
+   [ 365.4s] running: triage 22/24, screen 1/4: meta/llama-3.2-90b-vision-instruct
+   [ 562.8s] running: triage 24/24, screen 2/4: meta/llama2-70b
+   [ 566.8s] done: 2/2 usable of 24 candidates tried
+PASS  a real catalogue fetch came back with models to choose from  [n_listed=81]
+PASS  each candidate that refused the triage text was recorded as a refusal
+      ['triage …' notes for nvidia: 0 -> 22, refused=22 (tried 24, screened 2)]
+PASS  a refusal names why it refused, so a delisting is not mistaken for a bad afternoon
+      [meta/llama2-70b -> triage 0/1 texts answered: no_choices -- {"data":"{\"sta"]
+PASS  the screens left real benchmark_runs rows, attributed to the probe corpus  [144 -> 146]
+PASS  screened models got a row so they can be ranked  [31 -> 32]
+PASS  a 2-text screen lands in the probe tier and cannot outrank a measured capture
+      [best measured #1 (moonshotai/kimi-k3, n_rows=48) vs screened #4, #16, #19]
+PASS  a discovered model is appended behind the healthy ones the user placed by hand
+      [placed=[('z-ai/glm-5.3-flash', 1), ('moonshotai/kimi-k3', 4)]
+       auto=[('meta/llama-3.2-11b-vision-instruct', 2),
+             ('meta/llama-3.2-90b-vision-instruct', 3)]]
+PASS  a model that refused triage was not added to the using pool
+```
+
+**24 candidates tried, 22 refusals recorded, 2 screened, 2 usable** — where the old walk produced 0.
+The cost is honest and is now printed in the job's own final stage ("`{n_usable}/{n_screened}` usable
+of `{n_tried}` candidates tried"), because the row count cannot show it: every id NVIDIA serves is
+already in `catalog_models`, so a run that touched nine brand-new ids and a run that touched none both
+read `96 -> 96`. That is why the verifier's before-snapshot was rewritten — the first version asserted
+on a number that provably cannot move, and the assertion it replaced had been passing on luck.
+
+Two timings from that log worth keeping. The gap between `triage 8/24` at 4.0 s and `triage 11/24` at
+185.0 s is three candidates, one of which ran to the full 180 s screen ceiling on a congested pool: the
+walk is bounded by `TRIAGE_CAP`, not by the provider's mood, and its worst case is 24 candidate calls
+of which at most 4 cost two texts. And `n_tried` is deliberately *not* a column on `discovery_jobs` —
+only `n_listed`, `n_screened`, `n_usable` and `stage` are exposed on `/my/discover`, so the verifier
+has to parse the count out of the stage text, which is exactly what a user sees.
+
+**The dead end that made a suite look cleaner than it was.** The first version of the new detection
+spec used Angular's `fakeAsync`/`tick`, and the file failed to *collect*:
+
+```
+Error: zone-testing.js is needed for the fakeAsync() test helper but could not be found.
+Test Files  1 failed | 6 passed (7)
+     Tests  86 passed (86)
+```
+
+The tally said 86 passed — the truth is that sixteen tests in the failed file never ran, and the line
+that would have shown it was the summary of a run whose headline looked almost clean. `frontend/package.json`
+carries no `zone.js` at all (Angular 22.2, zoneless), so `fakeAsync` is simply not available in this
+project; `vi.useFakeTimers()` + `vi.advanceTimersByTime()` do drive the rxjs `timeout()` operator and
+the spec was rewritten on them. A second finding in the same file: a request aborted by `timeout()` is
+already **cancelled**, so the "clean up the pending request" step — `req.flush()` — throws `Cannot
+flush a cancelled request`. The test's own teardown was the bug; `http.verify()` counts the cancelled
+request as handled, and nothing needs draining.
+
+**Tallies.**
+
+```
+python -m pytest backend/tests -q           158 passed in 96.50s   (adds the offline discovery walk: 6)
+cd frontend && npx ng test --watch=false    Test Files 8 passed (8) / Tests 104 passed (104)
+python tools/verify_deploy_recipe.py        40 checks passed
+python tools/verify_pool_failover.py        45/45 checks passed, live against NVIDIA
+```
+
+The Angular run needed two attempts: the first died with `Worker exited unexpectedly with signal
+SIGTERM during stopping state` and zero test output — the host's commit-charge exhaustion recorded in
+Round 27, not a spec failure.
+
+**What this round did not ship.** The verifier runs `python -m backend.serve_local` on a copy of the
+dev database, so it proves the **sources**. The deployed artifacts are older than these fixes: nginx is
+serving `main-3WW256QJ.js` while local `dist` holds `main-Y72S4VCX.js`, the images are about six hours
+old, the exe is from 15:51 and the installer from 15:53, and the sources under test were edited at 21:24
+(`backend/discovery.py`) and 21:28 (`http-budget.ts`, `detection.service.ts`). The 360 s browser tier,
+the probe ceiling, the failover budget and the triage walk are therefore in the repo, the two unit
+suites, the preflight and the live verifier — **not yet in the container or the packaged app**, which
+is the rebuild that follows. Still true from earlier rounds, and unchanged by this one: the shipped n8n
+workflow reports gateway statuses as `no_choices`, so a History row reads `no_choices` where "HTTP 410
+end of life" would be honest, and closing that is a workflow redeploy rather than a backend edit.

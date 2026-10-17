@@ -171,6 +171,131 @@ gate both ways, the 400 refusals, the guide round-trip into a plain user's `/con
 `/n8n/status` following the stored target, the labelled 502, and one real detection
 through the just-saved target).
 
+### Your using pool: the order you set, and what health does to it
+
+A signed-in user puts the models they can pay for into an ordered **using pool** on the Ranking
+tab — by drag, or by the ↑/↓ buttons, because an order only a pointer can change is not a
+control a keyboard user has. `/detect` reads it as the second authority on which model runs:
+
+    explicit `lane_config` in the request  >  the caller's pool  >  the admin's deployed default
+
+and the answer says which one decided (`lane_source`: `request` / `user-pool` /
+`deployed-default` / `failover`), because a verdict that does not name its model is exactly the
+unattributable number this app has spent rounds removing. The pool is synthesised into a plain
+`lane_config` and then handled by the same branch a caller-named primary takes, so the
+tie-break policy, the `base_url` fill, BYOK-first key picking and the tuning resolution stay one
+code path instead of growing a parallel one that can drift from it.
+
+**Auto-switch.** When the pool's top model returns *no verdict*, the next model in the user's
+own order is tried. That happens in the backend rather than in the workflow: the engine has two
+lanes and no concept of a third candidate, and teaching it an N-model walk would mean
+rebuilding the shipped, measured two-lane graph. Three limits, each a real cost rather than a
+taste:
+
+* only when the answer carries no verdict — a detection the tie-break lane rescued is an answer
+  the user already paid for, and replacing it with *maybe* an answer costs a second full call;
+* never on an engine-level or request-level failure (`NO_FAILOVER_CODES`: `ENGINE_UNREACHABLE`,
+  `ENGINE_TIMEOUT`, `INPUT_REJECTED`, `LANE_CONFIG_INVALID`, `NO_PRIMARY_MODEL`,
+  `PAYLOAD_TOO_LARGE`). A different model cannot fix a dead engine, and on this platform a dead
+  local port *hangs* instead of refusing, so "try twice more" is measured in minutes;
+* at most `MAX_FAILOVER_ATTEMPTS = 2`, and only while `FAILOVER_RESERVE_S = 20` s remain on the
+  request's own budget. The chain above this is 270 s wait → 285 s gunicorn → 330 s nginx → 360 s
+  in the browser (`frontend/src/app/core/http-budget.ts`), so a
+  retry started with 5 s on the clock cannot finish and would turn a clean 502 into a gateway
+  timeout with no verdict at all.
+
+That budget is `REQUEST_BUDGET_S = 250` and it belongs to the **request**, not to whichever model
+happens to be on top. Getting that wrong made the switch useless in the field: on 2026-10-17 a
+pool of `[nemotron-3-ultra (row ceiling 90 s), z-ai/glm-5.3-flash (240 s)]` refused in 0.7 s,
+failover correctly decided to switch — and handed the replacement 109 s, because the deadline had
+been computed from the *first* model's ceiling. glm needed longer than that on a congested pool,
+so 120 s bought two non-answers and no verdict. The first attempt still keeps its own lane
+ceiling (`max()`, not `min()` — a single lane at the shipped 240 s is what the tiers above are
+derived from); only the *leftover* budget for a retry comes from the request.
+
+The outermost tier is the browser, and it is the one no server-side file carries, so it is the one
+nobody re-derives when a ceiling moves. `/detect` waited 150 s ("long because the 550B lane took 80s")
+and a key probe 60 s while the chain under them grew to 270 s, so the client aborted requests the
+gateway was still honouring: the user read *failed* about a detection whose verdict went on to land
+in History a minute later. Both now take one constant, `HTTP_PATIENCE_MS` from
+`frontend/src/app/core/http-budget.ts`, and `verify_deploy_recipe.py` fails if any server-side tier
+grows past it.
+
+A switch is reported out loud — `auto_switch: {from, to, reason, attempts[]}`, a warning line,
+`lane_source: "failover"` — the result card renders it as a banner above the score, and the
+history row names the model that answered rather than the one the user ranked first.
+
+**Auto-rearrange.** Every lane answer updates `model_health`, keyed `(provider, model_id)` —
+per endpoint, because the same model id behind two gateways has two failure histories.
+Transient markers (429, 503, quota, overloaded …) can never reach `down`
+(`state_down_after = 10**9`): a rate limit is the provider's queue, not the model's death. A
+dead failure (a 404 function-id, a 410 delisting, a parse failure) reaches `down` after three
+consecutive ones. Only `down` moves a model, and it moves to the back of the *served* order
+without anyone editing the user's ranking: `your_rank` is what the user set, `position` is what
+is served, and a recovery restores the ranking with nothing to undo. `degraded` — one failure,
+or a busy streak — is reported and badged but does not re-rank, because a single 504 on a
+congested free pool must not change which model the next detection pays for.
+
+**Auto-discovery.** Saving a key with a `model_id` probes it inline, and a key that just
+answered is the only trustworthy moment to spend its budget finding out what else that endpoint
+serves — before that the app cannot tell an unusable model from an unusable credential, and
+screening on a broken key would mark good models dead. So verification queues one discovery job
+(de-duplicated on `(user, provider)`, since re-checking a key three times must not queue three
+identical screens). The job fetches the provider's catalogue **with the caller's own
+credential**, keeps the free candidates (`:free`-suffixed on OpenRouter) that have never been
+measured here, and screens up to `discovery_screen_limit` (default 4) of them on the two real
+HC3 texts in `benchmark/corpus-probe2.json` — through the shipped engine path, tie-break off, no
+`tuning` block, so an unknown model is judged at the workflow's baked defaults instead of at a
+band borrowed from another model. The first of those two texts doubles as the **triage**: a candidate
+that cannot answer it is recorded in `catalog_models` with the engine's own reason — `http_410`
+(retired), `no_choices` (advertised but not served), `http_503` (the pool is busy) — and costs one
+call rather than two, and the job moves on to the next id, trying up to `DEFAULT_TRIAGE_CAP` (24) to
+get its 4 screens. Both numbers exist because a provider returns its catalogue in its own order,
+which for NVIDIA is alphabetical, and the ids a new user has never measured are overwhelmingly the
+ones somebody retired: measured on 2026-10-17, a four-candidate job spent eight calls on
+`01-ai/yi-large`, `adept/fuyu-8b`, `ai21labs/jamba-1.5-large-instruct` and
+`aisingapore/sea-lion-7b-instruct` and reported `0/4 usable` — correct arithmetic, nothing brought in
+for the user. A refusal is then left alone for `DEAD_RETRY_DAYS` (7), so one bad afternoon is not
+filed as a permanent delisting and the next run does not spend its whole cap re-triaging the same
+legacy ids. A screen writes a `benchmark_runs` row with
+`corpus='probe2'`, `tag='autoscreen'`, `n_rows=2`, which lands it in the ranking's **probe
+tier** where it can never outrank a full capture (`MEASURED_MIN_TEXTS = 24`); a usable one also
+gets a `models` row (`measured=0`, `lane=NULL`, thresholds NULL — a screen is evidence the model
+answers, not a calibration) and is appended to the caller's pool with `source='auto'`, behind
+everything they placed by hand. `POST /my/discover` runs the same job on demand and refuses with
+`NO_USER_KEY` rather than spending the admin's shared key; the UI offers it only for endpoints
+the caller owns a key for, and renders a refused job as refused, never as queued.
+
+Because a verified key is the *only* thing that queues that job, the verification itself cannot be
+allowed to guess. It used to give up on a bare 45 s, and on 2026-10-17 that called a working
+credential broken: `z-ai/glm-5.3-flash` — the shipped default lane, chosen because it is
+thorough — did not answer "reply with the single word: ok" inside 60 s on a congested pool, so the
+whole "enter it, test it, save it, get your models ranked" flow stopped at step one. A probe now
+gets the ceiling of the model it is probing (`probe_timeout_s`: the row's `timeout_ms`, floored at
+45 s, capped at `REQUEST_BUDGET_S`; an explicit `timeout_seconds` still wins, because that is how
+the verifiers ask for a fast failure). It is a ceiling, not a wait — a healthy gateway replies in
+a couple of seconds and returns as fast as it always did.
+
+`python tools/verify_pool_failover.py` proves the loop live against a real provider, on a
+throwaway copy of the dev DB with a throwaway user whose credential is copied as ciphertext (so
+no key is ever printed): the drag writes the rank; a model that genuinely refuses —
+`moonshotai/kimi-k3`, retired by NVIDIA on 2026-10-15, whose gateway still answers `410 Gone`
+with the end-of-life date in 0.6 s — triggers exactly one switch, named in the body; one refusal
+does *not* reorder the pool; three mark it `down` and re-order the served list while `your_rank`
+survives; the next detection goes straight to the live model with no failover at all; and a
+verified key queues a real catalogue fetch whose screens show up in `benchmark_runs`,
+`catalog_models`, `models` and the probe tier of `/ranking` — or, when the provider answers nothing,
+whose *refusals* are recorded in `catalog_models` with the engine's own reason and nowhere else.
+The second branch is the one that matters on a congested morning: a candidate that cannot answer the
+first of the two texts costs one call, the walk moves to the next id, and nothing that refused
+becomes a score, a pinnable row, or a pool entry.
+
+The fixture is the lesson, not just the harness. It first used the advertised-but-404 NVIDIA
+primary, which turned out to answer sometimes and to 503 at other times — and a 503 is
+*transient*, which by design can never mark a model `down`. Asserting a re-order on it would have
+been testing that provider's mood rather than the rule, so the dead model is now one the provider
+has permanently retired.
+
 ### The technical report is an asset of the site, not a folder in the repo
 
 Every deployment serves its own evidence: `frontend/public/research/report.html` (+ `report.pdf`) is
@@ -216,10 +341,17 @@ fitted for a different distribution. See [docs/calibration.md](docs/calibration.
 node n8n/test-normalize.js            # 68 hostile-payload cases against the shipped Code node
 node n8n/test-parse.js                # 14: truncated answers salvage a whole number, never a cut one
 node n8n/test-ensemble.js             # tie-break decision table + the optional-lane contract
-python -m pytest backend/tests -q     # 127: routing, encryption, purger, tuning block, auth gate, off-lane
-                                      # sanitization, and slow-engine-vs-missing-engine labelling
-cd frontend && npx ng test --watch=false   # 89: lane_config composition, key headers, admin card, quote painting,
-                                      # lane-scale note, report-link fallback (blank paper_url -> /research/)
+python -m pytest backend/tests -q     # 158: routing, encryption, purger, tuning block, auth gate, off-lane
+                                      # sanitization, slow-engine-vs-missing-engine labelling, and the
+                                      # using-pool: failover precedence, the request budget every later
+                                      # attempt shares, which failures a second model cannot fix, and the
+                                      # discovery walk -- a refusal costs one call, is recorded without a
+                                      # score, and the next id still gets tried
+cd frontend && npx ng test --watch=false   # 104: lane_config composition, key headers, admin card, quote painting,
+                                      # lane-scale note, report-link fallback (blank paper_url -> /research/),
+                                      # the using-pool drag/reorder panel, the auto-discovery list, and the
+                                      # two request ceilings -- a detect and a key probe are waited out to
+                                      # the gateway's own patience, a control-plane read is not
                                       # On a host with no commit headroom the run dies without testing anything:
                                       # esbuild "Fatal process out of memory: Zone" / "spawn UNKNOWN" in the
                                       # build phase, or a clean build followed by "Worker exited unexpectedly
@@ -237,13 +369,27 @@ python tools/verify_default_lane_live.py  # the promoted default lane, live: boo
                                       # dev DB from .env, the old primary loses its lane, one real
                                       # document is judged by the new model on its own measured cut,
                                       # and phrase evidence comes back on the deployed default
+python tools/verify_pool_failover.py  # the using pool live, on a copy of the dev DB with a real stored
+                                      # key (45 checks): a rank-1 model that refuses is failed over and
+                                      # the switch is reported, one refusal does NOT reorder the pool,
+                                      # three consecutive ones mark it down and the served order starts
+                                      # with the model that answers while your_rank is kept, the dead
+                                      # model is then never called at all, the history row and the
+                                      # ranking page name the model that answered, saving a verified key
+                                      # queues discovery on its own, and the discovery walk turns a real
+                                      # 81-id catalogue into usable models by refusing to spend two texts
+                                      # on an id that will not answer -- the run measured 24 candidates
+                                      # tried, 2 screened, 22 refusals recorded with their reason, and
+                                      # none of the 22 reaching the ranking page or the pool
 python tools/verify_deploy_recipe.py  # container preflight, no daemon needed: COPY sources vs
                                       # .dockerignore, CRLF in files a Linux container executes, the
                                       # healthcheck path is public AND routed, the timeout chain nests
-                                      # (lane + 30 -> gunicorn -> nginx), DEPLOY.md quotes the same
-                                      # numbers the files carry, the two shipped copies of the report
-                                      # are byte-identical and tracked, and dist carries them too
-                                      # (38 checks)
+                                      # at every tier -- lane -> max(lane+30, REQUEST_BUDGET_S) ->
+                                      # gunicorn -> nginx -> the browser's own HTTP_PATIENCE_MS, so
+                                      # no inner layer can give up before an outer one -- and DEPLOY.md
+                                      # quotes the same numbers the files carry, the two shipped copies
+                                      # of the report are byte-identical and tracked, and dist carries
+                                      # them too (40 checks)
 python tools/verify_container_deploy.py # the RUNNING stack through nginx: liveness public, gateway
                                       # status behind login, served bundle == dist, /research/report.html
                                       # byte-equal to the repo copy + the PDF served as application/pdf,
