@@ -3716,12 +3716,15 @@ The preflight that needs no daemon went 33 → 38 checks, the container proof 12
 
 **What could not be re-run, and why it matters.** The Angular suite did not execute for this round.
 The failure is the host, not the code: `ng test` builds through esbuild, and every invocation — a
-whole-`ui` chunk and a single file — died in the build phase with `Fatal process out of memory: Zone`.
-`Win32_OperatingSystem` reported `FreePhysicalMemory 1,596,324 KB` but `FreeVirtualMemory 24,080 KB`:
-the commit charge, not the working set, was exhausted (vmmem holding ~5.8 GB with the stack up, which
-this round must not stop). `bash` itself failed to fork once in the same minute
-(`0xC0000142`). `NODE_OPTIONS=--max-old-space-size` cannot reach a native zone allocation, so there
-was no knob left to turn. What was done instead, and its exact limit: the three new specs
+whole-`ui` chunk and a single file — died in the build phase. Three different error strings appeared
+inside twenty minutes of retries: `# Fatal process out of memory: Zone`, then
+`Error: spawn UNKNOWN` while starting the esbuild service, then `Error: EINVAL` at
+`new Worker (node:internal/worker:293)` from piscina's thread pool. `Win32_OperatingSystem` reported
+`FreePhysicalMemory 1,596,324 KB` but `FreeVirtualMemory 24,080 KB`: the commit charge, not the working
+set, was exhausted (vmmem holding ~5.8 GB with the stack up, which this round must not stop).
+`bash` itself failed to fork once in the same minute (`0xC0000142`). `NODE_OPTIONS=--max-old-space-size`
+cannot reach a native zone allocation, and shrinking `--include` to one file does not help because the
+build is per invocation, not per file — so there was no knob left to turn. What was done instead, and its exact limit: the three new specs
 (blank → `/research/report.html`, DOI → DOI href, DOI + blank label → "Read the paper") ran green
 earlier in this same session against the sources that are now in the build — `ranking-view.ts` and
 `ranking-view.spec.ts` have not been touched since — and the shipped bundle was then proved by
