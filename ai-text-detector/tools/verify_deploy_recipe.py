@@ -1,9 +1,11 @@
 #!/usr/bin/env python3
 """Container-deploy preflight that needs no Docker daemon.
 
-`docker build` is the only true proof of a Dockerfile, and on this host the Linux engine
-cannot start (WSL optional component missing), so #106 stays open. What CAN be proven here is
-every way a recipe like this fails before a compiler ever sees it, because each of these is a
+`python tools/verify_container_deploy.py` is the live half of the same story -- it drives the running
+stack through nginx and is what caught the HEALTHCHECK-on-a-401 and root-owned-SQLite failures. This
+file is the half that runs with no engine at all, which matters because a clone does not have this
+host's volumes or keys: `docker build` is the only true proof of a Dockerfile, so what CAN be proven
+here is every way a recipe like this fails before a compiler ever sees it, because each of these is a
 file the build reads as a name rather than as code:
 
   * a COPY source that does not exist in the declared build context (build fails at that step,
@@ -16,6 +18,8 @@ file the build reads as a name rather than as code:
     host-run script COPY'd or `bash`'d raw gets no such rescue;
   * an ENTRYPOINT/HEALTHCHECK naming a path the image never receives;
   * a compose service whose build context or dockerfile is not where the file says it is;
+  * a timeout chain that no longer nests -- lane ceiling + grace above gunicorn above nginx, because
+    an outer tier shorter than the wait inside it silently converts a slow detection into a 502;
   * and, since "ready to deploy" means *someone else can clone and run it*, whether the deploy
     artifacts are actually tracked by git rather than only present in this working tree.
 
@@ -209,6 +213,47 @@ def main() -> int:
     check("proxy_pass" in ngx and "api" in ngx.lower(), "nginx.conf reverse-proxies the API")
     check(re.search(r"try_files.*index\.html", ngx, re.S) is not None,
           "nginx.conf falls back to index.html for SPA routes")
+
+    # The timeout chain: lane -> backend wait -> gunicorn -> nginx. Every tier has to clear the one
+    # inside it, or the outer layer kills a request the inner layer was still legitimately waiting
+    # for. That is how a working 214 s detection came back as a 502 on 2026-10-17: the lane ceiling
+    # moved twice (120 s -> 180 s -> 240 s) while the tiers above it were never re-derived from it.
+    # The ceiling is read from `seed`, not from a number typed into this file, because the boot
+    # re-seed rewrites `models.timeout_ms` from LANE_TIMEOUT_MS on every start.
+    sys.path.insert(0, str(REPO))
+    from backend import seed as seed_mod
+    lane_ceiling_s = max(
+        seed_mod.LANE_TIMEOUT_MS.get(m[0], seed_mod.DEFAULT_LLM["LLM_TIMEOUT_MS"]) / 1000.0
+        for m in seed_mod.DEFAULT_LANES.values())
+    backend_wait_s = lane_ceiling_s + 30.0            # app.py adds its own 30 s of grace
+    compose_gunicorn = re.search(r'GUNICORN_TIMEOUT:\s*"\$\{GUNICORN_TIMEOUT:-(\d+)\}"',
+                                 COMPOSE.read_text(encoding="utf-8", errors="replace"))
+    entrypoint_gunicorn = re.search(r'TIMEOUT="\$\{GUNICORN_TIMEOUT:-(\d+)\}"',
+                                    (REPO / "docker/backend-entrypoint.sh")
+                                    .read_text(encoding="utf-8", errors="replace"))
+    nginx_read = re.search(r"proxy_read_timeout\s+(\d+)s", ngx)
+    check(bool(compose_gunicorn and entrypoint_gunicorn
+                and compose_gunicorn.group(1) == entrypoint_gunicorn.group(1)),
+          "compose and the container entrypoint agree on gunicorn --timeout",
+          f"compose={compose_gunicorn.group(1) if compose_gunicorn else '?'} "
+          f"entrypoint={entrypoint_gunicorn.group(1) if entrypoint_gunicorn else '?'}")
+    if compose_gunicorn and nginx_read:
+        gunicorn_s = int(compose_gunicorn.group(1))
+        nginx_s = int(nginx_read.group(1))
+        check(gunicorn_s > backend_wait_s, "gunicorn --timeout clears the backend's longest wait",
+              f"lane {lane_ceiling_s:.0f}s + 30 = {backend_wait_s:.0f}s wait, gunicorn {gunicorn_s}s")
+        check(nginx_s > gunicorn_s, "nginx proxy_read_timeout clears gunicorn",
+              f"nginx {nginx_s}s > gunicorn {gunicorn_s}s")
+        # DEPLOY.md is the text an operator follows, and it quotes every one of these numbers. A doc
+        # that still says the old ceiling sends someone to change a tier that is already correct.
+        deploy = (REPO / "docker/DEPLOY.md").read_text(encoding="utf-8", errors="replace")
+        stated = (re.search(r"lane timeout_ms` \((\d+) s on the shipped primary\)", deploy),
+                  re.search(r"gunicorn `--timeout` (\d+) s", deploy),
+                  re.search(r"nginx `proxy_read_timeout` (\d+) s", deploy))
+        check(all(stated) and int(stated[0].group(1)) == int(lane_ceiling_s)
+              and int(stated[1].group(1)) == gunicorn_s and int(stated[2].group(1)) == nginx_s,
+              "DEPLOY.md quotes the chain the files actually carry",
+              " ".join(m.group(1) if m else "missing" for m in stated))
 
     # the workflow the operator is told to import exists, and is the file the generator writes
     wf = REPO / "n8n/ai-only-workflow.json"

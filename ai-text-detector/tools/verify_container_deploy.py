@@ -35,7 +35,8 @@ API = BASE + "/api"
 #   DETECT_MODEL=google/diffusiongemma-26b-a4b-it python tools/verify_container_deploy.py
 # This exists because the deploy is not the only thing that can make a detection fail: on
 # 2026-10-17 the shared NVIDIA pool could not answer a 320-char text on the shipped primary inside
-# its own 180 s ceiling, twice, while the same containers answered another calibrated row in 1.8 s.
+# its own 180 s ceiling (raised to 240 s on 2026-10-17), twice, while the same containers answered
+# another calibrated row in 1.8 s.
 # Overriding the lane proves nginx -> gunicorn -> n8n -> provider -> parse -> verdict -> phrases ->
 # history end to end, and the class-separation check is then skipped rather than quietly re-labelled,
 # because that lane's operating point is not the one the stack ships.
@@ -50,7 +51,12 @@ def check(ok: bool, label: str, detail: str = "") -> bool:
 
 
 def call(url: str, payload: dict | None = None, opener=None, timeout: float = 240.0):
-    """Return (status, parsed_json_or_text). Never raises -- a failed deploy reports, it does not trace."""
+    """Return (status, parsed_json_or_text). Never raises -- a failed deploy reports, it does not trace.
+
+    A `/detect` caller must override this default: the backend will wait `lane timeout_ms + 30 s`
+    (270 s on the shipped primary), and a client that gives up first reports a working deploy as a
+    failure. See the detect calls below.
+    """
     data = json.dumps(payload).encode() if payload is not None else None
     req = urllib.request.Request(
         url, data=data,
@@ -182,7 +188,9 @@ def main() -> int:
         body = {"text": row["text"]}
         if LANE:
             body["lane_config"] = {"primary": {"model": LANE}}
-        st, res = call(API + "/detect", body, opener=op, timeout=300)
+        # 360 s: above the whole server-side chain (270 s backend wait, 285 s gunicorn, 330 s nginx),
+        # so a slow answer is reported as the server's verdict, never as this client giving up.
+        st, res = call(API + "/detect", body, opener=op, timeout=360)
         res = res if isinstance(res, dict) else {}
         verdict = verdict_of(res)
         ok = st == 200 and bool(verdict)

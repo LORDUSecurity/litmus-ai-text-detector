@@ -110,9 +110,11 @@ Two things about how configuration reaches the database, both learned on 2026-10
 - Pin image tags for reproducibility: replace `n8nio/n8n:latest` with the version you
   validated, and `nginx:1.27-alpine` / `node:22-alpine` / `python:3.12-slim` likewise.
 - The backend forwards each detection to n8n and waits; with the shared NVIDIA pool a
-  verdict can take ~2 minutes. The timeout chain is `lane timeout_ms` (180 s on the shipped primary)
-  → backend wait (+30 s = 210 s) → gunicorn `--timeout` 240 s → nginx `proxy_read_timeout` 300 s, and
+  verdict can take ~2 minutes. The timeout chain is `lane timeout_ms` (240 s on the shipped primary)
+  → backend wait (+30 s = 270 s) → gunicorn `--timeout` 285 s → nginx `proxy_read_timeout` 330 s, and
   each tier must stay above the one inside it. Do not lower them below the slowest lane's timeout.
+  The chain moved as one unit on 2026-10-17 because the shipped lane answered a 320-char text in
+  214.2 s -- inside the 240 s ceiling, outside the 180 s one it replaced.
 
 ## How BYOK keys are kept off disk
 
@@ -155,9 +157,12 @@ and never left behind by a restart", not "never written".
   own ceiling. The message names the URL and the wait, and the engine-vs-transport discrimination is
   deliberate (`ENGINE_UNREACHABLE` is the other 502, and means nothing answered). Measured on the
   live deploy: the shared NVIDIA pool pushed `z-ai/glm-5.3-flash` from its usual ~86 s to 127–162 s in
-  a single hour, and one text exceeded the 180 s lane ceiling and came back at 210 s (180 s lane +
-  the backend's 30 s grace). Retry, or raise that model row's `timeout_ms` from the Admin tab — do
-  not lower nginx `proxy_read_timeout` or gunicorn `--timeout` below it.
+  a single hour, and one text exceeded the 180 s lane ceiling and came back at 214 s. The operator
+  priced that wait as worth having and the shipped ceiling moved to 240 s (see the chain above), so a
+  slow-but-legal detection now succeeds rather than 502s. Retry an ENGINE_TIMEOUT anyway -- it means
+  the lane ran past 240 s -- or raise that model row's `timeout_ms` from the Admin tab, but keep the
+  whole chain above it: do not lower nginx `proxy_read_timeout` or gunicorn `--timeout` below
+  `timeout_ms + 30 s`.
 - **Ranking tab is empty** — `seed.py` found no benchmark data. The backend image copies
   `benchmark/` (results/manifest/catalog/corpus); rebuild with `--no-cache` if you added
   new capture files, then `docker compose exec backend python -m backend.seed`.
@@ -179,26 +184,35 @@ can enforce the BYOK no-persist guarantee.
 ## Live deploy proof
 
 `python tools/verify_container_deploy.py` drives the *running* stack and is the only check that can
-see the failures this recipe actually had. It asserts eleven things: nginx proxies `/api/healthz`
-without a session and keeps `/api/gateway-health` behind one, the SPA it serves is the bundle the
-repo just built, the deploy's admin can sign in, the containerised backend seeded the promoted
-primary, the purger attached to n8n's own SQLite without creating it, the workflow is published with
-its webhook registered, and two real labeled `benchmark/corpus.json` texts are scored through the
-whole path (nginx → gunicorn → n8n → provider lane → parse → verdict) and come back with phrase
-evidence attached. Nothing it prints contains a key.
+see the failures this recipe actually had. On the shipped lane it asserts twelve things: nginx
+proxies `/api/healthz` without a session and keeps `/api/gateway-health` behind one, the SPA it
+serves is the bundle the repo just built, the deploy's admin can sign in, the containerised backend
+seeded the promoted primary, the purger attached to n8n's own SQLite without creating it, the
+workflow is published with its webhook registered, two real labeled `benchmark/corpus.json` texts are
+scored through the whole path (nginx → gunicorn → n8n → provider lane → parse → verdict) and come
+back with phrase evidence attached, and the two verdicts are on opposite sides. Nothing it prints
+contains a key.
 
 Set `DETECT_MODEL` to score those two texts on another calibrated row instead of the shipped default
 (`DETECT_MODEL=google/diffusiongemma-26b-a4b-it python tools/verify_container_deploy.py`). That is
-what proves the plumbing when a free pool is saturated; the tool then says out loud that the shipped
-operating point was not exercised and does not assert class separation for a lane it did not pick.
+what proves the plumbing when a free pool is saturated; the tool drops to eleven checks, says out
+loud that the shipped operating point was not exercised, and does not assert class separation for a
+lane it did not pick.
 
-Run it after every `docker compose up -d --build`. Measured here on 2026-10-17: 11/11 on the
-override lane (hu-000 HUMAN_LIKELY p 0.15 in 8.3 s, ai-000 AI_GENERATED p 0.98 in 1.9 s, 3 phrases
-each), and two `502 ENGINE_TIMEOUT` answers for the shipped `z-ai/glm-5.3-flash` lane between
-10:40 and 11:00 UTC while the hourly reachability probe recorded the same model at 127–162 s on a
-short prompt. The container was not the failure: the same three containers answered another row in
-1.8 s. That is a lane-capacity finding, and it is the operator's call whether to raise the row's
-`timeout_ms` or move the default lane -- see the `ENGINE_TIMEOUT` entry in Troubleshooting.
+Run it after every `docker compose up -d --build`. Measured here on 2026-10-17:
+
+* **12/12 on the shipped `z-ai/glm-5.3-flash` lane** — `hu-000` HUMAN_LIKELY p 0.18 in 209.4 s and
+  `ai-000` AI_GENERATED p 0.80 in 199.5 s, 3 phrase quotes each, through nginx.
+* **11/11 on an override lane** (`google/diffusiongemma-26b-a4b-it`: p 0.15 in 8.3 s, p 0.98 in
+  1.9 s) — the run that proved the containers were fine while the default lane was 502ing.
+
+Earlier the same morning, before the lane ceiling was raised, the shipped default returned two
+`502 ENGINE_TIMEOUT` between 10:40 and 11:00 UTC while the hourly reachability probe recorded the
+same model at 127–162 s on a short prompt: the answer was arriving at ~214 s against a 180 s
+ceiling. Both timings above land in the same pool regime, and both now fit under the ceiling — which
+is why the chain is 240 s lane → 270 s backend wait → 285 s gunicorn → 330 s nginx rather than the
+180/210/240/300 it was. If your deploy sits in a slower regime, expect the 502 and read the
+`ENGINE_TIMEOUT` entry in Troubleshooting.
 
 ## Preflight (needs no Docker daemon)
 

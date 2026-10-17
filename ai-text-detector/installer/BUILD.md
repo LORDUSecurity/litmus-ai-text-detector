@@ -223,7 +223,7 @@ Then it asserts the two things no hash can show, because a copy of a developer's
 new install. The stand-in engine now keeps the JSON body the packaged backend sent, so the run proves
 the request itself names one lane and says `secondary: {"enabled": false}`; and a second boot with a
 database file that does not yet exist reads back what the binary seeds on a user's very first launch
-(one primary on the promoted model and its measured band, `timeout_ms` 180000, the tie-break row
+(one primary on the promoted model and its measured band, `timeout_ms` 240000, the tie-break row
 present with `enabled = 0`). The upgrade copy proves `apply_lane_defaults()` switches an
 already-on row off exactly once and writes `lane_defaults_version`; the virgin boot proves the
 first-insert path, which the upsert never touches.
@@ -231,8 +231,8 @@ first-insert path, which the upsert never touches.
 Two consequences of the boot re-seed worth knowing before debugging this tool: `models.timeout_ms`
 is rewritten from `LANE_TIMEOUT_MS` on every start, so the only way to shorten the wait inside the
 upgrade boot is to launch it with `LLM_TIMEOUT_MS=1000` (which is what keeps that phase at ~31 s
-rather than 210 s), and the clean-install phase must *not* set it, or it would override the shipped
-180 s ceiling it exists to prove. `SECONDARY_ENABLED` is left unset for the same reason.
+rather than 270 s), and the clean-install phase must *not* set it, or it would override the shipped
+240 s ceiling it exists to prove. `SECONDARY_ENABLED` is left unset for the same reason.
 
 It installs per-user by default (no UAC), creates Start-Menu + optional Desktop
 shortcuts, and leaves `%LOCALAPPDATA%\AITextDetector` on uninstall.

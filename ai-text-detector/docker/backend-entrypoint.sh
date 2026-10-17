@@ -46,10 +46,11 @@ fi
 
 WORKERS="${GUNICORN_WORKERS:-2}"
 THREADS="${GUNICORN_THREADS:-8}"
-# 240, not 180: the backend waits `lane timeout_ms + 30 s` for n8n, and the shipped primary lane's
-# ceiling is 180 s, so a slow-but-legal detection runs to 210 s. Keep this above that and below
-# nginx's proxy_read_timeout (300 s) -- the compose file carries the same default and the reason.
-TIMEOUT="${GUNICORN_TIMEOUT:-240}"
+# 285, not 240: the backend waits `lane timeout_ms + 30 s` for n8n, and the shipped primary lane's
+# ceiling is 240 s (glm-5.3-flash measured 214.2 s on the live deploy), so a slow-but-legal
+# detection runs to 270 s. Keep this above that and below nginx's proxy_read_timeout (330 s) --
+# the compose file carries the same default and the reason.
+TIMEOUT="${GUNICORN_TIMEOUT:-285}"
 
 echo "[entrypoint] starting gunicorn on 0.0.0.0:8787 (gthread workers=${WORKERS} threads=${THREADS} timeout=${TIMEOUT}s)"
 exec gunicorn \

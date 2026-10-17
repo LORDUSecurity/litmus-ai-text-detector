@@ -288,10 +288,14 @@ LANE_BANDS = {
 # (probe_primary_candidates.py, 2026-10-16) against the baked 90 s -- inside the ceiling but
 # with no room for a slow pool, and a lane that times out is indistinguishable from a dead
 # one to the user. 120 s was tried first and was still not enough: the live default-lane proof
-# timed out at exactly 120 s on 2026-10-16, and the capture that measured this model's band was
-# run with a 180 s leg ceiling, so 180 s is the number the measurement actually supports. The
-# backend adds its own 30 s client-side headroom on top of this.
-LANE_TIMEOUT_MS = {"z-ai/glm-5.3-flash": 180000}
+# timed out at exactly 120 s on 2026-10-16. 180 s was the number the capture supported, and on
+# 2026-10-17 the live container proved it is the number the *pool* does not support: the shipped
+# default answered hu-000 (320 chars) correctly -- HUMAN_LIKELY, p 0.15, 3 phrase quotes -- in
+# 214.2 s, four seconds past the 210 s the backend is willing to wait, after three ENGINE_TIMEOUT
+# answers in the preceding half hour. The operator priced it as worth waiting for: 240 s, which
+# keeps the whole chain inside its outer tiers (240 lane + 30 s headroom = 270 s wait, gunicorn
+# 285 s, nginx 330 s) and leaves ~26 s of margin over the measured 214 s.
+LANE_TIMEOUT_MS = {"z-ai/glm-5.3-flash": 240000}
 
 # The tie-break lane ships switched off. Measured reason (round 25c, hc3-clean 48 texts, the
 # deployed primary on its own band): the lane was asked about 3 texts and answered all 3 wrongly

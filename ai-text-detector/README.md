@@ -22,7 +22,7 @@ python -m backend.seed
 
 **One model scores every text.** A short paragraph answers in ~7 s (the deployed lane's
 measured p50); the live proof's full document took 86 s on the free NVIDIA pool, so the lane
-ceiling is 180 s per attempt — wait for it before you call it dead. The second-opinion lane
+ceiling is 240 s per attempt — wait for it before you call it dead. The second-opinion lane
 ships configured but switched **off**: on the 48-text corpus, with the deployed primary on its
 own measured band, it was asked about 3 texts and answered all 3 wrongly, while the same
 ensemble with the lane off answers 45 of 48 at 44 correct / 1 wrong (round 25c). A gray-zone
@@ -189,7 +189,7 @@ fitted for a different distribution. See [docs/calibration.md](docs/calibration.
 node n8n/test-normalize.js            # 68 hostile-payload cases against the shipped Code node
 node n8n/test-parse.js                # 14: truncated answers salvage a whole number, never a cut one
 node n8n/test-ensemble.js             # tie-break decision table + the optional-lane contract
-python -m pytest backend/tests -q     # 120: routing, encryption, purger, tuning block, auth gate, off-lane
+python -m pytest backend/tests -q     # 127: routing, encryption, purger, tuning block, auth gate, off-lane
                                       # sanitization, and slow-engine-vs-missing-engine labelling
 cd frontend && npx ng test --watch=false   # 86: lane_config composition, key headers, admin card, quote painting, lane-scale note
 node tools/verify-lane-retry.js       # the workflow retries a failing lane (loopback mock, no budget spent)
@@ -203,14 +203,25 @@ python tools/verify_default_lane_live.py  # the promoted default lane, live: boo
                                       # dev DB from .env, the old primary loses its lane, one real
                                       # document is judged by the new model on its own measured cut,
                                       # and phrase evidence comes back on the deployed default
-python tools/verify_exe_bundle.py     # the packaged .exe is proved in two boots (18 checks). Upgrade
+python tools/verify_deploy_recipe.py  # container preflight, no daemon needed: COPY sources vs
+                                      # .dockerignore, CRLF in files a Linux container executes, the
+                                      # healthcheck path is public AND routed, the timeout chain nests
+                                      # (lane + 30 -> gunicorn -> nginx), DEPLOY.md quotes the same
+                                      # numbers the files carry (33 checks)
+python tools/verify_container_deploy.py # the RUNNING stack through nginx: liveness public, gateway
+                                      # status behind login, served bundle == dist, admin sign-in,
+                                      # seeded promoted primary, purger on n8n's own SQLite, webhook
+                                      # registered, two real labelled corpus texts scored with phrase
+                                      # evidence, and the two verdicts on opposite sides (12 checks on
+                                      # the shipped lane; 11 with DETECT_MODEL, which skips separation)
+python tools/verify_exe_bundle.py     # the packaged .exe is proved in two boots (22 checks). Upgrade
                                       # boot: a throwaway copy of the dev DB, where the boot must switch
                                       # a previously-enabled tie-break row off exactly once, the served
                                       # bundle must hash equal to dist, and the stand-in engine reports
                                       # the body the binary sent -- one lane named, secondary {"enabled":
                                       # false}. Virgin boot: an empty database, i.e. what the installer
                                       # actually delivers, seeded with one primary on its measured band,
-                                      # a 180 s ceiling, and the tie-break row present but disabled.
+                                      # a 240 s ceiling, and the tie-break row present but disabled.
 node benchmark/tiebreak-authority.js  # is the tie-break lane's authority earning its keep
                                       # (runs the shipped node, judged on the band the deployed
                                       # config gives that model; refuses to score a capture whose

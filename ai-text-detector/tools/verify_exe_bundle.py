@@ -9,7 +9,7 @@ and a string from the change under test is present in what actually got download
 
 Then it checks the two halves no hash can show: what the packaged backend *sends* to an engine
 (a dev-tree DB copy must come out of the boot with the tie-break switched off), and what a
-brand-new install gets seeded by the binary itself (one primary on its measured 180 s ceiling,
+brand-new install gets seeded by the binary itself (one primary on its measured 240 s ceiling,
 a tie-break row that ships disabled). The dev copy proves the upgrade path; only a fresh file
 proves the first launch a user of the installer actually sees.
 
@@ -394,7 +394,7 @@ def main() -> int:
     # same binary -- what it sends to an engine, and how long it is willing to wait. The wait is
     # timeout_ms/1000 + 30, and timeout_ms comes from the boot re-seed, so the lever has to be the
     # environment: LLM_TIMEOUT_MS=1000 makes the seeded row itself fast, and the ~31 s pause below
-    # replaces a 210 s one (glm's shipped ceiling is 180 s, proved separately in the fresh install).
+    # replaces a 270 s one (glm's shipped ceiling is 240 s, proved separately in the fresh install).
     srv, silent_port, captured = silent_engine()
     # A random password written to the copy only, never printed: the copy's stored hash belongs to
     # the developer's account, and the check below has to be somebody to get past /detect's gate.
@@ -427,8 +427,8 @@ def main() -> int:
                 "N8N_URL": f"http://127.0.0.1:{silent_port}",
                 "WEBHOOK_PATH": "/webhook/verify-exe-bundle",
                 # ...and the same for the lane ceiling, which `seed_models` rewrites on every boot
-                # from LANE_TIMEOUT_MS (180 s for glm). Setting it to 1000 keeps this run at ~31 s;
-                # the shipped 180000 is proved in its own phase, below, where no timeout is set.
+                # from LANE_TIMEOUT_MS (240 s for glm). Setting it to 1000 keeps this run at ~31 s;
+                # the shipped 240000 is proved in its own phase, below, where no timeout is set.
                 "LLM_TIMEOUT_MS": "1000"})
     log = open(tmp / "exe.log", "w", encoding="utf-8")
     t0 = time.time()

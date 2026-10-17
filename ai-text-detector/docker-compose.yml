@@ -49,11 +49,11 @@ services:
       GUNICORN_WORKERS: "${GUNICORN_WORKERS:-2}"
       GUNICORN_THREADS: "${GUNICORN_THREADS:-8}"
       # Must sit above the longest detection the backend will wait for: the forward is
-      # `timeout_ms + 30 s` of slack, and the shipped primary lane's ceiling is 180 s, so a request
-      # can legitimately run to 210 s. gthread's heartbeat did survive a 210 s request here (the
-      # 180 s default logged no WORKER TIMEOUT on the live deploy), but a timeout that only works by
-      # that margin is not a timeout -- 240 s puts it above the worst case by design.
-      GUNICORN_TIMEOUT: "${GUNICORN_TIMEOUT:-240}"
+      # `timeout_ms + 30 s` of slack, and the shipped primary lane's ceiling is 240 s, so a request
+      # can legitimately run to 270 s. Measured on the live deploy: glm-5.3-flash answered a
+      # 320-char text in 214.2 s, so 180 s was cutting a working detection and 240 s is the ceiling
+      # the operator chose. Keep this between that wait and nginx's proxy_read_timeout.
+      GUNICORN_TIMEOUT: "${GUNICORN_TIMEOUT:-285}"
     volumes:
       # seed.py reads the lane keys/models/thresholds from this FILE, not from env, so it
       # is bind-mounted read-only rather than copied into the image.

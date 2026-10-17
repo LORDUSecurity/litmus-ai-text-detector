@@ -3497,7 +3497,8 @@ Two decisions, both the operator's, both now the shipped default:
 1. **The tie-break lane ships switched off.** On the corrected round-25c numbers the lane was
    asked 3 of 48 texts and answered all 3 wrongly (three human documents accused of being AI),
    while the lane-off ensemble answered 45 of 48 at 44 correct / 1 wrong / 3 review.
-2. **The glm lane ceiling goes to 180 s**, the number the band's own capture was run under.
+2. **The glm lane ceiling goes to 180 s**, the number the band's own capture was run under
+   (superseded 2026-10-17 by Round 26: the ceiling is a property of the *pool*, not the capture).
    120 s was already tried and timed out on a live document; a ceiling that is lower than the
    measurement it is supposed to protect is not a margin, it is a coin flip.
 
@@ -3558,11 +3559,94 @@ now runs **18 checks in two boots**:
 * the virgin boot (a database file that does not exist, which is the state a user who just ran the
   installer is in -- the copy above cannot prove the first-install insert path at all) proves the
   binary seeds one primary `z-ai/glm-5.3-flash` on its measured `0.8/0.55` band with
-  `timeout_ms=180000`, a configured secondary row with **`enabled = 0`**, and the version key.
+  `timeout_ms=180000` (since Round 26: 240000), a configured secondary row with **`enabled = 0`**,
+  and the version key.
 
 Because the re-seed rewrites `timeout_ms` from `LANE_TIMEOUT_MS`, the timeout ceiling under test can
 only be set through the environment: the upgrade boot pins `LLM_TIMEOUT_MS=1000` so its wait is 31 s
-(`timeout_s=31` in the ENGINE_TIMEOUT line) instead of 210 s, and the virgin boot deliberately leaves
-it unset so the shipped 180 s is what gets read back. `installer/README.txt` gained a "Which model
+(`timeout_s=31` in the ENGINE_TIMEOUT line) instead of 210 s (Round 26: 270 s), and the virgin boot
+deliberately leaves it unset so the shipped ceiling -- 180 s then, 240 s since Round 26 -- is what
+gets read back. `installer/README.txt` gained a "Which model
 answers" section for the same reason: a user reading the folder should learn the lane ships off and
 that switching it on is an admin action for the whole install, not a personal preference.
+
+## Round 26: the ceiling is a property of the pool, not of the capture (2026-10-17)
+
+The container deploy was proven live (#106) with one clause still unsatisfied: on the **shipped
+default lane** the verifier's two texts both came back `502 … ENGINE_TIMEOUT`. The tempting reading
+was "the container is broken". It was not. A throwaway probe that lifted only
+`tuning.request_timeout_ms` made the same pipeline answer `hu-000` correctly -- `HUMAN_LIKELY`,
+p 0.15, three phrase quotes -- in **214.2 s**, while the hourly reachability probe recorded the same
+model at 127-162 s in that hour and the row's ceiling was 180 s (+30 s of backend grace = 210 s).
+The ceiling was cutting a working detection, and the engine tier follows the row automatically: the
+workflow's HTTP nodes read `options.timeout` from `config.request_timeout_ms`, which `app.py` derives
+from `models.timeout_ms`.
+
+The operator priced the trade (task #127): **wait for glm rather than move the default lane.** So
+`seed.LANE_TIMEOUT_MS` moved 180000 -> 240000 and the chain moved with it as one unit:
+
+```
+lane timeout_ms 240 s  ->  backend wait 240 + 30 = 270 s
+                         ->  gunicorn --timeout 285 s
+                         ->  nginx proxy_read_timeout 330 s
+```
+
+The band (0.80/0.55) did not move, so no accuracy claim in this document changed: a raise in the
+ceiling buys *coverage*, not a new ruler. Texts that used to 502 now answer, and the first one that
+did answered in its usual place.
+
+Two mechanics worth recording, because both were assumed rather than checked:
+
+* `seed_models`' upsert carries `timeout_ms = excluded.timeout_ms`, so the baked change reaches an
+  **existing** install at its next boot -- no migration, no one-shot floor, no admin action. Proved
+  on the running container: row 1 read `timeout_ms=240000` with `updated_at` at the recreate, band
+  and lane untouched. This is the *opposite* of the `enabled` column, which is deliberately absent
+  from the upsert so an admin's lane switch survives a boot (#124).
+* Every tier above the lane has to be re-derived from it, and nothing in the repo checked that. The
+  ceiling has now moved 120 -> 180 -> 240 while the outer tiers were each hand-edited once.
+
+So `tools/verify_deploy_recipe.py` grew four checks: compose and the container entrypoint must agree
+on `--timeout`; gunicorn must clear `lane + 30`; nginx must clear gunicorn; and `docker/DEPLOY.md`
+must quote the same three numbers the files carry (the doc is the thing an operator edits). The
+check reads the ceiling out of `seed`, not out of a number typed into the tool, and it was
+negative-tested by setting nginx to 280 s: `FAIL nginx proxy_read_timeout clears gunicorn
+[nginx 280s > gunicorn 285s]`, exit 1, then restored. 33/33 after the raise. The live verifier's own
+client timeout went 300 -> 360 s for the same reason: a probe that gives up before the server does
+reports a working deploy as broken.
+
+After the rebuild (`docker compose build backend web && docker compose up -d`), the same 11 checks
+were re-run against the published nginx origin with **no `DETECT_MODEL` override** -- the shipped
+operating point, not a stand-in:
+
+```
+PASS  a labeled human text is scored through nginx (hu-000)
+      [200 209.4s verdict=HUMAN_LIKELY p=0.18 key_source=header
+       lane=z-ai/glm-5.3-flash secondary=False evidence_legs=1 phrases=3]
+PASS  a labeled AI text is scored through nginx (ai-000)
+      [200 199.5s verdict=AI_GENERATED  p=0.80 ...      phrases=3]
+PASS  the deployed lane separates the two classes it was calibrated on
+      [human=HUMAN_LIKELY ai=AI_GENERATED]
+
+12/12 checks passed
+```
+
+209.4 s and 199.5 s are both above the 180 s ceiling the row used to carry, and both answer. The
+count went 11 -> 12 because the separation check only runs when no `DETECT_MODEL` override is set:
+it refuses to claim class separation for a lane it did not pick. `ai-000` landing exactly on the
+0.80 cut is the probability lattice doing what Round 16 said it does -- the cut sits *between*
+populated values for that reason, and the row's own band made the call, not a rounding tie.
+
+One honest limit: this proves the shipped operating point **answers** at 240 s, on two texts, in a
+pool regime where 200 s is normal. It does not re-fit anything and it is not a coverage claim --
+a pool slower than 240 s still returns `502 ENGINE_TIMEOUT`, and that is now the operator's chosen
+failure mode rather than a defect inherited from the capture.
+
+The packaged local app carries the same decision, because it bakes the same seed: after rebuilding
+the onefile (`installer/BUILD.md` -- backend-only change, so no UI re-staging, `STAGE_MATCHES_DIST`
+confirmed first), `tools/verify_exe_bundle.py` passed 22/22 including its virgin-install phase, which
+reads the ceiling out of `seed.LANE_TIMEOUT_MS` and compares it to what the binary actually wrote:
+
+```
+PASS  with the 240 s ceiling the capture actually supports
+      [timeout_ms=240000 (backend waits 270 s)]
+```
