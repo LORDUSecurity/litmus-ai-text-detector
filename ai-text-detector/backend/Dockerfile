@@ -35,9 +35,11 @@ RUN sed -i 's/\r$//' /usr/local/bin/backend-entrypoint.sh \
 
 EXPOSE 8787
 
-# /gateway-health is public and returns 200 even when n8n is still booting, so it is a
-# safe liveness target. Uses urllib (no curl in the slim image).
+# /healthz is the one route that answers without a session, and it carries no content.
+# This check used to target /gateway-health on the belief that it was public; it is not --
+# the guard answers 401 -- so the container never reached "healthy" and `docker compose up -d`
+# died on the web service's `service_healthy` dependency. Uses urllib (no curl in the slim image).
 HEALTHCHECK --interval=30s --timeout=5s --start-period=30s --retries=3 \
-    CMD python -c "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8787/gateway-health', timeout=4)" || exit 1
+    CMD python -c "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8787/healthz', timeout=4)" || exit 1
 
 ENTRYPOINT ["/usr/local/bin/backend-entrypoint.sh"]

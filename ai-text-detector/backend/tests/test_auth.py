@@ -649,3 +649,24 @@ def test_ranking_never_puts_a_probe_above_a_measured_model(client):
     assert ranked[0]["provisional"] is False and ranked[1]["provisional"] is True
     assert all(e["n_clean"] > 0 for e in ranked)
 
+
+def test_healthz_is_the_public_liveness_route(client):
+    """`backend/Dockerfile`'s HEALTHCHECK has to hit a route that answers without a session, or the
+    container never becomes healthy and `docker compose up -d` dies on the web service's
+    `service_healthy` dependency. It used to point at `/gateway-health`, which this guard protects;
+    `/healthz` was already listed in `auth.PUBLIC_PATHS` but no route implemented it, so it 404'd --
+    neither failure is visible to `docker compose config`. A fresh deploy only shows up when a real
+    daemon runs, which is how #106 found it on 2026-10-17.
+
+    The route stays information-free: the same file that leaks a container's DB path, engine URL and
+    seeded lane defaults to an anonymous caller is a reconnaissance gift on a hosted deploy, so the
+    rich answer remains behind a login.
+    """
+    r = client.get("/healthz")
+    assert r.status_code == 200, r.get_json()
+    assert r.get_json() == {"ok": True}
+
+    guarded = client.get("/gateway-health")
+    assert guarded.status_code == 401, \
+        "the detailed status answers 200 to an anonymous caller"
+

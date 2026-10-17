@@ -223,6 +223,27 @@ def main() -> int:
     except OSError as exc:
         print(f"SKIP  git tracking check ({exc})")
 
+    # The container's own liveness probe: a HEALTHCHECK pointed at a route the auth guard protects
+    # never passes, `depends_on: {backend: {condition: service_healthy}}` then blocks the web
+    # service, and `docker compose up -d` dies with "dependency failed to start". No YAML check can
+    # see that -- it needs the guard's public set and the route table. Found on the first run with a
+    # real daemon (2026-10-17): the probe targeted /gateway-health, which answers 401.
+    df = (REPO / "backend" / "Dockerfile").read_text(encoding="utf-8", errors="replace")
+    m = re.search(r"urlopen\(['\"]http://[^/]+(/[^'\"]+)", df)
+    probe = m.group(1) if m else None
+    pub = set(re.findall(r'"(/[a-z0-9_-]*)"',
+                         (REPO / "backend" / "auth.py").read_text(encoding="utf-8", errors="replace")
+                         .split("PUBLIC_PATHS = {")[-1].split("}")[0]))
+    routes = set(re.findall(r'@app\.route\("(/[a-z0-9_-]*)"',
+                            (REPO / "backend" / "app.py").read_text(encoding="utf-8", errors="replace")))
+    check(bool(probe), "backend Dockerfile declares a liveness URL", str(probe))
+    check(bool(probe) and probe in pub,
+          "…and its path is in the auth guard's PUBLIC_PATHS",
+          f"probe={probe} public={sorted(pub)}")
+    check(bool(probe) and probe in routes,
+          "…and a route actually answers it (a public path with no route is a 404)",
+          f"probe={probe} routes_with_no_auth={sorted(pub & routes)}")
+
     # and what a daemon would say, if one is listening
     r = subprocess.run(["docker", "compose", "-f", str(COMPOSE), "config", "--quiet"],
                        capture_output=True, text=True, cwd=REPO)

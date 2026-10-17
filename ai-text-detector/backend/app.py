@@ -532,6 +532,25 @@ def _probe_with_key(prov, model_id: str, key: str, timeout_s: float) -> dict:
 
 def register_routes(app: Flask) -> None:
 
+    @app.route("/healthz", methods=["GET"])
+    def healthz():
+        """Liveness, and the only authenticated-surface route that needs no session.
+
+        `auth.PUBLIC_PATHS` has listed `/healthz` since the auth guard was written, but no route
+        ever answered it -- so `GET /healthz` was a 404, and `backend/Dockerfile`'s HEALTHCHECK
+        pointed instead at `/gateway-health`, which the guard protects. The container therefore
+        never turned healthy and `docker compose up -d` died on
+        "dependency failed to start: container ...-backend-1 is unhealthy": the web service never
+        started, on every fresh deploy. Found by the first real daemon run (#106, 2026-10-17);
+        `docker compose config` could not see it because it only reads YAML.
+
+        Deliberately carries no content. `/gateway-health` answers the DB path, row counts, the
+        engine URL and the seeded defaults, which is exactly what a hosted deploy must not hand an
+        anonymous caller -- so the probe gets a liveness flag and the operator keeps the rich
+        status behind a login.
+        """
+        return jsonify({"ok": True}), 200
+
     @app.route("/gateway-health", methods=["GET"])
     def gateway_health():
         primary, secondary = default_models()

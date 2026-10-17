@@ -27,9 +27,13 @@ backend (gunicorn :8787) ──http──> n8n:5678/webhook/ai-detect-ai
 ```bash
 # from the repo root
 docker compose up -d --build          # build web+backend, pull n8n, start all three
-bash docker/n8n-import.sh             # one-time: import + activate the detection workflow
+bash docker/n8n-import.sh             # one-time: import, publish, activate, restart n8n
 # wait for n8n to finish booting and register the webhook (see Troubleshooting)
 ```
+
+`n8n-import.sh` exports `MSYS_NO_PATHCONV=1` and `MSYS2_ARG_CONV_EXCL='*'` because Git Bash rewrites
+`--input=/n8n-workflows/ai-only-workflow.json` into a `C:/Program Files/Git/...` path before docker
+sees it, and the CLI then reports ENOENT for a file that is plainly mounted.
 
 Open `http://localhost:8080` and sign in with `ADMIN_USERNAME` / `ADMIN_PASSWORD`
 (default `admin` / `changeme-admin` — **change these first**).
@@ -38,13 +42,27 @@ Verify the stack:
 
 ```bash
 docker compose ps                                   # all three "running"/"healthy"
-curl -s http://localhost:8080/api/gateway-health     # backend reachable through nginx
+curl -s http://localhost:8080/api/healthz            # {"ok":true} — anonymous liveness
+curl -s http://localhost:8080/api/gateway-health     # 401 until you send a session cookie
 docker compose logs -f backend                       # seed summary + gunicorn boot
+```
+
+`/api/healthz` is the only route that answers with no session. That is deliberate: the backend's own
+`HEALTHCHECK` needs a target that cannot 401 (it used to poll `/gateway-health`, the container never
+turned healthy, and `web` never started), and `/gateway-health` answers the DB path, row counts, the
+engine URL and the seeded lane defaults — an operator command, not a public endpoint. For it:
+
+```bash
+curl -s -c /tmp/j.txt -X POST http://localhost:8080/api/auth/login \
+     -H 'Content-Type: application/json' \
+     -d "{\"username\":\"$ADMIN_USERNAME\",\"password\":\"$ADMIN_PASSWORD\"}" > /dev/null
+curl -s -b /tmp/j.txt http://localhost:8080/api/gateway-health
 ```
 
 `/api/gateway-health` reports `purge_enabled: true` once the purger has opened n8n's
 SQLite. If it shows `purge_enabled: false`, the `n8n_data` volume is not yet shared or
-n8n has not created its database — restart the backend after n8n is up.
+n8n has not created its database — the purger now waits for n8n to create that file instead of
+opening it first, so give n8n a minute before restarting anything.
 
 ## Configuration
 
@@ -92,8 +110,9 @@ Two things about how configuration reaches the database, both learned on 2026-10
 - Pin image tags for reproducibility: replace `n8nio/n8n:latest` with the version you
   validated, and `nginx:1.27-alpine` / `node:22-alpine` / `python:3.12-slim` likewise.
 - The backend forwards each detection to n8n and waits; with the shared NVIDIA pool a
-  verdict can take ~2 minutes. nginx `proxy_read_timeout` and gunicorn `--timeout` are
-  already set above that. Do not lower them below the slowest lane's timeout.
+  verdict can take ~2 minutes. The timeout chain is `lane timeout_ms` (180 s on the shipped primary)
+  → backend wait (+30 s = 210 s) → gunicorn `--timeout` 240 s → nginx `proxy_read_timeout` 300 s, and
+  each tier must stay above the one inside it. Do not lower them below the slowest lane's timeout.
 
 ## How BYOK keys are kept off disk
 
@@ -103,12 +122,42 @@ remove it (measured 2026-10-06). The backend therefore shares the `n8n_data` vol
 runs a purger that deletes those execution rows a second after each detection. Keep the
 shared volume mounted; without it the guarantee is lost.
 
+The delete is of the `execution_entity` parent row, and n8n's schema declares
+`execution_data.executionId … ON DELETE CASCADE`, so the blob that carries the header goes with it
+-- which is why `PRAGMA foreign_keys = ON` is not optional in `purge.py`. Rows that predate the
+backend process are purged at startup too: the steady-state sweep only deletes `id > startup_max_id`,
+so before that startup pass every execution that was mid-flight when the deploy restarted kept its
+key for the life of the volume. `/api/gateway-health` reports the count as
+`startup_rows_purged` next to `rows_purged`.
+
+What this does not claim is that a key is never on disk: for the seconds an execution is running,
+n8n has written the inbound request. The guarantee is "deleted within a few seconds of the call,
+and never left behind by a restart", not "never written".
+
 ## Troubleshooting
 
+- **n8n restarts in a loop, `docker compose ps` shows no `healthy` flag for it, log says
+  `SQLITE_READONLY: attempt to write a readonly database`** — n8n's `database.sqlite` in the
+  `n8n_data` volume is owned by `root` while n8n runs as uid `node`. It gets created by the backend:
+  `sqlite3.connect()` creates the file it is handed, and the backend container is root, so a backend
+  that boots before n8n finishes migrating leaves a file n8n cannot write. Fixed in `backend/purge.py`
+  (the purger refuses to create the path and waits for n8n instead). To repair an already-poisoned
+  volume: `docker compose down && docker volume rm <project>_n8n_data && docker compose up -d`.
+  Check ownership with
+  `docker compose exec -T n8n ls -la /home/node/.n8n` — the `.sqlite` must be `node node`.
 - **Detection 404s / "Cannot reach the detection path"** — the n8n webhook is not
   registered yet. n8n can take a while to register webhooks after boot. Run
   `docker compose restart n8n`, wait, then retry. Confirm with
-  `curl -s http://localhost:8080/api/n8n/status` (`webhook_registered: true`).
+  `curl -s -b /tmp/j.txt http://localhost:8080/api/n8n/status` (`webhook_registered: true`;
+  `/tmp/j.txt` is the cookie jar from the signed-in `curl` above — `/api/n8n/status` is not public).
+- **`POST /api/detect` answers `502 DETECTION_UNAVAILABLE` with `error_code: ENGINE_TIMEOUT`** — the
+  stack is intact: n8n accepted the webhook call and the model lane simply did not finish inside its
+  own ceiling. The message names the URL and the wait, and the engine-vs-transport discrimination is
+  deliberate (`ENGINE_UNREACHABLE` is the other 502, and means nothing answered). Measured on the
+  live deploy: the shared NVIDIA pool pushed `z-ai/glm-5.3-flash` from its usual ~86 s to 127–162 s in
+  a single hour, and one text exceeded the 180 s lane ceiling and came back at 210 s (180 s lane +
+  the backend's 30 s grace). Retry, or raise that model row's `timeout_ms` from the Admin tab — do
+  not lower nginx `proxy_read_timeout` or gunicorn `--timeout` below it.
 - **Ranking tab is empty** — `seed.py` found no benchmark data. The backend image copies
   `benchmark/` (results/manifest/catalog/corpus); rebuild with `--no-cache` if you added
   new capture files, then `docker compose exec backend python -m backend.seed`.
@@ -127,6 +176,30 @@ that no longer exists. This stack is SQLite-only (no Postgres/Redis), drops `det
 adds the Flask `backend` and the nginx `web` tier, and shares n8n's volume so the purger
 can enforce the BYOK no-persist guarantee.
 
+## Live deploy proof
+
+`python tools/verify_container_deploy.py` drives the *running* stack and is the only check that can
+see the failures this recipe actually had. It asserts eleven things: nginx proxies `/api/healthz`
+without a session and keeps `/api/gateway-health` behind one, the SPA it serves is the bundle the
+repo just built, the deploy's admin can sign in, the containerised backend seeded the promoted
+primary, the purger attached to n8n's own SQLite without creating it, the workflow is published with
+its webhook registered, and two real labeled `benchmark/corpus.json` texts are scored through the
+whole path (nginx → gunicorn → n8n → provider lane → parse → verdict) and come back with phrase
+evidence attached. Nothing it prints contains a key.
+
+Set `DETECT_MODEL` to score those two texts on another calibrated row instead of the shipped default
+(`DETECT_MODEL=google/diffusiongemma-26b-a4b-it python tools/verify_container_deploy.py`). That is
+what proves the plumbing when a free pool is saturated; the tool then says out loud that the shipped
+operating point was not exercised and does not assert class separation for a lane it did not pick.
+
+Run it after every `docker compose up -d --build`. Measured here on 2026-10-17: 11/11 on the
+override lane (hu-000 HUMAN_LIKELY p 0.15 in 8.3 s, ai-000 AI_GENERATED p 0.98 in 1.9 s, 3 phrases
+each), and two `502 ENGINE_TIMEOUT` answers for the shipped `z-ai/glm-5.3-flash` lane between
+10:40 and 11:00 UTC while the hourly reachability probe recorded the same model at 127–162 s on a
+short prompt. The container was not the failure: the same three containers answered another row in
+1.8 s. That is a lane-capacity finding, and it is the operator's call whether to raise the row's
+`timeout_ms` or move the default lane -- see the `ENGINE_TIMEOUT` entry in Troubleshooting.
+
 ## Preflight (needs no Docker daemon)
 
 `python tools/verify_deploy_recipe.py` proves the parts of this stack that fail before a compiler
@@ -138,8 +211,8 @@ sees them: every `COPY` source exists in the build context it declares and is no
 actually tracked by git. It exits non-zero with the failing check named. Run it before `--build`,
 and again after editing a Dockerfile, the compose file or `.dockerignore`.
 
-What it cannot prove is the image build itself: on a Windows host whose WSL optional component is
-missing (`wsl --status` -> `WSL_E_WSL_OPTIONAL_COMPONENT_REQUIRED`), Docker Desktop's Linux engine
-never starts, so `docker build` has no daemon to ask. Fix the host, then the remaining checks are
-`docker compose up -d --build`, `curl http://localhost:8080/gateway-health` through nginx, and one
-live detection.
+What it cannot prove is the image build itself -- that needs a daemon. On this host the earlier
+blocker was WSL's missing optional component (`wsl --status` -> `WSL_E_WSL_OPTIONAL_COMPONENT_REQUIRED`),
+cleared with `wsl.exe --install --no-distribution` and a Docker Desktop restart; no reboot was needed.
+With Engine 29.6.2 up, the remaining checks are `docker compose up -d --build`,
+`bash docker/n8n-import.sh`, and `python tools/verify_container_deploy.py`.

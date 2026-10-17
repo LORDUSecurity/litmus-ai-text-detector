@@ -12,6 +12,7 @@ os.environ["DETECTOR_SECRET"] = os.path.join(_TMP, "test-secret.key")
 os.environ["N8N_DB"] = os.path.join(_TMP, "no-such-n8n.sqlite")
 
 import json  # noqa: E402
+import sqlite3  # noqa: E402
 import urllib.error  # noqa: E402
 
 import pytest  # noqa: E402
@@ -83,6 +84,82 @@ def test_gateway_health_carries_the_fields_the_angular_service_reads(client):
 
 def test_purger_is_not_started_by_an_import(client):
     assert purger._thread is None
+
+
+def test_purger_start_clears_the_wait_message_once_the_database_appears(tmp_path, monkeypatch):
+    """A purger that had to wait must not keep reporting the reason it waited.
+
+    /gateway-health answers `purge_enabled` next to `purge_error`, so a stale "n8n has not
+    created ... yet" line beside `purge_enabled: true` reads as a healthy-but-broken purger.
+    """
+    from backend import purge
+
+    db_file = tmp_path / "database.sqlite"          # n8n's own file, created later
+    monkeypatch.setattr(purge, "N8N_DB", str(db_file))
+
+    waiting = purge.Purger()
+    waiting.start()
+    assert waiting.enabled is False
+    assert "has not created" in (waiting.error or ""), waiting.error
+    waiting._stop.set()                             # kill the wait thread this test spawned
+
+    con = sqlite3.connect(db_file)
+    con.execute("CREATE TABLE execution_entity (id INTEGER PRIMARY KEY, workflowId TEXT)")
+    con.execute("INSERT INTO execution_entity (workflowId) VALUES ('ai-detection-ai-only')")
+    con.commit()
+    con.close()
+
+    p = purge.Purger()
+    p.error = waiting.error                          # the leftover message from the wait path
+    p.start()
+    assert p.enabled is True, p.error
+    assert p.error is None, f"a successful start kept {p.error!r}"
+    assert p.startup_max_id == 1
+    p._stop.set()
+
+
+def test_purger_clears_rows_that_predate_it(tmp_path, monkeypatch):
+    """A restart must not strand a key: rows written before this process are purged too.
+
+    The sweep deletes `id > startup_max_id`, so without the startup pass every execution that was
+    mid-flight when the backend restarted kept its webhook row -- and with it `execution_data.data`,
+    which carries the inbound `x-primary-api-key` -- for the life of the volume. The schema here
+    mirrors n8n's: the cascade is what makes the parent delete remove the blob.
+    """
+    from backend import purge
+
+    db_file = tmp_path / "database.sqlite"
+    monkeypatch.setattr(purge, "N8N_DB", str(db_file))
+    con = sqlite3.connect(db_file)
+    con.execute("CREATE TABLE execution_entity (id INTEGER PRIMARY KEY AUTOINCREMENT,"
+                " workflowId TEXT NOT NULL, status TEXT NOT NULL)")
+    con.execute("CREATE TABLE execution_data (executionId INTEGER PRIMARY KEY,"
+                " data TEXT NOT NULL, FOREIGN KEY(executionId) REFERENCES execution_entity(id)"
+                " ON DELETE CASCADE)")
+    leaked = '{"headers": {"x-primary-api-key": "nvapi-LEAKED"}}'
+    for wf, status, blob in ((purge.WORKFLOW_ID, "running", leaked),
+                             (purge.WORKFLOW_ID, "crashed", leaked),
+                             ("someone-else's-workflow", "crashed",
+                              '{"headers": {"x-primary-api-key": "other-workflow-key"}}')):
+        con.execute("INSERT INTO execution_entity (workflowId, status) VALUES (?, ?)", (wf, status))
+        con.execute("INSERT INTO execution_data (executionId, data) VALUES (?, ?)",
+                    (con.execute("SELECT last_insert_rowid()").fetchone()[0], blob))
+    con.commit()
+    con.close()
+
+    p = purge.Purger()
+    p.start()          # opens, records the workflow-scoped floor, then purges everything under it
+    assert p.startup_max_id == 2, "the floor is MAX(id) for THIS workflow, not the whole table"
+    assert p.leftovers_purged == 2, p.status()
+    assert p.status()["startup_rows_purged"] == 2
+
+    ro = sqlite3.connect(f"file:{db_file}?mode=ro", uri=True)
+    left = ro.execute("SELECT workflowId FROM execution_entity").fetchall()
+    blobs = ro.execute("SELECT data FROM execution_data").fetchall()
+    ro.close()
+    p._stop.set()
+    assert [w[0] for w in left] == ["someone-else's-workflow"], left
+    assert not any("nvapi-LEAKED" in b[0] for b in blobs), "a deleted parent left its key blob"
 
 
 # ---------------------------------------------------------------- detection routing
