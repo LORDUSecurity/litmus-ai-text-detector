@@ -3730,7 +3730,30 @@ earlier in this same session against the sources that are now in the build — `
 `ranking-view.spec.ts` have not been touched since — and the shipped bundle was then proved by
 grepping **the served bytes** for the fallback path (`verify_exe_bundle.py "/research/report.html"`,
 2 occurrences in `main-3WW256QJ.js`). That is evidence the behaviour is in the artifact; it is not
-evidence the specs still pass, and the suite owes a rerun on a host with commit headroom.
+evidence the specs still pass, and the suite owed a rerun on a host with commit headroom.
+
+**The owed rerun happened, ~40 minutes later, and it passes.** Commit headroom came back on its own
+(`FreePhysicalMemory 1,244,212 KB`, `FreeVirtualMemory 2,788,380 KB` — an order of magnitude more than
+during the failures), which let the first retry get *further* than any earlier attempt and produce a
+**fourth** signature: the bundle built cleanly (`Application bundle generation complete. [39.476 seconds]`),
+Vitest printed its `RUN` banner, and then the log ended at `Error: Worker exited unexpectedly with
+signal SIGTERM during stopping state` with **zero** test output and exit code 1. Nothing in that log
+distinguishes a dead host from a broken spec, so it is recorded here as the shape to check for. The
+second attempt (`npx ng test --watch=false --reporters=dot`) ran end to end:
+
+```
+Application bundle generation complete. [33.604 seconds]
+ Test Files  7 passed (7)
+      Tests  89 passed (89)
+   Duration  33.01s (environment 81%, setup 8%, tests 7%, transform 2%, import 2%)
+```
+
+86 → 89 is exactly the three `describe('RankingView report link')` specs, all seven spec files were
+discovered (`--include` left at its default), and the gap this round opened is closed. The behavioural
+proof did not depend on it: the link was also driven in the deployed container as a signed-in non-admin,
+where `a.paper-link` read `href="/research/report.html"`, `target="_blank"` and `rel="noopener noreferrer"`
+beside 48 model cards — and the URL itself answers `200` with no session (`Set-Cookie` absent), so the
+document is public even though the UI path to it is not.
 
 **The report itself grew a Part II** (window 2026-10-13 → 2026-10-17, §9): kimi-k3's zero-wrong
 recommendation is retracted as an operating choice — the model returns HTTP 410 `model_removed` with

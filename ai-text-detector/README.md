@@ -220,9 +220,12 @@ python -m pytest backend/tests -q     # 127: routing, encryption, purger, tuning
                                       # sanitization, and slow-engine-vs-missing-engine labelling
 cd frontend && npx ng test --watch=false   # 89: lane_config composition, key headers, admin card, quote painting,
                                       # lane-scale note, report-link fallback (blank paper_url -> /research/)
-                                      # On a host with no commit headroom esbuild dies in the build phase
-                                      # ("Fatal process out of memory: Zone"); run --include subsets —
-                                      # NODE_OPTIONS cannot fix a native zone allocation.
+                                      # On a host with no commit headroom the run dies without testing anything:
+                                      # esbuild "Fatal process out of memory: Zone" / "spawn UNKNOWN" in the
+                                      # build phase, or a clean build followed by "Worker exited unexpectedly
+                                      # with signal SIGTERM" and zero test output. Check FreeVirtualMemory
+                                      # (KB) before believing either; NODE_OPTIONS cannot fix a native zone
+                                      # allocation and --include subsets do not help (the build is per invocation).
 node tools/verify-lane-retry.js       # the workflow retries a failing lane (loopback mock, no budget spent)
 node tools/verify-free-lane.js        # a real text judged end-to-end through a free OpenRouter lane
 node benchmark/phrase-match-rate.js   # how many of the model's own quotes the evidence panel can locate (575/575)
