@@ -38,13 +38,17 @@ cp benchmark/results-*.jsonl benchmark/runs-manifest.log \
 cp -r frontend/dist/frontend/browser/* .localbuild/frontend/dist/frontend/browser/
 ```
 
-`-r` is not optional. The UI ships one subdirectory — `research/`, the technical report the Ranking
-page links (see `README.md`) — and without it `cp` prints `omitting directory` and exits non-zero, so
-the stage simply has no report in it. Hit on 2026-10-17 while staging for the report. The loud part is
-worth noting: the chain stops at the `&&`, and the `diff` below would also fail, because it lists
-`research` on one side and not the other. What no staging check can see is a *stale* file inside that
-folder — the bundle hash is the SPA's, not the asset's — which is why `verify_exe_bundle.py` compares
-the served report bytes against the repo copy rather than trusting the name.
+`-r` is not optional. The UI ships two subdirectories — `research/`, the technical report the Ranking
+page links (see `README.md`), and `fonts/`, the self-hosted Spectral/Cormorant Garamond faces the
+stylesheets name (`tools/fetch_fonts.py` writes them; a CDN `<link>` is not an option for an app that
+must boot with no network) — and without it `cp` prints `omitting directory` and exits non-zero, so the
+stage simply has no report and no serif in it. Hit on 2026-10-17 while staging for the report. The loud
+part is worth noting: the chain stops at the `&&`, and the `diff` below would also fail, because it
+lists `research` on one side and not the other. What no staging check can see is a *stale* file inside
+those folders — the bundle hash is the SPA's, not the asset's — which is why `verify_exe_bundle.py`
+compares the served report bytes against the repo copy rather than trusting the name. A missing font,
+unlike a missing report, shows up as a page that renders in the fallback serif and nothing else, so the
+browser pass over the packaged app has to look at the type, not only at the HTTP status.
 
 The staged `benchmark/` files carry only masked key *hints* (`api_key=nvapi-...(len 70)`),
 never real keys. A strict scan for `nvapi-…{6}`, `sk-…{20}`, `AIza…{20}` returns nothing.

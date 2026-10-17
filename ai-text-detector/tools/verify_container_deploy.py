@@ -170,6 +170,20 @@ def main() -> int:
           "…and the printable copy downloads as a PDF, not as HTML",
           f"{len(served_pdf)} B ctype={pdf_ctype.split(';')[0]!r}")
 
+    # 3d: the self-hosted serif faces. Their absence is quieter than the report's -- the page still
+    # renders, just in whatever serif the visitor's OS has, and nothing anywhere errors -- and nginx's
+    # SPA fallback answers /fonts/anything with index.html and a 200. So: the woff2 magic, then byte
+    # equality with the staged file. The Content-Type is printed, not gated: nginx's own mime table
+    # decides it, and a browser takes a font it can parse.
+    face = "Spectral-400.woff2"
+    served_face, face_ctype = fetch_raw(f"/fonts/{face}")
+    dist_face = dist / "fonts" / face
+    check(served_face[:4] == b"wOF2" and dist_face.is_file()
+          and served_face == dist_face.read_bytes(),
+          "…and the self-hosted serif face is served, not the SPA fallback",
+          f"{len(served_face)} B ctype={face_ctype.split(';')[0]!r} "
+          f"identical_to_dist={dist_face.is_file() and served_face == dist_face.read_bytes()}")
+
     # 4-6: an authenticated operator view of the engine.
     op, st, who, _env = admin_opener()
     # /auth/login wraps the account: {"user": {"username", "role", ...}}. Reading `role` off the

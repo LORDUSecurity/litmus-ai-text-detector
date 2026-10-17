@@ -68,6 +68,16 @@ def get(path: str, port: int = PORT) -> tuple[int, bytes]:
         return -1, str(exc).encode()
 
 
+def ctype(path: str, port: int = PORT) -> str:
+    """The Content-Type a URL came back with, because a font served as text/plain is a font the
+    browser may not take -- and `get()` throws the headers away."""
+    try:
+        with urllib.request.urlopen(f"http://127.0.0.1:{port}" + path, timeout=30) as resp:
+            return resp.headers.get("Content-Type") or ""
+    except Exception:  # noqa: BLE001
+        return ""
+
+
 def port_is_free(port: int = PORT) -> bool:
     try:
         with socket.create_connection(("127.0.0.1", port), timeout=1):
@@ -470,12 +480,32 @@ def main() -> int:
 
         st3, css = get("/")
         styles = re.findall(r'(styles-[A-Z0-9]{8}\.css)', css.decode("utf-8", "replace"))
+        served_css = b""
         if styles:
             d = DIST / styles[0]
             st4, got = get(f"/{styles[0]}")
+            served_css = got
             check(d.is_file() and st4 == 200
                   and hashlib.sha256(got).hexdigest() == hashlib.sha256(d.read_bytes()).hexdigest(),
                   "stylesheet too", styles[0])
+
+        # The serif faces are the third thing a 200 cannot vouch for. The static responder answers an
+        # unknown path with index.html and a 200, so a stage that dropped `fonts/` -- a `cp` without
+        # `-r`, the exact trap installer/BUILD.md records -- still ships a page that *renders*, just in
+        # whatever serif the OS has. Nothing fails. So the faces are read out of the served stylesheet
+        # and compared to the bytes tools/fetch_fonts.py wrote, and the one thing a byte comparison
+        # cannot see (whether the browser is allowed to treat it as a font) is taken from the header.
+        faces = sorted(set(re.findall(r"url\(/fonts/([A-Za-z0-9_-]+\.woff2)",
+                                      served_css.decode("utf-8", "replace"))))
+        check(len(faces) >= 4, "the served stylesheet names its own self-hosted faces",
+              f"{len(faces)} faces: {faces}")
+        for face in faces:
+            src = ROOT / "frontend" / "public" / "fonts" / face
+            stf, blob = get(f"/fonts/{face}")
+            check(stf == 200 and src.is_file() and blob == src.read_bytes()
+                  and blob[:4] == b"wOF2",
+                  f"…and the packaged exe serves {face} as the fetched file",
+                  f"{stf} {len(blob)} bytes magic={blob[:4]!r} ctype={ctype(f'/fonts/{face}')!r}")
 
         # The citation is an asset of this binary as well. The static responder falls back to
         # index.html with a 200 for any path it does not have, so a status code proves nothing here --
