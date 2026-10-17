@@ -191,6 +191,13 @@ lane started shipping off: 27.06 s, no warnings, 44,655,417 bytes around the 43,
 And again at 23:41 after `DEFAULT_API_KEY_GUIDES` was rewritten with the sign-in-first wording: 11.4 s,
 no warnings, 44,659,459 bytes around the 43,242,453-byte onefile.
 
+Round 26's ceiling raise is the same kind of change: `LANE_TIMEOUT_MS` is backend-seeded text, so the
+exe frozen inside the setup package is the only copy a local-app install ever boots. The onefile was
+rebuilt (backend-only, so no UI re-staging — `STAGE_MATCHES_DIST` confirmed first) and `verify_exe_bundle.py`
+passed 22/22 with its virgin install reading back `timeout_ms=240000 (backend waits 270 s)`. The
+setup package was then recompiled at 11:45: 27.64 s, no warnings, 44,662,980 bytes around the
+43,246,440-byte onefile.
+
 **Why the guide wording had to reach a build at all:** the cards are backend-seeded text, so the only
 copy a local-app user ever reads is the one frozen inside the exe. Editing `backend/seed.py` changes
 the dev tree and nothing else until steps 1-3 run again — which is the same trap as step 0 for the UI.
