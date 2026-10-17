@@ -1,27 +1,98 @@
+/* Self-hosted serif faces: the app ships offline (Docker image, PyInstaller exe), so
+   url() must be the absolute /fonts/ path — never a CDN. */
+@font-face {
+  font-family: "Spectral";
+  src: url("/fonts/Spectral-400.woff2") format("woff2");
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "Spectral";
+  src: url("/fonts/Spectral-500.woff2") format("woff2");
+  font-weight: 500;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "Spectral";
+  src: url("/fonts/Spectral-600.woff2") format("woff2");
+  font-weight: 600;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "Spectral";
+  src: url("/fonts/Spectral-700.woff2") format("woff2");
+  font-weight: 700;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "Cormorant Garamond";
+  src: url("/fonts/CormorantGaramond-600.woff2") format("woff2");
+  font-weight: 600;
+  font-style: normal;
+  font-display: swap;
+}
+
 :root {
   --bg: #0b1020;
   --bg-2: #0e1730;
   --panel: rgba(24, 34, 58, 0.55);
   --panel-2: rgba(30, 42, 70, 0.6);
   --panel-solid: #161d31;
+  --field-bg: #101627;
   --line: rgba(120, 160, 255, 0.16);
   --line-strong: rgba(120, 160, 255, 0.32);
   --ink: #e8eefc;
   --ink-dim: #9fb0d4;
-  /* Blue is the tune colour: one hue, three stops, used for accent, glow and rings. */
-  --accent: #4d8dff;
-  --accent-2: #7db4ff;
-  --accent-deep: #2f6ae0;
+  /* Referenced with an inline fallback in ranking-view.ts; defined so the fallback stops winning. */
+  --muted: #9fb0d4;
+  /* Royal blue is the signature, but graphics-only in dark: 3.57:1 on panel (valid non-text),
+     it fails as text — that is why the text accent below is lighter. */
+  --royal: #4169E1;
+  --accent: #5b8cff;
+  --accent-2: #8fb0ff;
+  --accent-deep: #2b4fc7;
+  /* Text on an accent-filled button: 5.99:1 (white on #5b8cff is only 3.16:1). */
+  --on-accent: #0b1020;
+  /* CTA gradient ends stay >= 4.85:1 under --on-grad in both themes. */
+  --grad-cta: linear-gradient(135deg, var(--accent-deep), var(--royal));
+  --on-grad: #ffffff;
   --good: #47c98a;
   --bad: #ff5f6d;
   --warn: #e8b34b;
   --neutral: #8d96a6;
   --violet: #a98bff;
-  --glass-blur: 18px;
+  /* Per-theme alpha washes so glows, pills and gradients recolour on theme switch. */
+  --accent-a08: rgba(91, 140, 255, 0.08);
+  --accent-a16: rgba(91, 140, 255, 0.16);
+  --accent-a30: rgba(91, 140, 255, 0.3);
+  --good-a16: rgba(71, 201, 138, 0.16);
+  --bad-a16: rgba(255, 95, 109, 0.16);
+  --warn-a16: rgba(232, 179, 75, 0.16);
+  /* Body backdrop blooms, royal-tinted per theme. */
+  --bloom-a: rgba(65, 105, 225, 0.22);
+  --bloom-b: rgba(169, 139, 255, 0.14);
+  --bloom-c: rgba(43, 79, 199, 0.18);
+  /* Top-edge hairline highlight; keeps the glass reading sharp rather than soft. */
+  --sheen: rgba(255, 255, 255, 0.07);
+  --glass-blur: 14px;
   --glass-sheen: linear-gradient(135deg, rgba(255, 255, 255, 0.08), rgba(255, 255, 255, 0) 45%);
   --shadow: 0 18px 50px -22px rgba(0, 0, 0, 0.75);
   --ring-track: rgba(140, 170, 235, 0.16);
+  --font-ui: "Spectral", Georgia, "Iowan Old Style", "Times New Roman", serif;
+  --font-display: "Cormorant Garamond", "Spectral", Georgia, serif;
   --mono: ui-monospace, "Cascadia Mono", "JetBrains Mono", Consolas, monospace;
+  --r-sm: 4px;
+  --r-md: 6px;
+  --r-lg: 10px;
+  --r-pill: 999px;
   color-scheme: dark;
 }
 
@@ -34,13 +105,42 @@ html.light,
   --panel: rgba(255, 255, 255, 0.62);
   --panel-2: rgba(255, 255, 255, 0.72);
   --panel-solid: #ffffff;
+  --field-bg: #ffffff;
   --line: rgba(40, 90, 190, 0.16);
   --line-strong: rgba(40, 90, 190, 0.3);
   --ink: #16203a;
   --ink-dim: #55648a;
-  --accent: #2f6ae0;
-  --accent-2: #4d8dff;
-  --accent-deep: #1f4fb8;
+  --muted: #55648a;
+  /* Royal measures 4.72:1 on --panel-2 over the flat bg, but only 3.68:1 where the body
+     bloom shows through, so it stays graphics-only in this theme: borders, rings, glows. */
+  --royal: #4169E1;
+  /* Text accents, measured against the lightest and the bloom-tinted backdrop a card can
+     sit on (--panel 0.62 white over --bg, and over --bloom-a): #2b45b8 is 7.74:1 / 7.34:1,
+     #3355cf is 6.13:1 / 5.81:1 and 4.77:1 directly on the bloom. Royal #4169E1 as text is
+     4.48:1 on a card over the bloom -- under AA -- which is why neither text stop is royal. */
+  --accent: #2b45b8;
+  --accent-2: #3355cf;
+  --accent-deep: #1f3fa8;
+  /* 7.94:1 on --accent. */
+  --on-accent: #ffffff;
+  --grad-cta: linear-gradient(135deg, var(--accent), var(--accent-deep));
+  --on-grad: #ffffff;
+  /* The dark semantics measure 1.8–2.8:1 on the light panel; these all clear 4.5:1. */
+  --good: #17795a;
+  --bad: #b3263a;
+  --warn: #8a6414;
+  --neutral: #5c6575;
+  --violet: #5b3fb8;
+  --accent-a08: rgba(43, 69, 184, 0.08);
+  --accent-a16: rgba(43, 69, 184, 0.14);
+  --accent-a30: rgba(43, 69, 184, 0.24);
+  --good-a16: rgba(23, 121, 90, 0.14);
+  --bad-a16: rgba(179, 38, 58, 0.12);
+  --warn-a16: rgba(138, 100, 20, 0.14);
+  --bloom-a: rgba(65, 105, 225, 0.16);
+  --bloom-b: rgba(91, 63, 184, 0.08);
+  --bloom-c: rgba(65, 105, 225, 0.12);
+  --sheen: rgba(255, 255, 255, 0.9);
   --glass-sheen: linear-gradient(135deg, rgba(255, 255, 255, 0.7), rgba(255, 255, 255, 0) 50%);
   --shadow: 0 18px 44px -26px rgba(30, 60, 130, 0.5);
   --ring-track: rgba(40, 90, 190, 0.14);
@@ -56,17 +156,18 @@ body {
   margin: 0;
   padding: 0;
   color: var(--ink);
-  font: 15px/1.55 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  /* Serif reads smaller than the old system-ui at equal px, hence 15.5px/1.6. */
+  font: 400 15.5px/1.6 var(--font-ui);
 }
 
-/* The frosted backdrop: two radial blue blooms over the base colour, fixed so panels
+/* The frosted backdrop: two radial royal blooms over the base colour, fixed so panels
    blur against a stable gradient rather than scrolling content. */
 body {
   min-height: 100vh;
   background:
-    radial-gradient(1100px 620px at 12% -8%, rgba(77, 141, 255, 0.22), transparent 60%),
-    radial-gradient(900px 600px at 105% 8%, rgba(169, 139, 255, 0.18), transparent 58%),
-    radial-gradient(800px 700px at 50% 120%, rgba(47, 106, 224, 0.16), transparent 60%),
+    radial-gradient(1100px 620px at 12% -8%, var(--bloom-a), transparent 60%),
+    radial-gradient(900px 600px at 105% 8%, var(--bloom-b), transparent 58%),
+    radial-gradient(800px 700px at 50% 120%, var(--bloom-c), transparent 60%),
     linear-gradient(180deg, var(--bg), var(--bg-2));
   background-attachment: fixed;
 }
@@ -82,7 +183,10 @@ body {
 
 .page-head h1 {
   margin: 0 0 4px;
-  font-size: 22px;
+  font-family: var(--font-display);
+  font-weight: 600;
+  font-size: 27px;
+  line-height: 1.15;
   letter-spacing: 0.2px;
 }
 
@@ -99,7 +203,7 @@ body {
   -webkit-backdrop-filter: blur(var(--glass-blur)) saturate(140%);
   backdrop-filter: blur(var(--glass-blur)) saturate(140%);
   border: 1px solid var(--line);
-  border-radius: 16px;
+  border-radius: var(--r-lg);
   padding: 16px 18px;
   box-shadow: var(--shadow);
   transition: border-color 0.25s ease, box-shadow 0.25s ease, transform 0.25s ease;
@@ -124,7 +228,7 @@ body {
   margin: 0;
   font-size: 14px;
   text-transform: uppercase;
-  letter-spacing: 0.08em;
+  letter-spacing: 0.12em;
   color: var(--ink-dim);
 }
 
@@ -140,7 +244,7 @@ body {
 
 button {
   font: inherit;
-  border-radius: 7px;
+  border-radius: var(--r-md);
   border: 1px solid var(--line);
   background: var(--panel-2);
   color: var(--ink);
@@ -149,7 +253,7 @@ button {
 }
 
 button:hover:not(:disabled) {
-  border-color: var(--accent);
+  border-color: var(--royal);
 }
 
 button:disabled {
@@ -170,7 +274,7 @@ label.ghost {
   align-items: center;
   gap: 2px;
   border: 1px solid var(--line);
-  border-radius: 7px;
+  border-radius: var(--r-md);
   background: transparent;
   color: var(--ink-dim);
   font-size: 12.5px;
@@ -179,7 +283,7 @@ label.ghost {
 }
 
 label.ghost:hover {
-  border-color: var(--accent);
+  border-color: var(--royal);
   color: var(--ink);
 }
 
@@ -210,7 +314,7 @@ label.ghost[aria-busy="true"] {
 button.primary {
   background: var(--accent);
   border-color: var(--accent);
-  color: #0d1016;
+  color: var(--on-accent);
   font-weight: 650;
   padding: 9px 26px;
 }
@@ -224,7 +328,7 @@ button.primary {
 .lane {
   background: var(--panel-2);
   border: 1px solid var(--line);
-  border-radius: 9px;
+  border-radius: var(--r-md);
   padding: 12px 14px;
 }
 
@@ -246,7 +350,7 @@ button.primary {
   display: block;
   font-size: 11.5px;
   text-transform: uppercase;
-  letter-spacing: 0.07em;
+  letter-spacing: 0.12em;
   color: var(--ink-dim);
   margin-bottom: 4px;
 }
@@ -273,9 +377,9 @@ textarea {
   width: 100%;
   font: inherit;
   color: var(--ink);
-  background: #14171d;
+  background: var(--field-bg);
   border: 1px solid var(--line);
-  border-radius: 6px;
+  border-radius: var(--r-md);
   padding: 7px 9px;
 }
 
@@ -294,7 +398,7 @@ textarea {
 input:focus,
 select:focus,
 textarea:focus {
-  outline: 2px solid color-mix(in srgb, var(--accent) 55%, transparent);
+  outline: 2px solid var(--royal);
   outline-offset: 1px;
 }
 
@@ -314,9 +418,9 @@ textarea.bad {
 code {
   font-family: var(--mono);
   font-size: 12.5px;
-  background: #14171d;
+  background: var(--field-bg);
   border: 1px solid var(--line);
-  border-radius: 4px;
+  border-radius: var(--r-sm);
   padding: 1px 5px;
 }
 
@@ -330,6 +434,7 @@ code {
   margin: 6px 0 0;
   font-size: 12.5px;
   font-family: var(--mono);
+  font-variant-numeric: tabular-nums;
 }
 
 .counter.bad {
@@ -350,7 +455,7 @@ code {
   background: color-mix(in srgb, var(--warn) 10%, transparent);
   margin: 10px 0;
   padding: 8px 11px;
-  border-radius: 0 6px 6px 0;
+  border-radius: 0 var(--r-md) var(--r-md) 0;
   font-size: 13px;
 }
 
@@ -372,7 +477,7 @@ code {
 }
 
 .banner {
-  border-radius: 9px;
+  border-radius: var(--r-md);
   padding: 12px 15px;
   border: 1px solid var(--line);
 }
@@ -425,8 +530,10 @@ code {
 }
 
 .verdict {
-  font-size: 20px;
-  font-weight: 700;
+  font-family: var(--font-display);
+  font-size: 24px;
+  font-weight: 600;
+  line-height: 1.15;
   letter-spacing: 0.02em;
 }
 
@@ -434,6 +541,37 @@ code {
 .elapsed {
   font-family: var(--mono);
   font-size: 12.5px;
+  color: var(--ink-dim);
+}
+
+/* "This verdict came from a different model than the one you picked." Warn-toned rather than
+   bad: the detection succeeded, and the substitution is the feature working, but the user has
+   to be able to see which model's number they are reading. */
+.switch-note {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 6px;
+  margin: 10px 0;
+  padding: 9px 12px;
+  border-radius: var(--r-md);
+  border: 1px solid color-mix(in srgb, var(--warn) 45%, transparent);
+  background: linear-gradient(135deg, var(--warn-a16), transparent);
+  color: var(--warn);
+  font-size: 13px;
+}
+
+.switch-note code {
+  background: transparent;
+  border: 0;
+  padding: 0;
+  color: var(--ink);
+}
+
+.switch-attempt {
+  flex-basis: 100%;
+  font-family: var(--mono);
+  font-size: 11.5px;
   color: var(--ink-dim);
 }
 
@@ -476,13 +614,16 @@ code {
   display: block;
   font-size: 11.5px;
   text-transform: uppercase;
-  letter-spacing: 0.07em;
+  letter-spacing: 0.12em;
   color: var(--ink-dim);
 }
 
 .score .value {
-  font-family: var(--mono);
-  font-size: 19px;
+  font-family: var(--font-display);
+  font-weight: 600;
+  font-size: 24px;
+  line-height: 1.1;
+  font-variant-numeric: tabular-nums;
 }
 
 /* The number above is on the deciding lane's own scale, so say which one right under it:
@@ -498,7 +639,7 @@ code {
 .bar {
   height: 6px;
   border-radius: 3px;
-  background: #14171d;
+  background: var(--field-bg);
   border: 1px solid var(--line);
   overflow: hidden;
   margin-top: 4px;
@@ -510,7 +651,7 @@ code {
 }
 
 .fill.soft {
-  background: var(--accent);
+  background: var(--royal);
 }
 
 .fill.warn {
@@ -552,7 +693,7 @@ table.kv td.note {
 .attempt {
   background: var(--panel-2);
   border: 1px solid var(--line);
-  border-radius: 8px;
+  border-radius: var(--r-md);
   padding: 10px 12px;
 }
 
@@ -574,7 +715,7 @@ table.kv td.note {
   font-size: 11px;
   font-family: var(--mono);
   border: 1px solid var(--line);
-  border-radius: 20px;
+  border-radius: var(--r-pill);
   padding: 1px 8px;
   color: var(--ink-dim);
 }
@@ -606,6 +747,7 @@ table.kv td.note {
   margin: 4px 0;
   font-family: var(--mono);
   font-size: 12.5px;
+  font-variant-numeric: tabular-nums;
   color: var(--ink-dim);
 }
 
@@ -693,9 +835,9 @@ ul.warnings {
   line-height: 1.5;
   max-height: 420px;
   overflow: auto;
-  background: #14171d;
+  background: var(--field-bg);
   border: 1px solid var(--line);
-  border-radius: 6px;
+  border-radius: var(--r-md);
   padding: 10px;
   white-space: pre-wrap;
   word-break: break-word;
@@ -714,7 +856,7 @@ ul.warnings {
 .tabs button {
   background: transparent;
   border: 1px solid var(--line);
-  border-radius: 999px;
+  border-radius: var(--r-pill);
   color: var(--ink-dim);
   cursor: pointer;
   font: inherit;
@@ -724,14 +866,14 @@ ul.warnings {
 
 .tabs button[aria-selected='true'] {
   background: var(--panel-2);
-  border-color: var(--accent);
+  border-color: var(--royal);
   color: var(--ink);
 }
 
 .card {
   background: var(--panel);
   border: 1px solid var(--line);
-  border-radius: 10px;
+  border-radius: var(--r-lg);
   margin: 0 0 14px;
   padding: 14px 16px;
 }
@@ -748,9 +890,9 @@ ul.warnings {
 }
 
 .pill {
-  background: rgba(71, 201, 138, 0.14);
-  border: 1px solid rgba(71, 201, 138, 0.4);
-  border-radius: 999px;
+  background: var(--good-a16);
+  border: 1px solid color-mix(in srgb, var(--good) 40%, transparent);
+  border-radius: var(--r-pill);
   color: var(--good);
   font-size: 11px;
   letter-spacing: 0.04em;
@@ -759,20 +901,20 @@ ul.warnings {
 }
 
 .pill-off {
-  background: rgba(141, 150, 166, 0.14);
-  border-color: rgba(141, 150, 166, 0.4);
+  background: color-mix(in srgb, var(--neutral) 14%, transparent);
+  border-color: color-mix(in srgb, var(--neutral) 40%, transparent);
   color: var(--neutral);
 }
 
 .pill-bad {
-  background: rgba(255, 107, 107, 0.14);
-  border-color: rgba(255, 107, 107, 0.4);
+  background: var(--bad-a16);
+  border-color: color-mix(in srgb, var(--bad) 40%, transparent);
   color: var(--bad);
 }
 
 .pill-warn {
-  background: rgba(232, 179, 75, 0.14);
-  border-color: rgba(232, 179, 75, 0.4);
+  background: var(--warn-a16);
+  border-color: color-mix(in srgb, var(--warn) 40%, transparent);
   color: var(--warn);
 }
 
@@ -799,7 +941,7 @@ ul.warnings {
   align-items: flex-end;
   background: var(--panel-2);
   border: 1px solid var(--line);
-  border-radius: 10px;
+  border-radius: var(--r-lg);
   display: flex;
   flex-wrap: wrap;
   gap: 10px;
@@ -817,9 +959,9 @@ ul.warnings {
 
 .inline-form input,
 .inline-form select {
-  background: #14171d;
+  background: var(--field-bg);
   border: 1px solid var(--line);
-  border-radius: 6px;
+  border-radius: var(--r-md);
   color: var(--ink);
   font: inherit;
   font-size: 13px;
@@ -850,9 +992,9 @@ table.grid th {
 }
 
 table.grid input.num {
-  background: #14171d;
+  background: var(--field-bg);
   border: 1px solid var(--line);
-  border-radius: 5px;
+  border-radius: var(--r-sm);
   color: var(--ink);
   font: inherit;
   font-size: 12.5px;
@@ -861,9 +1003,9 @@ table.grid input.num {
 }
 
 table.grid select {
-  background: #14171d;
+  background: var(--field-bg);
   border: 1px solid var(--line);
-  border-radius: 5px;
+  border-radius: var(--r-sm);
   color: var(--ink);
   font: inherit;
   font-size: 12.5px;
@@ -876,7 +1018,7 @@ table.grid td.row-actions {
 }
 
 button.danger {
-  border-color: rgba(255, 107, 107, 0.45);
+  border-color: color-mix(in srgb, var(--bad) 45%, transparent);
   color: var(--bad);
 }
 
@@ -909,7 +1051,8 @@ table.grid td.num-bad {
 
 .panel,
 .card {
-  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.35);
+  /* Crisp edge: 1px --line border plus a top hairline highlight so the glass reads sharp. */
+  box-shadow: var(--shadow), inset 0 1px 0 var(--sheen);
   transition: border-color 0.25s ease, box-shadow 0.25s ease;
 }
 
@@ -923,18 +1066,18 @@ table.grid td.num-bad {
   flex: 0 0 auto;
   width: 46px;
   height: 46px;
-  border-radius: 13px;
+  border-radius: var(--r-lg);
   display: grid;
   place-items: center;
-  background: linear-gradient(145deg, rgba(111, 168, 255, 0.22), rgba(71, 201, 138, 0.14));
-  border: 1px solid color-mix(in srgb, var(--accent) 45%, var(--line));
+  background: linear-gradient(145deg, var(--accent-a30), var(--good-a16));
+  border: 1px solid color-mix(in srgb, var(--royal) 45%, var(--line));
 }
 
 .brand-mark svg {
   width: 26px;
   height: 26px;
   fill: none;
-  stroke: var(--accent);
+  stroke: var(--royal);
   stroke-width: 1.6;
   stroke-linecap: round;
   stroke-linejoin: round;
@@ -985,13 +1128,13 @@ button.primary {
   align-items: center;
   gap: 2px;
   transition: transform 0.15s ease, box-shadow 0.2s ease, filter 0.2s ease;
-  box-shadow: 0 4px 14px rgba(111, 168, 255, 0.25);
+  box-shadow: 0 4px 14px var(--accent-a30);
 }
 
 button.primary:hover:not(:disabled) {
   transform: translateY(-1px);
   filter: brightness(1.07);
-  box-shadow: 0 6px 18px rgba(111, 168, 255, 0.32);
+  box-shadow: 0 6px 18px color-mix(in srgb, var(--accent) 40%, transparent);
 }
 
 button.primary .ico {
@@ -1034,8 +1177,8 @@ button.primary .ico {
 }
 
 .lane:hover {
-  border-color: color-mix(in srgb, var(--accent) 40%, var(--line));
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.35);
+  border-color: color-mix(in srgb, var(--royal) 40%, var(--line));
+  box-shadow: var(--shadow);
 }
 
 .lane-enter {
@@ -1096,8 +1239,8 @@ button.primary .ico {
   display: block;
   width: 40px;
   height: 22px;
-  border-radius: 999px;
-  background: #14171d;
+  border-radius: var(--r-pill);
+  background: var(--field-bg);
   border: 1px solid var(--line);
   position: relative;
   transition: background 0.25s ease, border-color 0.25s ease;
@@ -1115,7 +1258,7 @@ button.primary .ico {
 }
 
 .lane-switch.on .track {
-  background: color-mix(in srgb, var(--good) 22%, #14171d);
+  background: color-mix(in srgb, var(--good) 22%, var(--field-bg));
   border-color: color-mix(in srgb, var(--good) 55%, transparent);
 }
 
@@ -1125,7 +1268,7 @@ button.primary .ico {
 }
 
 .switch input:focus-visible + .track {
-  outline: 2px solid color-mix(in srgb, var(--accent) 55%, transparent);
+  outline: 2px solid var(--royal);
   outline-offset: 2px;
 }
 
@@ -1138,7 +1281,7 @@ button.primary .ico {
   flex: 0 0 auto;
   width: 38px;
   height: 38px;
-  border-radius: 11px;
+  border-radius: var(--r-lg);
   display: grid;
   place-items: center;
   border: 1px solid var(--line);
@@ -1205,7 +1348,7 @@ button.primary .ico {
   color: var(--ink-dim);
   font-size: 13px;
   text-transform: uppercase;
-  letter-spacing: 0.08em;
+  letter-spacing: 0.12em;
   padding: 8px 0 10px;
   transition: color 0.2s ease;
 }
@@ -1269,9 +1412,9 @@ button.primary .ico {
 .ev-legend .sw {
   width: 14px;
   height: 14px;
-  border-radius: 4px;
+  border-radius: var(--r-sm);
   display: inline-block;
-  border: 1px solid rgba(255, 255, 255, 0.12);
+  border: 1px solid var(--line);
 }
 
 .ev-note {
@@ -1286,9 +1429,9 @@ button.primary .ico {
   padding: 12px 14px;
   max-height: 460px;
   overflow: auto;
-  background: #14171d;
+  background: var(--field-bg);
   border: 1px solid var(--line);
-  border-radius: 8px;
+  border-radius: var(--r-md);
   font-family: var(--mono);
   font-size: 13px;
   line-height: 1.75;
@@ -1333,7 +1476,7 @@ button.primary .ico {
   background-image: var(--glass-sheen);
   backdrop-filter: blur(var(--glass-blur)) saturate(150%);
   border-bottom: 1px solid var(--line);
-  box-shadow: 0 10px 30px -24px rgba(0, 0, 0, 0.8);
+  box-shadow: var(--shadow);
 }
 
 .appbar .brand {
@@ -1342,7 +1485,9 @@ button.primary .ico {
 
 .appbar .brand h1 {
   margin: 0;
-  font-size: 16px;
+  font-family: var(--font-display);
+  font-weight: 600;
+  font-size: 19px;
   letter-spacing: 0.2px;
 }
 
@@ -1362,7 +1507,7 @@ button.primary .ico {
   align-items: center;
   gap: 7px;
   padding: 8px 14px;
-  border-radius: 999px;
+  border-radius: var(--r-pill);
   border: 1px solid transparent;
   background: transparent;
   color: var(--ink-dim);
@@ -1382,10 +1527,10 @@ button.primary .ico {
 }
 
 .nav button[aria-selected='true'] {
-  color: #fff;
-  background: linear-gradient(135deg, var(--accent), var(--accent-deep));
+  color: var(--on-grad);
+  background: var(--grad-cta);
   border-color: var(--line-strong);
-  box-shadow: 0 8px 22px -12px var(--accent);
+  box-shadow: 0 8px 22px -12px var(--royal);
 }
 
 .appbar-right {
@@ -1401,7 +1546,7 @@ button.primary .ico {
   display: inline-grid;
   place-items: center;
   padding: 0;
-  border-radius: 12px;
+  border-radius: var(--r-lg);
   border: 1px solid var(--line);
   background: var(--panel-2);
   color: var(--ink);
@@ -1423,7 +1568,7 @@ button.primary .ico {
   align-items: center;
   gap: 8px;
   padding: 5px 6px 5px 12px;
-  border-radius: 999px;
+  border-radius: var(--r-pill);
   border: 1px solid var(--line);
   background: var(--panel-2);
   font-size: 13px;
@@ -1432,11 +1577,11 @@ button.primary .ico {
 .user-chip .role {
   font-size: 10.5px;
   text-transform: uppercase;
-  letter-spacing: 0.08em;
+  letter-spacing: 0.12em;
   padding: 2px 8px;
-  border-radius: 999px;
-  background: linear-gradient(135deg, var(--accent), var(--accent-deep));
-  color: #fff;
+  border-radius: var(--r-pill);
+  background: var(--grad-cta);
+  color: var(--on-grad);
 }
 
 .user-chip .role.user {
@@ -1458,7 +1603,7 @@ button.primary .ico {
   height: 54px;
   border-radius: 50%;
   border: 3px solid var(--line);
-  border-top-color: var(--accent);
+  border-top-color: var(--royal);
   animation: spin 0.9s linear infinite;
 }
 
@@ -1480,12 +1625,12 @@ button.primary .ico {
 .auth-card {
   width: min(420px, 100%);
   padding: 30px 28px 26px;
-  border-radius: 20px;
+  border-radius: var(--r-lg);
   border: 1px solid var(--line);
   background: var(--panel);
   background-image: var(--glass-sheen);
   backdrop-filter: blur(var(--glass-blur)) saturate(150%);
-  box-shadow: var(--shadow);
+  box-shadow: var(--shadow), inset 0 1px 0 var(--sheen);
 }
 
 .auth-card .auth-brand {
@@ -1497,7 +1642,10 @@ button.primary .ico {
 
 .auth-card h1 {
   margin: 0;
-  font-size: 20px;
+  font-family: var(--font-display);
+  font-weight: 600;
+  font-size: 25px;
+  line-height: 1.15;
 }
 
 .auth-card .tagline {
@@ -1510,7 +1658,7 @@ button.primary .ico {
   display: flex;
   gap: 6px;
   padding: 4px;
-  border-radius: 12px;
+  border-radius: var(--r-lg);
   background: var(--panel-2);
   border: 1px solid var(--line);
   margin-bottom: 18px;
@@ -1520,7 +1668,7 @@ button.primary .ico {
   flex: 1;
   padding: 8px;
   border: 0;
-  border-radius: 9px;
+  border-radius: var(--r-md);
   background: transparent;
   color: var(--ink-dim);
   font: inherit;
@@ -1530,8 +1678,8 @@ button.primary .ico {
 }
 
 .auth-modes button[aria-selected='true'] {
-  background: linear-gradient(135deg, var(--accent), var(--accent-deep));
-  color: #fff;
+  background: var(--grad-cta);
+  color: var(--on-grad);
 }
 
 .auth-card .field {
@@ -1547,15 +1695,15 @@ button.primary .ico {
 .auth-error {
   margin: 0 0 14px;
   padding: 10px 12px;
-  border-radius: 10px;
-  border: 1px solid rgba(255, 95, 109, 0.4);
-  background: rgba(255, 95, 109, 0.12);
+  border-radius: var(--r-lg);
+  border: 1px solid color-mix(in srgb, var(--bad) 40%, transparent);
+  background: var(--bad-a16);
   color: #ffd7db;
   font-size: 13px;
 }
 
 :root[data-theme='light'] .auth-error {
-  color: #8a1f28;
+  color: var(--bad);
 }
 
 .auth-foot {
@@ -1581,19 +1729,19 @@ button.primary .ico {
   align-items: center;
   gap: 8px;
   padding: 9px 16px;
-  border-radius: 999px;
+  border-radius: var(--r-pill);
   text-decoration: none;
   font-size: 13.5px;
-  color: #fff;
-  background: linear-gradient(135deg, var(--accent), var(--accent-deep));
+  color: var(--on-grad);
+  background: var(--grad-cta);
   border: 1px solid var(--line-strong);
-  box-shadow: 0 10px 26px -14px var(--accent);
+  box-shadow: 0 10px 26px -14px var(--royal);
   transition: transform 0.12s ease, box-shadow 0.18s ease;
 }
 
 .paper-link:hover {
   transform: translateY(-1px);
-  box-shadow: 0 14px 30px -14px var(--accent);
+  box-shadow: 0 14px 30px -14px var(--royal);
 }
 
 .rank-grid {
@@ -1607,12 +1755,12 @@ button.primary .ico {
   display: flex;
   gap: 16px;
   padding: 18px 16px 16px;
-  border-radius: 16px;
+  border-radius: var(--r-lg);
   border: 1px solid var(--line);
   background: var(--panel);
   background-image: var(--glass-sheen);
   backdrop-filter: blur(var(--glass-blur)) saturate(140%);
-  box-shadow: var(--shadow);
+  box-shadow: var(--shadow), inset 0 1px 0 var(--sheen);
   transition: border-color 0.18s ease, transform 0.14s ease;
 }
 
@@ -1622,7 +1770,7 @@ button.primary .ico {
 }
 
 .rank-card.deployed {
-  border-color: rgba(71, 201, 138, 0.5);
+  border-color: color-mix(in srgb, var(--good) 50%, transparent);
 }
 
 .rank-badge {
@@ -1634,12 +1782,13 @@ button.primary .ico {
   padding: 0 9px;
   display: grid;
   place-items: center;
-  border-radius: 999px;
-  font-size: 13px;
-  font-weight: 700;
-  color: #fff;
-  background: linear-gradient(135deg, var(--accent-2), var(--accent-deep));
-  box-shadow: 0 8px 18px -10px var(--accent);
+  border-radius: var(--r-pill);
+  font-family: var(--font-display);
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--on-grad);
+  background: var(--grad-cta);
+  box-shadow: 0 8px 18px -10px var(--royal);
 }
 
 .rank-body {
@@ -1667,7 +1816,8 @@ button.primary .ico {
   display: flex;
   gap: 14px;
   flex-wrap: wrap;
-  font-size: 12px;
+  /* serif reads smaller than the old system-ui at 12px */
+  font-size: 12.5px;
   color: var(--ink-dim);
 }
 
@@ -1681,7 +1831,7 @@ button.primary .ico {
   align-items: center;
   gap: 5px;
   padding: 2px 9px;
-  border-radius: 999px;
+  border-radius: var(--r-pill);
   font-size: 11px;
   border: 1px solid var(--line);
   background: var(--panel-2);
@@ -1689,22 +1839,22 @@ button.primary .ico {
 }
 
 .chip.good {
-  border-color: rgba(71, 201, 138, 0.45);
+  border-color: color-mix(in srgb, var(--good) 45%, transparent);
   color: var(--good);
 }
 
 .chip.free {
-  border-color: rgba(169, 139, 255, 0.45);
+  border-color: color-mix(in srgb, var(--violet) 45%, transparent);
   color: var(--violet);
 }
 
 .chip.lane {
-  border-color: rgba(77, 141, 255, 0.5);
+  border-color: color-mix(in srgb, var(--royal) 50%, transparent);
   color: var(--accent-2);
 }
 
 .chip.warn {
-  border-color: rgba(240, 176, 78, 0.5);
+  border-color: color-mix(in srgb, var(--warn) 50%, transparent);
   color: var(--warn);
 }
 
@@ -1715,27 +1865,27 @@ button.primary .ico {
   gap: 7px;
   margin-top: 12px;
   padding: 7px 13px;
-  border-radius: 999px;
+  border-radius: var(--r-pill);
   font-size: 12px;
   font-weight: 600;
   letter-spacing: 0.01em;
   color: var(--accent-2);
-  border: 1px solid rgba(77, 141, 255, 0.45);
-  background: linear-gradient(135deg, rgba(77, 141, 255, 0.14), rgba(77, 141, 255, 0));
+  border: 1px solid color-mix(in srgb, var(--royal) 45%, transparent);
+  background: linear-gradient(135deg, var(--accent-a16), transparent);
   cursor: pointer;
   transition: border-color 0.16s ease, background 0.16s ease, transform 0.12s ease;
 }
 
 .pick-btn:hover {
-  border-color: var(--accent);
-  background: linear-gradient(135deg, rgba(77, 141, 255, 0.24), rgba(77, 141, 255, 0.04));
+  border-color: var(--royal);
+  background: linear-gradient(135deg, color-mix(in srgb, var(--accent) 24%, transparent), var(--accent-a08));
   transform: translateY(-1px);
 }
 
 .pick-btn.active {
   color: var(--good);
-  border-color: rgba(71, 201, 138, 0.55);
-  background: linear-gradient(135deg, rgba(71, 201, 138, 0.18), rgba(71, 201, 138, 0));
+  border-color: color-mix(in srgb, var(--good) 55%, transparent);
+  background: linear-gradient(135deg, var(--good-a16), transparent);
 }
 
 .pick-btn .ico {
@@ -1756,11 +1906,11 @@ button.primary .ico {
   gap: 8px;
   margin: 12px 0 0;
   padding: 10px 14px;
-  border-radius: 12px;
+  border-radius: var(--r-lg);
   font-size: 12.5px;
   color: var(--ink-dim);
-  border: 1px solid rgba(77, 141, 255, 0.4);
-  background: linear-gradient(135deg, rgba(77, 141, 255, 0.12), rgba(77, 141, 255, 0.02));
+  border: 1px solid color-mix(in srgb, var(--royal) 40%, transparent);
+  background: linear-gradient(135deg, var(--accent-a16), transparent);
 }
 
 .pick-banner b {
@@ -1771,10 +1921,10 @@ button.primary .ico {
 .pick-dot {
   width: 8px;
   height: 8px;
-  border-radius: 999px;
+  border-radius: var(--r-pill);
   flex: none;
-  background: var(--accent);
-  box-shadow: 0 0 10px 1px var(--accent);
+  background: var(--royal);
+  box-shadow: 0 0 10px 1px var(--royal);
 }
 
 .pick-note {
@@ -1834,7 +1984,7 @@ button.primary .ico {
 }
 
 .ring-value {
-  stroke: var(--accent);
+  stroke: var(--royal);
   stroke-linecap: round;
   transition: stroke-dashoffset 0.7s cubic-bezier(0.22, 1, 0.36, 1);
 }
@@ -1866,14 +2016,15 @@ button.primary .ico {
 }
 
 .ring-num {
-  font-size: 25px;
-  font-weight: 700;
+  font-family: var(--font-display);
+  font-size: 30px;
+  font-weight: 600;
   font-variant-numeric: tabular-nums;
   color: var(--ink);
 }
 
 .ring.compact .ring-num {
-  font-size: 17px;
+  font-size: 20px;
 }
 
 .ring-unit {
@@ -1919,6 +2070,159 @@ button.primary .ico {
   text-align: center;
 }
 
+/* ===================== using pool / discovery ===================== */
+
+/* The pool is the one control on the page whose order changes what a detection costs, so it
+   reads as a ranked list rather than a grid: position number, model, health, and the handles.
+   Drag states are drawn with the royal token at low alpha so the drop target is obvious in
+   both themes without a second colour vocabulary. */
+.pool-list {
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+}
+
+.pool-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  padding: 9px 12px;
+  border-radius: var(--r-md);
+  border: 1px solid var(--line);
+  background: var(--panel-2);
+  transition: border-color 0.16s ease, background 0.16s ease, transform 0.12s ease;
+}
+
+.pool-row:hover {
+  border-color: color-mix(in srgb, var(--royal) 45%, var(--line));
+}
+
+.pool-row.dragging {
+  opacity: 0.55;
+  border-style: dashed;
+}
+
+.pool-row.drop-before {
+  border-top: 2px solid var(--royal);
+}
+
+.pool-row.demoted {
+  border-color: color-mix(in srgb, var(--warn) 45%, transparent);
+  background: linear-gradient(135deg, var(--warn-a16), transparent);
+}
+
+.pool-row .grip {
+  cursor: grab;
+  color: var(--ink-dim);
+  font-size: 13px;
+  letter-spacing: -2px;
+  user-select: none;
+}
+
+.pool-row .grow {
+  flex: 1;
+  min-width: 160px;
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  flex-wrap: wrap;
+}
+
+.pool-row .hint {
+  font-size: 12px;
+  color: var(--ink-dim);
+}
+
+.pool-row .demote-note {
+  flex-basis: 100%;
+  color: var(--warn);
+}
+
+/* The served position, in a royal disc: it is the number detection actually follows, which
+   is why it is styled as a badge and `your_rank` only appears in the demotion sentence. */
+.pool-pos {
+  flex: none;
+  width: 24px;
+  height: 24px;
+  display: grid;
+  place-items: center;
+  border-radius: var(--r-pill);
+  font-family: var(--font-display);
+  font-weight: 600;
+  font-size: 13px;
+  font-variant-numeric: tabular-nums;
+  color: var(--on-grad);
+  background: var(--grad-cta);
+}
+
+.pool-row button.icon-only {
+  width: 28px;
+  padding: 3px 0;
+  text-align: center;
+  line-height: 1;
+}
+
+.pool-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-top: 10px;
+}
+
+.discover {
+  margin-top: 18px;
+  padding-top: 14px;
+  border-top: 1px solid var(--line);
+}
+
+.discover .panel-head h3 {
+  margin: 0;
+  font-size: 15px;
+}
+
+.discover-actions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin: 10px 0 0;
+}
+
+.job-list {
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin: 12px 0 0;
+  padding: 0;
+}
+
+.job-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  padding: 7px 10px;
+  border-radius: var(--r-sm);
+  border: 1px solid var(--line);
+  background: var(--panel-2);
+  font-size: 12.5px;
+}
+
+.job-row.bad {
+  border-color: color-mix(in srgb, var(--bad) 45%, transparent);
+}
+
+.job-row .hint {
+  font-family: var(--mono);
+  font-size: 11.5px;
+  color: var(--ink-dim);
+}
+
 /* ===================== BYOK / guides ===================== */
 
 .byok {
@@ -1933,7 +2237,7 @@ button.primary .ico {
   gap: 10px;
   flex-wrap: wrap;
   padding: 10px 12px;
-  border-radius: 12px;
+  border-radius: var(--r-lg);
   border: 1px solid var(--line);
   background: var(--panel-2);
 }
@@ -1957,7 +2261,7 @@ button.primary .ico {
 
 .guide {
   padding: 14px;
-  border-radius: 14px;
+  border-radius: var(--r-lg);
   border: 1px solid var(--line);
   background: var(--panel-2);
   transition: border-color 0.18s ease, transform 0.14s ease;
@@ -2003,7 +2307,7 @@ button.primary .ico {
   align-items: center;
   gap: 14px;
   padding: 12px 14px;
-  border-radius: 12px;
+  border-radius: var(--r-lg);
   border: 1px solid var(--line);
   background: var(--panel-2);
   cursor: pointer;
@@ -2017,28 +2321,28 @@ button.primary .ico {
 
 .history-row .verdict-pill {
   padding: 3px 10px;
-  border-radius: 999px;
+  border-radius: var(--r-pill);
   font-size: 11.5px;
   font-weight: 600;
   white-space: nowrap;
 }
 
 .verdict-pill.ai {
-  background: rgba(255, 95, 109, 0.16);
+  background: var(--bad-a16);
   color: var(--bad);
-  border: 1px solid rgba(255, 95, 109, 0.4);
+  border: 1px solid color-mix(in srgb, var(--bad) 40%, transparent);
 }
 
 .verdict-pill.human {
-  background: rgba(71, 201, 138, 0.16);
+  background: var(--good-a16);
   color: var(--good);
-  border: 1px solid rgba(71, 201, 138, 0.4);
+  border: 1px solid color-mix(in srgb, var(--good) 40%, transparent);
 }
 
 .verdict-pill.review {
-  background: rgba(232, 179, 75, 0.16);
+  background: var(--warn-a16);
   color: var(--warn);
-  border: 1px solid rgba(232, 179, 75, 0.4);
+  border: 1px solid color-mix(in srgb, var(--warn) 40%, transparent);
 }
 
 .verdict-pill.none {
