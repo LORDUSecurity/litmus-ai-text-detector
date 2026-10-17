@@ -239,3 +239,69 @@ describe('RankingView scoring lock', () => {
     expect(empty.nativeElement.querySelector('.lock-note')).toBe(null);
   });
 });
+
+/**
+ * The citation slot on the Ranking page.
+ *
+ * The report used to be reachable only when an admin had typed a URL, and a fresh install has none —
+ * so the page that claims "the best result we found" linked to nothing. The report now ships inside
+ * this bundle (`public/research/report.html`) and that in-site copy is the fallback; `paper_url` is
+ * only an override, because the settings validator rejects a relative path so an in-site target
+ * could never have been stored there anyway. These specs are what keep the two states distinct:
+ * blank must land on the shipped copy, not on an empty href, and a saved DOI must win.
+ */
+describe('RankingView report link', () => {
+  async function buildWith(config: Partial<PublicConfig>) {
+    const backend = {
+      config: () => of({ ...CONFIG, ...config } as unknown as PublicConfig),
+      ranking: () => of(EMPTY_RANKING),
+      myKeys: () => of<UserKeyView[]>([]),
+      addMyKey: vi.fn(),
+      deleteMyKey: () => of({ deleted: 1 }),
+    };
+    await TestBed.configureTestingModule({
+      imports: [RankingView],
+      providers: [
+        { provide: BackendService, useValue: backend },
+        {
+          provide: AuthService,
+          useValue: { isAdmin: () => false, user: () => ({ role: 'user', username: 'nadia' }) },
+        },
+      ],
+    }).compileComponents();
+
+    const f = TestBed.createComponent(RankingView);
+    f.detectChanges();
+    await f.whenStable();
+    f.detectChanges();
+    return f;
+  }
+
+  const link = (f: ComponentFixture<RankingView>) =>
+    f.nativeElement.querySelector('a.paper-link') as HTMLAnchorElement;
+
+  it('falls back to the copy this site serves when no paper URL is configured', async () => {
+    const f = await buildWith({ paper_url: '', paper_title: '' });
+    expect(link(f), 'the citation must not vanish on a fresh install').toBeTruthy();
+    expect(link(f).getAttribute('href')).toBe('/research/report.html');
+    expect(link(f).textContent).toContain('Technical report');
+  });
+
+  it('prefers the admin\'s archival URL and their own label', async () => {
+    const f = await buildWith({
+      paper_url: 'https://zenodo.org/doi/10.5281/zenodo.2',
+      paper_title: 'Read the preprint',
+    });
+    expect(link(f).getAttribute('href')).toBe('https://zenodo.org/doi/10.5281/zenodo.2');
+    expect(link(f).textContent).toContain('Read the preprint');
+  });
+
+  it('labels a saved URL with a default rather than showing an empty link', async () => {
+    const f = await buildWith({
+      paper_url: 'https://zenodo.org/doi/10.5281/zenodo.2',
+      paper_title: '',
+    });
+    expect(link(f).getAttribute('href')).toContain('zenodo.org');
+    expect(link(f).textContent).toContain('Read the paper');
+  });
+});

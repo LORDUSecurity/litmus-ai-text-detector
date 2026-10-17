@@ -3650,3 +3650,92 @@ reads the ceiling out of `seed.LANE_TIMEOUT_MS` and compares it to what the bina
 PASS  with the 240 s ceiling the capture actually supports
       [timeout_ms=240000 (backend waits 270 s)]
 ```
+
+## Round 27: the report is a page the product serves, not a folder in the repo (2026-10-17)
+
+Asked whether the research was "in" the deliverable, the answer had been no: it lived in
+`research-zenodo/`, waiting on a DOI only the author can mint. That is the wrong shape for a site whose
+whole claim is "here is the evidence, dated to its window" — a user on the deployed page cannot see a
+directory. So the report became **an asset of the build**, and this round is the measurement of that
+move plus the two things it exposed.
+
+**One placement covers three servers.** `frontend/angular.json` globs `public/**/*` into the bundle, so
+`frontend/public/research/report.html` arrives in `dist/frontend/browser/research/`, which nginx serves
+through `try_files $uri` and the packaged exe serves through the same `SpaSplit` tree it uses for the
+SPA. The dev server serves it too. Nothing backend-side was added, and the deposit copy under
+`research-zenodo/` stays the authority — the preflight now fails if the two drift and prints the exact
+`cp` that repairs it.
+
+**`paper_url` could not be the mechanism, and that is a validation fact, not a preference.** The
+settings validator accepts only an absolute http(s) URL with a host, so `/research/report.html` can
+never be stored in it. The link therefore resolves in the view: admin URL set → the archival copy (a
+DOI); blank → the report this deployment serves. The earlier behaviour ("link renders only when a URL
+is configured") is gone, because it left a fresh install with no citation at all — the same
+user-visible dead end the Ranking page had with zero pinnable cards.
+
+**The trap that would have shipped silently: `cp` without `-r`.** Staging step 1 of `installer/BUILD.md`
+is `cp frontend/dist/frontend/browser/* …`; `cp` prints `omitting directory` and exits non-zero for
+`research/`, so the exe would carry the current hashed bundle and no report. What makes this worth
+writing down is that no existing check would have caught it *by name*: the bundle hash is the SPA's,
+and both servers answer an unknown path with `index.html` and **status 200**. A status code can never
+show a missing static asset here. The checks added compare served **bytes** with the repo copy:
+
+```
+PASS  the packaged exe serves the technical report the Ranking page links  [200 53601 bytes identical_to_deposit=True]
+PASS  …and the printable copy as a PDF  [200 471173 bytes magic=b'%PDF-']
+```
+
+`backend/serve_local.py` also pins `.pdf: application/pdf` in its mimetype map. Without it the frozen
+exe falls through to the Windows registry for an extension it has never seen, and the printable copy
+arrives as whatever the host decides — which is why the container check asserts the Content-Type, not
+just the bytes.
+
+**Live proof, both artifacts, same build.** The two shipped images were rebuilt (`docker compose up -d
+--build backend web`, n8n left running so its webhook registration survives) and the stack re-driven
+through nginx:
+
+```
+PASS  …and the technical report is served by the site, byte for byte  [53601 B ctype='text/html' part_ii=True]
+PASS  …and the printable copy downloads as a PDF, not as HTML  [471173 B ctype='application/pdf']
+PASS  a labeled human text is scored through nginx (hu-000)
+      [200 203.4s verdict=HUMAN_LIKELY p=0.18 key_source=header lane=z-ai/glm-5.3-flash
+       secondary=False evidence_legs=1 phrases=3]
+PASS  a labeled AI text is scored through nginx (ai-000)
+      [200 223.6s verdict=AI_GENERATED p=0.88 key_source=header lane=z-ai/glm-5.3-flash
+       secondary=False evidence_legs=1 phrases=4]
+PASS  the deployed lane separates the two classes it was calibrated on
+14/14 checks passed
+```
+
+`ai-000` read `p=0.80` in Round 26's run and `0.88` here — same verdict, same side of the 0.80 cut by
+a wider margin, and exactly the run-to-run movement Round 16 measured. Noted rather than smoothed
+over, because a report that quotes one number cannot claim the other.
+
+The preflight that needs no daemon went 33 → 38 checks, the container proof 12 → 14, the exe proof
+22 → 24; the setup package recompiled in 41.656 s with no warnings (44,941,122 bytes).
+
+**What could not be re-run, and why it matters.** The Angular suite did not execute for this round.
+The failure is the host, not the code: `ng test` builds through esbuild, and every invocation — a
+whole-`ui` chunk and a single file — died in the build phase with `Fatal process out of memory: Zone`.
+`Win32_OperatingSystem` reported `FreePhysicalMemory 1,596,324 KB` but `FreeVirtualMemory 24,080 KB`:
+the commit charge, not the working set, was exhausted (vmmem holding ~5.8 GB with the stack up, which
+this round must not stop). `bash` itself failed to fork once in the same minute
+(`0xC0000142`). `NODE_OPTIONS=--max-old-space-size` cannot reach a native zone allocation, so there
+was no knob left to turn. What was done instead, and its exact limit: the three new specs
+(blank → `/research/report.html`, DOI → DOI href, DOI + blank label → "Read the paper") ran green
+earlier in this same session against the sources that are now in the build — `ranking-view.ts` and
+`ranking-view.spec.ts` have not been touched since — and the shipped bundle was then proved by
+grepping **the served bytes** for the fallback path (`verify_exe_bundle.py "/research/report.html"`,
+2 occurrences in `main-3WW256QJ.js`). That is evidence the behaviour is in the artifact; it is not
+evidence the specs still pass, and the suite owes a rerun on a host with commit headroom.
+
+**The report itself grew a Part II** (window 2026-10-13 → 2026-10-17, §9): kimi-k3's zero-wrong
+recommendation is retracted as an operating choice — the model returns HTTP 410 `model_removed` with
+`effectiveDate: 2026-10-15T08:00:00Z`, so its capture is frozen at 39/48 and its promotion was already
+void on holdout grounds; the shipped primary's replacement lane is documented with its measured band,
+its 156-decided/3-wrong score and the tie-break-off comparison table; the transport ceiling (504 at
+~302 s server-side, no client timeout outruns it), the length-band collapse (coverage 92 % → 29 % on
+<300-char texts), the stress corpus, the clean-vs-dirty effect sizes, the phrase-evidence domain
+(575 quotes, 0.30–0.95) and the uncapped control (McNemar p = 1.0000, 0 discordant) all appear with
+their corpora named. The §6 table now carries the two correction marks instead of a prose caveat, and
+the old "no free lane verified through a live webhook" limitation is closed by the 12-of-12 run above.

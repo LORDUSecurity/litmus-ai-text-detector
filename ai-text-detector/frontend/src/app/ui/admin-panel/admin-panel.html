@@ -276,9 +276,11 @@
         </button>
       </form>
       <p class="hint">
-        Blank paper URL removes the button from the Ranking page; the reference stays in
-        <code>docs/</code> until it is published. <code>allowed_llm_hosts</code> is the comma-list of
-        gateway hosts BYOK may point at.
+        With a blank paper URL the Ranking page links the technical report that this build ships
+        (<code>/research/report.html</code>); set a URL to point that button at the published copy
+        instead. A relative path cannot be stored here — the validator wants an absolute http(s) URL,
+        which is why the in-site report is the fallback rather than a setting.
+        <code>allowed_llm_hosts</code> is the comma-list of gateway hosts BYOK may point at.
       </p>
       <label>allowed gateway hosts
         <input name="allowed_llm_hosts" size="60" [ngModel]="draft().allowed_llm_hosts"

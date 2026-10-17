@@ -149,6 +149,27 @@ def main() -> int:
           "nginx serves the SPA, and the bundle the repo built",
           f"served={bundle[:1]} dist={want}")
 
+    # 3b-3c: the citation the page links must be served by this deploy. An unknown path here does NOT
+    # 404 -- the SPA fallback answers 200 with index.html -- so the only honest test is byte equality
+    # with the copy the repo holds, not a status code.
+    def fetch_raw(path: str) -> tuple[bytes, str]:
+        try:
+            with urllib.request.urlopen(BASE + path, timeout=30) as resp:
+                return resp.read(), resp.headers.get("Content-Type", "")
+        except Exception as exc:  # noqa: BLE001
+            return b"", f"{type(exc).__name__}: {exc}"
+
+    served_html, html_ctype = fetch_raw("/research/report.html")
+    repo_html = (ROOT / "research-zenodo" / "report.html")
+    same_html = repo_html.is_file() and served_html == repo_html.read_bytes()
+    check(same_html, "…and the technical report is served by the site, byte for byte",
+          f"{len(served_html)} B ctype={html_ctype.split(';')[0]!r} "
+          f"part_ii={b'Part II' in served_html}")
+    served_pdf, pdf_ctype = fetch_raw("/research/report.pdf")
+    check(served_pdf.startswith(b"%PDF") and "pdf" in pdf_ctype.lower(),
+          "…and the printable copy downloads as a PDF, not as HTML",
+          f"{len(served_pdf)} B ctype={pdf_ctype.split(';')[0]!r}")
+
     # 4-6: an authenticated operator view of the engine.
     op, st, who, _env = admin_opener()
     # /auth/login wraps the account: {"user": {"username", "role", ...}}. Reading `role` off the

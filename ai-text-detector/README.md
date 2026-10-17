@@ -171,6 +171,33 @@ gate both ways, the 400 refusals, the guide round-trip into a plain user's `/con
 `/n8n/status` following the stored target, the labelled 502, and one real detection
 through the just-saved target).
 
+### The technical report is an asset of the site, not a folder in the repo
+
+Every deployment serves its own evidence: `frontend/public/research/report.html` (+ `report.pdf`) is
+copied from the deposit package and lands in the built bundle, so nginx and the packaged `.exe` both
+serve it at `/research/report.html` — no object storage, no second origin, and nothing for a user to
+configure. The Ranking page links it unconditionally.
+
+`paper_url` stays the *override*: set it (admin-only, and the validator requires an absolute http(s)
+URL, which is why a site-relative path cannot be stored there) and the link becomes the archival copy,
+e.g. a DOI. Leave it blank and the link is the report this build ships. Neither state leaves the page
+without a citation — which is why the earlier "link renders only when a URL is configured" behaviour
+was dropped.
+
+Two copies means one drift risk, and all three verifiers cover it: `verify_deploy_recipe.py` fails if
+`frontend/public/research/report.html` and `research-zenodo/report.html` are not byte-identical
+(it prints the exact `cp` to repair), fails if either copy is untracked, and warns if
+`frontend/dist` carries an older report than the source. `verify_container_deploy.py` and
+`verify_exe_bundle.py` then prove it from the *served* bytes, because both servers answer an unknown
+path with `index.html` and **200** — a status code can never show a missing asset here.
+
+After editing the report, re-copy and rebuild the bundle:
+
+```bash
+cp research-zenodo/report.html research-zenodo/report.pdf frontend/public/research/
+cd frontend && npx ng build && cd ..    # dist/frontend/browser/research/ must update too
+```
+
 ### Tuned parameters are not decorative
 
 Every parameter on a `models` row is applied to the detection, not just stored: the
@@ -191,7 +218,11 @@ node n8n/test-parse.js                # 14: truncated answers salvage a whole nu
 node n8n/test-ensemble.js             # tie-break decision table + the optional-lane contract
 python -m pytest backend/tests -q     # 127: routing, encryption, purger, tuning block, auth gate, off-lane
                                       # sanitization, and slow-engine-vs-missing-engine labelling
-cd frontend && npx ng test --watch=false   # 86: lane_config composition, key headers, admin card, quote painting, lane-scale note
+cd frontend && npx ng test --watch=false   # 89: lane_config composition, key headers, admin card, quote painting,
+                                      # lane-scale note, report-link fallback (blank paper_url -> /research/)
+                                      # On a host with no commit headroom esbuild dies in the build phase
+                                      # ("Fatal process out of memory: Zone"); run --include subsets —
+                                      # NODE_OPTIONS cannot fix a native zone allocation.
 node tools/verify-lane-retry.js       # the workflow retries a failing lane (loopback mock, no budget spent)
 node tools/verify-free-lane.js        # a real text judged end-to-end through a free OpenRouter lane
 node benchmark/phrase-match-rate.js   # how many of the model's own quotes the evidence panel can locate (575/575)
@@ -207,21 +238,27 @@ python tools/verify_deploy_recipe.py  # container preflight, no daemon needed: C
                                       # .dockerignore, CRLF in files a Linux container executes, the
                                       # healthcheck path is public AND routed, the timeout chain nests
                                       # (lane + 30 -> gunicorn -> nginx), DEPLOY.md quotes the same
-                                      # numbers the files carry (33 checks)
+                                      # numbers the files carry, the two shipped copies of the report
+                                      # are byte-identical and tracked, and dist carries them too
+                                      # (38 checks)
 python tools/verify_container_deploy.py # the RUNNING stack through nginx: liveness public, gateway
-                                      # status behind login, served bundle == dist, admin sign-in,
-                                      # seeded promoted primary, purger on n8n's own SQLite, webhook
-                                      # registered, two real labelled corpus texts scored with phrase
-                                      # evidence, and the two verdicts on opposite sides (12 checks on
-                                      # the shipped lane; 11 with DETECT_MODEL, which skips separation)
-python tools/verify_exe_bundle.py     # the packaged .exe is proved in two boots (22 checks). Upgrade
+                                      # status behind login, served bundle == dist, /research/report.html
+                                      # byte-equal to the repo copy + the PDF served as application/pdf,
+                                      # admin sign-in, seeded promoted primary, purger on n8n's own
+                                      # SQLite, webhook registered, two real labelled corpus texts scored
+                                      # with phrase evidence, and the two verdicts on opposite sides
+                                      # (14 checks on the shipped lane; 13 with DETECT_MODEL, which
+                                      # skips separation)
+python tools/verify_exe_bundle.py     # the packaged .exe is proved in two boots (24 checks). Upgrade
                                       # boot: a throwaway copy of the dev DB, where the boot must switch
                                       # a previously-enabled tie-break row off exactly once, the served
-                                      # bundle must hash equal to dist, and the stand-in engine reports
-                                      # the body the binary sent -- one lane named, secondary {"enabled":
-                                      # false}. Virgin boot: an empty database, i.e. what the installer
-                                      # actually delivers, seeded with one primary on its measured band,
-                                      # a 240 s ceiling, and the tie-break row present but disabled.
+                                      # bundle must hash equal to dist, /research/report.html must equal
+                                      # the repo copy and the PDF must start with %PDF, and the stand-in
+                                      # engine reports the body the binary sent -- one lane named,
+                                      # secondary {"enabled": false}. Virgin boot: an empty database,
+                                      # i.e. what the installer actually delivers, seeded with one
+                                      # primary on its measured band, a 240 s ceiling, and the tie-break
+                                      # row present but disabled.
 node benchmark/tiebreak-authority.js  # is the tie-break lane's authority earning its keep
                                       # (runs the shipped node, judged on the band the deployed
                                       # config gives that model; refuses to score a capture whose
@@ -234,6 +271,7 @@ node benchmark/doc-table.js hc3-48    # regenerate the published comparison tabl
 
 | File | What it answers |
 | --- | --- |
+| [research-zenodo/report.html](research-zenodo/report.html) | The citable technical report — also served by every deployment at `/research/report.html`, which is what the Ranking page links by default. |
 | [docs/free-model-research.md](docs/free-model-research.md) | Every measured lane, the corpora, the McNemar tests, and why the shipped lanes are the ones they are. |
 | [docs/calibration.md](docs/calibration.md) | How the decision cuts were fitted, and the replay commands that reproduce them. |
 | [docs/api-keys.md](docs/api-keys.md) | Where keys live, how they are encrypted, and how to add or rotate one. |

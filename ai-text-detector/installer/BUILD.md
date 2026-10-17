@@ -35,8 +35,16 @@ mkdir -p .localbuild/benchmark .localbuild/frontend/dist/frontend/browser
 cp benchmark/results-*.jsonl benchmark/runs-manifest.log \
    benchmark/catalog-probe-nvidia.json benchmark/catalog-probe-openrouter.json \
    benchmark/corpus*.json .localbuild/benchmark/
-cp frontend/dist/frontend/browser/* .localbuild/frontend/dist/frontend/browser/
+cp -r frontend/dist/frontend/browser/* .localbuild/frontend/dist/frontend/browser/
 ```
+
+`-r` is not optional. The UI ships one subdirectory — `research/`, the technical report the Ranking
+page links (see `README.md`) — and without it `cp` prints `omitting directory` and exits non-zero, so
+the stage simply has no report in it. Hit on 2026-10-17 while staging for the report. The loud part is
+worth noting: the chain stops at the `&&`, and the `diff` below would also fail, because it lists
+`research` on one side and not the other. What no staging check can see is a *stale* file inside that
+folder — the bundle hash is the SPA's, not the asset's — which is why `verify_exe_bundle.py` compares
+the served report bytes against the repo copy rather than trusting the name.
 
 The staged `benchmark/` files carry only masked key *hints* (`api_key=nvapi-...(len 70)`),
 never real keys. A strict scan for `nvapi-…{6}`, `sk-…{20}`, `AIza…{20}` returns nothing.
@@ -194,9 +202,37 @@ no warnings, 44,659,459 bytes around the 43,242,453-byte onefile.
 Round 26's ceiling raise is the same kind of change: `LANE_TIMEOUT_MS` is backend-seeded text, so the
 exe frozen inside the setup package is the only copy a local-app install ever boots. The onefile was
 rebuilt (backend-only, so no UI re-staging — `STAGE_MATCHES_DIST` confirmed first) and `verify_exe_bundle.py`
-passed 22/22 with its virgin install reading back `timeout_ms=240000 (backend waits 270 s)`. The
-setup package was then recompiled at 11:45: 27.64 s, no warnings, 44,662,980 bytes around the
-43,246,440-byte onefile.
+passed 22/22 including its virgin-install phase, which reads the ceiling out of `seed.LANE_TIMEOUT_MS`
+and compares it to what the binary actually wrote:
+
+```
+PASS  with the 240 s ceiling the capture actually supports
+      [timeout_ms=240000 (backend waits 270 s)]
+```
+
+The report asset is the other kind of change: it is *staged*, so it only reaches a user if step 0 and
+step 1 both ran. Re-staged and rebuilt on 2026-10-17 at 15:51 (UI change in `ranking-view.ts`, so a
+full re-stage, done from `rm -rf` with `cp -r`), verified 24/24, then compiled at 15:53: **41.656 s,
+no warnings, 44,941,122 bytes around the 43,522,151-byte onefile**. The two new checks in that run:
+
+```
+PASS  the packaged exe serves the technical report the Ranking page links
+      [200 53601 bytes identical_to_deposit=True]
+PASS  …and the printable copy as a PDF  [200 471173 bytes magic=b'%PDF-']
+```
+
+Pass the report path as argument 1 to make it the string the *served bundle* is grepped for, which
+proves the exe ships the `/research/report.html` fallback rather than an older link:
+
+```bash
+MSYS_NO_PATHCONV=1 python tools/verify_exe_bundle.py "/research/report.html"
+```
+
+The `MSYS_NO_PATHCONV=1` is required from Git Bash, not cosmetic: the shell rewrites the leading-slash
+argument into `C:/Program Files/Git/research/report.html` before Python ever sees it, and the run then
+reports `FAIL … contains 'C:/Program Files/Git/research/report.html' [0 occurrence(s)]` — a broken
+check, not a broken build. Measured on this exact command on 2026-10-17; the other 23 checks, including
+both report byte-equality ones, passed in the same failing run.
 
 **Why the guide wording had to reach a build at all:** the cards are backend-seeded text, so the only
 copy a local-app user ever reads is the one frozen inside the exe. Editing `backend/seed.py` changes

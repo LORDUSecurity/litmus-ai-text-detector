@@ -477,6 +477,18 @@ def main() -> int:
                   and hashlib.sha256(got).hexdigest() == hashlib.sha256(d.read_bytes()).hexdigest(),
                   "stylesheet too", styles[0])
 
+        # The citation is an asset of this binary as well. The static responder falls back to
+        # index.html with a 200 for any path it does not have, so a status code proves nothing here --
+        # the served bytes have to equal the report the repo cites.
+        repo_rep = (ROOT / "research-zenodo" / "report.html").read_bytes()
+        st_rep, rep = get("/research/report.html")
+        check(st_rep == 200 and rep == repo_rep,
+              "the packaged exe serves the technical report the Ranking page links",
+              f"{st_rep} {len(rep)} bytes identical_to_deposit={rep == repo_rep}")
+        st_pdf, pdf = get("/research/report.pdf")
+        check(st_pdf == 200 and pdf.startswith(b"%PDF"), "…and the printable copy as a PDF",
+              f"{st_pdf} {len(pdf)} bytes magic={pdf[:5]!r}")
+
         # The backend half of the same binary: a hash of main-*.js can never show this.
         sess = Session()
         st401, _ = sess.post_either("/auth/login",

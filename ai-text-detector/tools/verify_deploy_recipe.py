@@ -20,6 +20,9 @@ file the build reads as a name rather than as code:
   * a compose service whose build context or dockerfile is not where the file says it is;
   * a timeout chain that no longer nests -- lane ceiling + grace above gunicorn above nginx, because
     an outer tier shorter than the wait inside it silently converts a slow detection into a 502;
+  * a served copy of the technical report that has drifted from the copy the deposit package cites,
+    or that the built bundle does not carry (the link then lands on the SPA fallback, which answers
+    200 with index.html instead of the report -- a working page with a citation that is not one);
   * and, since "ready to deploy" means *someone else can clone and run it*, whether the deploy
     artifacts are actually tracked by git rather than only present in this working tree.
 
@@ -258,6 +261,46 @@ def main() -> int:
     # the workflow the operator is told to import exists, and is the file the generator writes
     wf = REPO / "n8n/ai-only-workflow.json"
     check(wf.is_file(), "the workflow JSON DEPLOY.md imports is present", wf.name)
+
+    # The technical report is served by the site itself, not only kept in a deposit folder, so the
+    # bundle has a second copy of a 50 KB document. Two failure modes are worth a check each: the
+    # copies drifting apart (the deposit package is what gets cited, the served copy is what users
+    # read -- a silent difference is a citation to text that does not exist), and the Ranking view
+    # linking a path the asset tree does not have. Both are file-name typos waiting to happen.
+    site = REPO / "frontend" / "public" / "research"
+    deposit = REPO / "research-zenodo"
+    for fname in ("report.html", "report.pdf"):
+        src, dst = deposit / fname, site / fname
+        if not (src.is_file() and dst.is_file()):
+            check(False, f"the served {fname} exists next to the deposit copy",
+                  f"deposit={src.is_file()} served={dst.is_file()}")
+            continue
+        same = src.read_bytes() == dst.read_bytes()
+        check(same, f"the site serves the same {fname} the deposit package holds",
+              "" if same else f"drifted -- copy it: cp {src.relative_to(REPO).as_posix()} "
+                              f"{dst.relative_to(REPO).as_posix()}")
+    view = (REPO / "frontend" / "src" / "app" / "ui" / "ranking-view" / "ranking-view.ts") \
+        .read_text(encoding="utf-8", errors="replace")
+    check("/research/report.html" in view,
+          "the Ranking view links the path the asset tree actually serves",
+          "public/research/report.html -> /research/report.html")
+    try:
+        t = subprocess.run(["git", "ls-files", "--", "research-zenodo", "frontend/public/research"],
+                           cwd=REPO, capture_output=True, text=True).stdout.split()
+        check(sum(1 for x in t if x.endswith(("report.html", "report.pdf"))) >= 4,
+              "both report copies are tracked, so a clone can build the site with the citation",
+              ", ".join(sorted(x.split("/")[-2] + "/" + x.split("/")[-1] for x in t)))
+    except OSError as exc:
+        print(f"SKIP  git tracking of the report ({exc})")
+
+    # a built bundle must carry the report, or the link lands on the SPA fallback instead
+    dist = REPO / "frontend" / "dist" / "frontend" / "browser" / "research" / "report.html"
+    if dist.is_file() and (site / "report.html").is_file():
+        check(dist.read_bytes() == (site / "report.html").read_bytes(),
+              "the built bundle carries the current report (rebuild after editing it)",
+              str(dist.relative_to(REPO)))
+    else:
+        print("SKIP  built-bundle report freshness (no build output yet -- run `ng build`)")
 
     # deployable from a clone, not only from this working tree
     try:

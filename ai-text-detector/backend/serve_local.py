@@ -91,6 +91,7 @@ for _ext, _type in {
     ".json": "application/json",
     ".svg": "image/svg+xml",
     ".ico": "image/x-icon",
+    ".pdf": "application/pdf",
     ".woff": "font/woff",
     ".woff2": "font/woff2",
     ".map": "application/json",

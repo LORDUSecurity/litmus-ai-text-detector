@@ -184,18 +184,26 @@ can enforce the BYOK no-persist guarantee.
 ## Live deploy proof
 
 `python tools/verify_container_deploy.py` drives the *running* stack and is the only check that can
-see the failures this recipe actually had. On the shipped lane it asserts twelve things: nginx
+see the failures this recipe actually had. On the shipped lane it asserts fourteen things: nginx
 proxies `/api/healthz` without a session and keeps `/api/gateway-health` behind one, the SPA it
-serves is the bundle the repo just built, the deploy's admin can sign in, the containerised backend
-seeded the promoted primary, the purger attached to n8n's own SQLite without creating it, the
-workflow is published with its webhook registered, two real labeled `benchmark/corpus.json` texts are
-scored through the whole path (nginx → gunicorn → n8n → provider lane → parse → verdict) and come
-back with phrase evidence attached, and the two verdicts are on opposite sides. Nothing it prints
-contains a key.
+serves is the bundle the repo just built, the two copies of the technical report under `/research/`
+are served byte-for-byte as the repo holds them (the PDF with a `application/pdf` Content-Type, not as
+HTML), the deploy's admin can sign in, the containerised backend seeded the promoted primary, the
+purger attached to n8n's own SQLite without creating it, the workflow is published with its webhook
+registered, two real labeled `benchmark/corpus.json` texts are scored through the whole path (nginx →
+gunicorn → n8n → provider lane → parse → verdict) and come back with phrase evidence attached, and the
+two verdicts are on opposite sides. Nothing it prints contains a key.
+
+The `/research/` pair is the one check that cannot be satisfied by a config edit. `frontend/Dockerfile`
+builds the UI inside the image, so the report reaches an image only when it is in
+`frontend/public/research/` — see the copy step in `README.md`. Both servers answer an unknown path
+with `index.html` and **200**, so a status code proves nothing about a static asset: the check fetches
+`/research/report.html` and compares bytes with `research-zenodo/report.html`, and asserts the PDF
+starts with `%PDF`.
 
 Set `DETECT_MODEL` to score those two texts on another calibrated row instead of the shipped default
 (`DETECT_MODEL=google/diffusiongemma-26b-a4b-it python tools/verify_container_deploy.py`). That is
-what proves the plumbing when a free pool is saturated; the tool drops to eleven checks, says out
+what proves the plumbing when a free pool is saturated; the tool drops to thirteen checks, says out
 loud that the shipped operating point was not exercised, and does not assert class separation for a
 lane it did not pick.
 

@@ -56,14 +56,12 @@ import type {
             Green ring = a working key is already in hand. Pick one to score your text with it.
           </p>
         </div>
-        @if (paperUrl(); as u) {
-          <a class="paper-link" [href]="u" target="_blank" rel="noopener noreferrer">
-            <svg class="ico" viewBox="0 0 24 24" aria-hidden="true">
-              <path d="M6 3h9l4 4v14H6z" /><path d="M14 3v5h5M9 13h7M9 17h7" />
-            </svg>
-            {{ paperTitle() || 'Read the paper' }}
-          </a>
-        }
+        <a class="paper-link" [href]="paperUrl()" target="_blank" rel="noopener noreferrer">
+          <svg class="ico" viewBox="0 0 24 24" aria-hidden="true">
+            <path d="M6 3h9l4 4v14H6z" /><path d="M14 3v5h5M9 13h7M9 17h7" />
+          </svg>
+          {{ paperTitle() }}
+        </a>
       </div>
 
       @if (noScoringKey()) {
@@ -267,8 +265,20 @@ export class RankingView implements OnInit {
   readonly config = signal<PublicConfig | null>(null);
   readonly keys = signal<UserKeyView[]>([]);
 
-  readonly paperUrl = computed(() => this.config()?.paper_url ?? '');
-  readonly paperTitle = computed(() => this.config()?.paper_title ?? '');
+  /** The technical report ships inside this bundle (public/research/), so `/research/report.html` is
+      always a valid same-origin target — and the settings validator only accepts an absolute http(s)
+      URL for `paper_url`, so an in-site path cannot be stored there. Hence: admin URL = the archival
+      copy (a DOI), blank = the copy this deployment serves. Neither state leaves the page with no
+      citation. */
+  readonly researchPath = '/research/report.html';
+
+  readonly paperUrl = computed(() => this.config()?.paper_url || this.researchPath);
+
+  readonly paperTitle = computed(() => {
+    const c = this.config();
+    if (!c?.paper_url) return 'Technical report';
+    return c.paper_title || 'Read the paper';
+  });
   readonly guides = computed(() => this.config()?.api_key_guides ?? []);
   readonly providers = computed(() => this.config()?.providers ?? []);
 
