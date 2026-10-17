@@ -116,6 +116,21 @@ describe('App', () => {
             : ({ ...LANE_ROWS[1], enabled: true } as never),
         ),
       );
+
+    // Opening the Ranking tab now also reads the caller's using pool and their discovery jobs
+    // (GET /api/my/pool, GET /api/my/discover). Those tests assert on the ranked cards, not on
+    // the pool, so they never flush them; drain them here with the empty answers that mean
+    // "no pool, no jobs" -- an empty job list is also what stops the 4 s poll from being
+    // scheduled, which would otherwise leave a timer running past the test.
+    http
+      .match((r) => r.url === '/api/my/pool' || r.url === '/api/my/discover')
+      .forEach((req) =>
+        req.flush(
+          (req.request.url === '/api/my/pool'
+            ? { pool: [] }
+            : { jobs: [], screen_texts: 'probe2', note: '' }) as never,
+        ),
+      );
     http.verify();
   });
 

@@ -18,12 +18,29 @@
     </span>
     <div class="verdict-block">
       <span class="verdict">{{ result.classification }}</span>
-      <span class="method">{{ result.method }}@if (secondaryDisabled()) { · single lane }</span>
+      <span class="method">
+        {{ result.method }}@if (secondaryDisabled()) { · single lane
+        }@if (laneSourceLabel()) { · {{ laneSourceLabel() }} }
+      </span>
     </div>
     @if (elapsedSeconds) {
       <span class="elapsed">{{ elapsedSeconds }}s</span>
     }
   </header>
+
+  @if (switched(); as sw) {
+    <!-- The score below belongs to sw.to, not to the model this page would otherwise name.
+         Above the number rather than inside the warnings fold: a verdict attributed to the
+         wrong model is worse than no verdict at all. -->
+    <p class="switch-note" role="status">
+      <strong>Auto-switched.</strong>
+      {{ sw.from || 'The first model' }} returned no usable verdict, so this result came from
+      <code>{{ sw.to }}</code>, the next model in your pool.
+      @for (a of sw.attempts; track a.to) {
+        <span class="switch-attempt">{{ attemptLabel(a) }}</span>
+      }
+    </p>
+  }
 
   @if (result.classification === 'DETECTION_UNAVAILABLE') {
     <p class="strong amber">
@@ -218,6 +235,12 @@
             <th>BYOK on server</th>
             <td>{{ result.config_used.byok_enabled ? 'allowed' : 'disabled' }}</td>
           </tr>
+          @if (laneSourceLabel()) {
+            <tr>
+              <th>Model chosen by</th>
+              <td>{{ laneSourceLabel() }}</td>
+            </tr>
+          }
           @if (cutSummary()) {
             <tr>
               <th>Decision cuts</th>

@@ -1,6 +1,7 @@
 import { HttpClient, HttpHeaders } from '@angular/common/http';
 import { Injectable, inject, signal } from '@angular/core';
 import { Observable, map, timeout } from 'rxjs';
+import { HTTP_PATIENCE_MS } from './http-budget';
 import type { ByokKeys, DetectionResult, LaneConfig } from './detection.types';
 import type { BackendHealth } from './backend.types';
 
@@ -17,8 +18,12 @@ export class DetectionService {
       the n8n execution row that would otherwise keep a BYOK key on disk. */
   private readonly endpoint = '/api/detect';
 
-  /** Long because the 550B lane took 80s on a real benchmark text. */
-  private readonly requestTimeoutMs = 150_000;
+  /** Waits out every tier below it: the lane ceiling (240 s), the backend's own 270 s wait,
+      gunicorn at 285 s and nginx at 330 s. It used to be 150 s -- "long because the 550B lane
+      took 80s" -- which made the browser the smallest number in a chain that had grown twice
+      since, so a legitimate 214 s detection was aborted here and reported as a failure while
+      the verdict went on to land in History. See ./http-budget.ts. */
+  private readonly requestTimeoutMs = HTTP_PATIENCE_MS;
 
   /** A model the signed-in user chose on the Ranking tab, or null for the admin's deployed lane.
       This is the "pick them auto if a verified key is there" step: the ranking already says which

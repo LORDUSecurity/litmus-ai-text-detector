@@ -31,6 +31,19 @@ const CONFIG = {
 
 const EMPTY_RANKING = { ranked: [] } as unknown as RankingResponse;
 
+/** The pool/discovery calls the view makes on load. Every stub in this file needs them: the
+    component reads them in ngOnInit, and a missing method would fail the spec for the wrong
+    reason (a TypeError, not a behaviour change). Fresh mocks per call, so no spec inherits
+    another's recorded calls. */
+const poolStubs = () => ({
+  myPool: () => of({ pool: [] }),
+  addToPool: vi.fn(),
+  removeFromPool: vi.fn(),
+  setPoolOrder: vi.fn(),
+  discover: vi.fn(),
+  discoveryStatus: () => of({ jobs: [], screen_texts: 'probe2', note: '' }),
+});
+
 describe('RankingView add-a-key form', () => {
   let fixture: ComponentFixture<RankingView>;
   let addMyKey: any;
@@ -58,6 +71,7 @@ describe('RankingView add-a-key form', () => {
       myKeys: () => of<UserKeyView[]>([]),
       addMyKey,
       deleteMyKey: () => of({ deleted: 1 }),
+      ...poolStubs(),
     };
 
     await TestBed.configureTestingModule({
@@ -177,6 +191,7 @@ describe('RankingView scoring lock', () => {
       myKeys: () => of<UserKeyView[]>([]),
       addMyKey: vi.fn(),
       deleteMyKey: () => of({ deleted: 1 }),
+      ...poolStubs(),
     };
     await TestBed.configureTestingModule({
       imports: [RankingView],
@@ -258,6 +273,7 @@ describe('RankingView report link', () => {
       myKeys: () => of<UserKeyView[]>([]),
       addMyKey: vi.fn(),
       deleteMyKey: () => of({ deleted: 1 }),
+      ...poolStubs(),
     };
     await TestBed.configureTestingModule({
       imports: [RankingView],
@@ -303,5 +319,228 @@ describe('RankingView report link', () => {
     });
     expect(link(f).getAttribute('href')).toContain('zenodo.org');
     expect(link(f).textContent).toContain('Read the paper');
+  });
+});
+
+/**
+ * The using pool: the user's ordered list of models, which is what detection now follows and
+ * what a failover walks down.
+ *
+ * Two things here are easy to get subtly wrong and expensive when wrong. First, the list is
+ * rendered in *served* order, which is not the user's order once a model has stopped answering
+ * — so the row has to carry both numbers and say why they differ, otherwise a demotion looks
+ * like the app silently re-ranked the user's choice. Second, the order is written by the drag
+ * AND by the arrow buttons: an order that only a pointer can change is not a control a keyboard
+ * user has. These specs drive the DOM, per the file's existing discipline.
+ */
+describe('RankingView using pool', () => {
+  const entry = (over: any = {}) =>
+    ({
+      provider: 'nvidia',
+      model: 'm/a',
+      source: 'user',
+      your_rank: 1,
+      position: 1,
+      health: 'ok',
+      consecutive_failures: 0,
+      last_error: '',
+      last_ok_at: null,
+      demoted: false,
+      ...over,
+    }) as any;
+
+  const card = (over: any = {}) =>
+    ({
+      model: 'z-ai/glm-5.3-flash',
+      tag: 'glm',
+      rank: 1,
+      accuracy: 0.94,
+      lane: null,
+      provider: 'nvidia',
+      provider_name: 'NVIDIA NIM',
+      free_tier: true,
+      provisional: false,
+      n_clean: 48,
+      correct: 45,
+      wrong: 0,
+      review: 3,
+      coverage: 0.94,
+      verified_key: true,
+      admin_key: false,
+      in_pool: false,
+      health: 'unknown',
+      ...over,
+    }) as any;
+
+  async function build(opts: {
+    pool?: any[];
+    ranked?: any[];
+    keys?: any[];
+    discoverReply?: any;
+    signedIn?: boolean;
+  } = {}) {
+    const mocks = {
+      ...poolStubs(),
+      addToPool: vi.fn(() => of({ pool: opts.pool ?? [] })),
+      removeFromPool: vi.fn(() => of({ pool: [] })),
+      setPoolOrder: vi.fn((order: any[]) => of({ pool: order.map((o: any, i: number) => entry({ ...o, position: i + 1 })) })),
+      discover: vi.fn(() => of(opts.discoverReply ?? { ok: true, job_id: 3, queued: true, status: 'queued' })),
+      myPool: () => of({ pool: opts.pool ?? [] }),
+      discoveryStatus: () => of({ jobs: [], screen_texts: 'probe2', note: '2 texts, probe tier' }),
+    };
+    const backend = {
+      config: () => of(CONFIG),
+      ranking: () => of({ ranked: opts.ranked ?? [] } as unknown as RankingResponse),
+      myKeys: () => of<UserKeyView[]>((opts.keys ?? []) as any),
+      addMyKey: vi.fn(),
+      deleteMyKey: () => of({ deleted: 1 }),
+      ...mocks,
+    };
+    await TestBed.configureTestingModule({
+      imports: [RankingView],
+      providers: [
+        { provide: BackendService, useValue: backend },
+        {
+          provide: AuthService,
+          useValue: {
+            isAdmin: () => false,
+            user: () => (opts.signedIn === false ? null : { role: 'user', username: 'nadia' }),
+          },
+        },
+      ],
+    }).compileComponents();
+
+    const fixture = TestBed.createComponent(RankingView);
+    fixture.detectChanges();
+    await fixture.whenStable();
+    fixture.detectChanges();
+    return { fixture, mocks, panel: () => fixture.nativeElement.querySelector('.pool-panel') };
+  }
+
+  const rows = (f: ComponentFixture<RankingView>) =>
+    Array.from(f.nativeElement.querySelectorAll('.pool-row')) as HTMLElement[];
+
+  /** jsdom has no DragEvent, and the handlers only need preventDefault + an optional
+      dataTransfer, so a plain Event exercises the same code path. */
+  function drag(f: ComponentFixture<RankingView>, from: number, to: number) {
+    const r = rows(f);
+    r[from].dispatchEvent(new Event('dragstart', { bubbles: true }));
+    f.detectChanges();
+    r[to].dispatchEvent(new Event('dragover', { bubbles: true }));
+    f.detectChanges();
+    r[to].dispatchEvent(new Event('drop', { bubbles: true }));
+    f.detectChanges();
+  }
+
+  it('renders the served order and explains a demotion with both numbers', async () => {
+    const { fixture } = await build({
+      pool: [
+        entry({ model: 'm/b', your_rank: 2, position: 1 }),
+        entry({ model: 'm/a', your_rank: 1, position: 2, health: 'down', demoted: true,
+                consecutive_failures: 3, last_error: '404' }),
+      ],
+    });
+    const r = rows(fixture);
+    expect(r.length).toBe(2);
+    expect(r[0].textContent).toContain('m/b');
+    expect(r[1].textContent).toContain('m/a');
+    expect(r[1].classList.contains('demoted')).toBe(true);
+    // the sentence that keeps a health demotion from looking like a silent re-ranking
+    expect(r[1].textContent).toContain('you ranked it #1');
+    expect(r[1].textContent).toContain('stopped answering');
+  });
+
+  it('writes the drag order to the server and keeps the local list until it answers', async () => {
+    const { fixture, mocks } = await build({
+      pool: [entry({ model: 'm/a' }), entry({ model: 'm/b', your_rank: 2, position: 2 }),
+             entry({ model: 'm/c', your_rank: 3, position: 3 })],
+    });
+    drag(fixture, 0, 2);
+    await fixture.whenStable();
+    fixture.detectChanges();
+
+    expect(mocks.setPoolOrder.mock.calls.length).toBe(1);
+    expect(mocks.setPoolOrder.mock.calls[0][0]).toEqual([
+      { provider: 'nvidia', model: 'm/b' },
+      { provider: 'nvidia', model: 'm/c' },
+      { provider: 'nvidia', model: 'm/a' },
+    ]);
+  });
+
+  it('moves a row with the arrow buttons, so the order does not depend on a pointer', async () => {
+    const { fixture, mocks } = await build({
+      pool: [entry({ model: 'm/a' }), entry({ model: 'm/b', your_rank: 2, position: 2 })],
+    });
+    const down = rows(fixture)[0].querySelector('button[aria-label^="Move m/a down"]') as HTMLButtonElement;
+    expect(down.disabled).toBe(false);
+    // the first row cannot go up: a no-op move must not reach the server
+    const up = rows(fixture)[0].querySelector('button[aria-label^="Move m/a up"]') as HTMLButtonElement;
+    expect(up.disabled).toBe(true);
+
+    down.click();
+    await fixture.whenStable();
+    fixture.detectChanges();
+    expect(mocks.setPoolOrder.mock.calls[0][0]).toEqual([
+      { provider: 'nvidia', model: 'm/b' },
+      { provider: 'nvidia', model: 'm/a' },
+    ]);
+  });
+
+  // Add and remove get their own tests on purpose: `build()` configures a TestBed, and Angular
+  // refuses to configure one that is already instantiated, so a second `build()` inside the same
+  // `it` is not a fresh fixture -- it is an error wearing the shape of a passing test.
+  it('adds a model to the using pool from its rank card', async () => {
+    const { fixture, mocks } = await build({ ranked: [card({})], pool: [] });
+    const add = Array.from(fixture.nativeElement.querySelectorAll('.pool-actions button'))
+      .find((b: any) => b.textContent.includes('Add to using pool')) as HTMLButtonElement;
+    expect(add, 'a card with a key behind it must offer the pool').toBeTruthy();
+    add.click();
+    await fixture.whenStable();
+    expect(mocks.addToPool.mock.calls[0]).toEqual(['nvidia', 'z-ai/glm-5.3-flash']);
+  });
+
+  it('removes a model from the pool row, and says which model it is removing', async () => {
+    const { fixture, mocks } = await build({ pool: [entry({ model: 'm/a' })] });
+    const remove = Array.from(fixture.nativeElement.querySelectorAll('.pool-row button'))
+      .find((b: any) => b.textContent.includes('Remove')) as HTMLButtonElement;
+    expect(remove.getAttribute('aria-label')).toContain('m/a');
+    remove.click();
+    await fixture.whenStable();
+    expect(mocks.removeFromPool.mock.calls[0]).toEqual(['nvidia', 'm/a']);
+  });
+
+  it('offers discovery only on endpoints the caller has a key for', async () => {
+    const { fixture, mocks } = await build({
+      keys: [{ id: 4, provider_id: 1, key_hint: 'sk-…', verified: true, label: 'mine' }],
+    });
+    const btns = Array.from(fixture.nativeElement.querySelectorAll('.discover-actions button')) as
+      HTMLButtonElement[];
+    expect(btns.length, 'only nvidia has a key; openrouter must not be offered').toBe(1);
+    expect(btns[0].textContent).toContain('NVIDIA NIM');
+    btns[0].click();
+    await fixture.whenStable();
+    expect(mocks.discover.mock.calls[0]).toEqual([1]);
+  });
+
+  it('reports a refused discovery as refused, not as queued', async () => {
+    const { fixture } = await build({
+      keys: [{ id: 4, provider_id: 1, key_hint: 'sk-…', verified: true, label: 'mine' }],
+      discoverReply: {
+        job_id: null, queued: false, status: 'disabled',
+        reason: 'the discovery worker is not running in this process',
+      },
+    });
+    (fixture.nativeElement.querySelector('.discover-actions button') as HTMLButtonElement).click();
+    await fixture.whenStable();
+    fixture.detectChanges();
+    const status = fixture.nativeElement.querySelector('.pool-panel .doc-status');
+    expect(status.textContent).toContain('Not queued');
+    expect(status.textContent).toContain('not running');
+    expect(status.classList.contains('bad')).toBe(true);
+  });
+
+  it('is absent for a signed-out visitor, who has no pool to order', async () => {
+    const { panel } = await build({ signedIn: false, pool: [entry({})] });
+    expect(panel()).toBe(null);
   });
 });

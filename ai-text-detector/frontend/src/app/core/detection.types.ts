@@ -104,6 +104,18 @@ export interface EffectiveSampling {
   max_tokens: number | 'auto';
 }
 
+/** One candidate the backend tried after the first model produced no verdict. `skipped`
+    means it was never called — no time left in the request budget, or an endpoint outside
+    `allowed_llm_hosts` — which is a different fact from "called and failed". */
+export interface FailoverAttempt {
+  from: string | null;
+  to: string;
+  provider: string;
+  ok?: boolean;
+  error_code?: string | null;
+  skipped?: string;
+}
+
 export interface DetectionResult {
   document_id?: string;
   classification: Classification;
@@ -129,6 +141,20 @@ export interface DetectionResult {
     models: LaneAttempt[];
   };
   component_scores?: ComponentScores;
+  /** Which authority chose the model that answered. The workflow's own `model_source` says
+      'request' for all four cases, because from its side they are identical; only the backend
+      can tell a deployed default from the caller's pool or from a failover they did not ask for. */
+  lane_source?: 'failover' | 'request' | 'user-pool' | 'deployed-default';
+  /** Present only when the first model returned no usable verdict and a later one did. The
+      verdict on screen then belongs to `to`, not to the model the page would otherwise name. */
+  auto_switch?: {
+    from: string | null;
+    to: string;
+    reason: string;
+    attempts: FailoverAttempt[];
+  };
+  /** Present when a failover was attempted and none of the candidates produced a verdict. */
+  failover?: { attempts: FailoverAttempt[]; switched_to: null };
   warning?: string;
   warnings?: string[];
   versions?: {

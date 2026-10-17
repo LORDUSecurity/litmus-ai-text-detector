@@ -2,6 +2,7 @@ import { HttpTestingController, provideHttpClientTesting } from '@angular/common
 import { TestBed } from '@angular/core/testing';
 import { provideHttpClient } from '@angular/common/http';
 import { DetectionService } from './detection.service';
+import { HTTP_PATIENCE_MS } from './http-budget';
 import { DetectionFormState } from './form-state';
 import type { LaneConfig } from './detection.types';
 
@@ -29,6 +30,43 @@ describe('DetectionService', () => {
     const req = http.expectOne('/api/detect');
     expect(req.request.method).toBe('POST');
     req.flush({ classification: 'HUMAN_LIKELY' });
+  });
+
+  it('waits out the whole gateway chain rather than aborting a detection still in flight', () => {
+    // nginx gives up at 330 s, so a client that gives up sooner is the tier that broke the
+    // request -- and the only thing the user sees is "failed", while the verdict carries on
+    // behind the abort and lands in History. This is the browser-side copy of the nesting bug
+    // that turned a working 214 s detection into a 502.
+    //
+    // vi's fake timers, not Angular's `fakeAsync`: this app is zoneless, and `fakeAsync` needs
+    // the zone-testing bundle the build does not carry -- the whole file failed to collect with
+    // "zone-testing.js is needed for the fakeAsync() test helper" until this comment was written.
+    vi.useFakeTimers();
+    try {
+      const form = new DetectionFormState();
+      let aborted: unknown = null;
+      service.detect('some text to judge', form.laneConfig(), form.keys())
+        .subscribe({ error: (e) => { aborted = e; } });
+
+      // The request is out and nobody has answered it -- this is the state a 214 s detection sits
+      // in, and the one an over-eager client used to mistake for a failure.
+      http.expectOne('/api/detect');
+      expect(HTTP_PATIENCE_MS).toBeGreaterThan(330_000);
+
+      // A real detection that took the gateway's whole patience is still in flight here.
+      vi.advanceTimersByTime(330_000);
+      expect(aborted).toBeNull();
+
+      vi.advanceTimersByTime(HTTP_PATIENCE_MS - 330_000 + 1);
+      expect(aborted).toBeTruthy();
+
+      // Nothing to drain: the abort already unsubscribed, which cancels the request in the
+      // testing controller, and `http.verify()` counts a cancelled request as handled. Flushing
+      // it here throws "Cannot flush a cancelled request" -- measured, on the first run of this
+      // spec, which is how I know the client really did give up on the in-flight call.
+    } finally {
+      vi.useRealTimers();
+    }
   });
 
   it('sends lane_config with a composed base_url and the model per lane', () => {

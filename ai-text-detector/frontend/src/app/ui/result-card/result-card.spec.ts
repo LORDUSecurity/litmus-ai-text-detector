@@ -1,7 +1,9 @@
+import { ComponentFixture, TestBed } from '@angular/core/testing';
 import {
   buildSegments,
   evidenceColor,
   probScaleNote,
+  ResultCard,
   STRENGTH_CEIL,
   STRENGTH_FLOOR,
   type EvidenceSegment,
@@ -274,5 +276,97 @@ describe('probScaleNote', () => {
         }),
       ),
     ).toBeNull();
+  });
+});
+
+/**
+ * Attribution after a failover.
+ *
+ * When the model a user picked stops answering, the backend tries the next one in their pool
+ * and returns THAT model's verdict. The backend also appends a warning, but a line inside a
+ * closed fold is not attribution — so the substitution renders above the score, and the header
+ * says which authority chose the model. These specs render the component rather than calling a
+ * function: the claim under test is what a user reads, not what a helper returns.
+ */
+describe('ResultCard attribution after a failover', () => {
+  const base = (over: Partial<DetectionResult> = {}): DetectionResult =>
+    ({
+      classification: 'AI_GENERATED',
+      ai_probability: 0.93,
+      confidence: 0.88,
+      method: 'PRIMARY_DECIDED_AI',
+      ...over,
+    }) as DetectionResult;
+
+  async function render(result: DetectionResult): Promise<ComponentFixture<ResultCard>> {
+    await TestBed.configureTestingModule({ imports: [ResultCard] }).compileComponents();
+    const f = TestBed.createComponent(ResultCard);
+    f.componentRef.setInput('result', result);
+    f.detectChanges();
+    await f.whenStable();
+    f.detectChanges();
+    return f;
+  }
+
+  const method = (f: ComponentFixture<ResultCard>) =>
+    (f.nativeElement.querySelector('.method') as HTMLElement).textContent ?? '';
+
+  it('names the model that actually answered, above the score', async () => {
+    const f = await render(
+      base({
+        lane_source: 'failover',
+        auto_switch: {
+          from: 'nvidia/dead-model',
+          to: 'z-ai/glm-5.3-flash',
+          reason: 'the first model returned no usable verdict',
+          attempts: [
+            { from: 'nvidia/dead-model', to: 'z-ai/glm-5.3-flash', provider: 'nvidia', ok: true },
+          ],
+        },
+      }),
+    );
+    const note = f.nativeElement.querySelector('.switch-note');
+    expect(note, 'the substitution must be visible without opening a fold').toBeTruthy();
+    expect(note.textContent).toContain('nvidia/dead-model');
+    expect(note.textContent).toContain('z-ai/glm-5.3-flash');
+    expect(note.textContent).toContain('answered');
+    expect(method(f)).toContain('auto-switched within your pool');
+  });
+
+  it('tells a candidate that was never called from one that was called and failed', async () => {
+    const f = await render(
+      base({
+        lane_source: 'failover',
+        auto_switch: {
+          from: 'a/x',
+          to: 'c/z',
+          reason: 'the first model returned no usable verdict',
+          attempts: [
+            { from: 'a/x', to: 'b/y', provider: 'p', skipped: 'no time left in this request budget' },
+            { from: 'a/x', to: 'c/z', provider: 'p', ok: true },
+          ],
+        },
+      }),
+    );
+    const attempts = Array.from(
+      f.nativeElement.querySelectorAll('.switch-attempt'),
+    ).map((e: any) => e.textContent.trim());
+    expect(attempts.length).toBe(2);
+    expect(attempts[0]).toContain('not called');
+    expect(attempts[1]).toContain('answered');
+  });
+
+  it('reports a pool-sourced verdict as the pool, not as the deployed default', async () => {
+    const f = await render(base({ lane_source: 'user-pool' }));
+    expect(f.nativeElement.querySelector('.switch-note')).toBe(null);
+    expect(method(f)).toContain('your using pool');
+  });
+
+  it('claims no authority for a stored row that predates the pool', async () => {
+    // An unknown authority reported as "the deployed default lane" would be a false claim
+    // about every history row saved before this feature existed.
+    const f = await render(base({}));
+    expect(method(f)).not.toContain('pool');
+    expect(method(f)).not.toContain('deployed');
   });
 });

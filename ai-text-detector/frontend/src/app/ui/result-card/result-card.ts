@@ -1,6 +1,7 @@
 import { Component, Input, computed } from '@angular/core';
 import type {
   DetectionResult,
+  FailoverAttempt,
   LaneAttempt,
   LaneConfigUsed,
   ModelPhrase,
@@ -266,6 +267,28 @@ export class ResultCard {
   });
 
   readonly warnings = computed(() => this.result.warnings ?? []);
+
+  /** Which authority chose the model that answered. Null on a stored row from before the
+      using-pool existed — an unknown authority is reported as unknown, not as "deployed". */
+  readonly laneSourceLabel = computed(() => {
+    switch (this.result.lane_source) {
+      case 'failover': return 'auto-switched within your pool';
+      case 'user-pool': return 'your using pool';
+      case 'request': return 'named in this request';
+      case 'deployed-default': return 'the deployed default lane';
+      default: return null;
+    }
+  });
+
+  /** A verdict that came from a different model than the one the page would otherwise name.
+      This is the fact that must not be missed, so it renders above the score and not only in
+      the warnings fold. */
+  readonly switched = computed(() => this.result.auto_switch ?? null);
+
+  attemptLabel(a: FailoverAttempt): string {
+    if (a.skipped) return `${a.to} — not called: ${a.skipped}`;
+    return a.ok ? `${a.to} — answered` : `${a.to} — ${a.error_code || 'no verdict'}`;
+  }
 
   /** Which scale the headline probability was measured on, phrased for beside-it display. */
   readonly scaleNote = computed(() => probScaleNote(this.result));

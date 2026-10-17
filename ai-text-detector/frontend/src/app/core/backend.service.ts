@@ -1,6 +1,7 @@
 import { HttpClient } from '@angular/common/http';
 import { Injectable, inject } from '@angular/core';
 import { Observable, timeout } from 'rxjs';
+import { HTTP_PATIENCE_MS } from './http-budget';
 import type {
   AdminSettings,
   ApiKeyView,
@@ -9,10 +10,13 @@ import type {
   BenchmarkModelRow,
   CatalogByProvider,
   DetectionRow,
+  DiscoveryEnqueue,
+  DiscoveryStatus,
   ExtractResult,
   ModelView,
   N8nExecutions,
   N8nStatus,
+  PoolResponse,
   ProbeResult,
   ProviderView,
   PublicConfig,
@@ -25,6 +29,15 @@ import type { DetectionResult } from './detection.types';
 /** The dev proxy maps /api → the Flask backend on 127.0.0.1:8787 and strips the
     prefix, so every path here is written without /api. */
 const API = '/api';
+
+/** How long a request that spends its time inside a model may be waited on.
+ *
+ *  A key probe is bounded server-side by the ceiling of the model being probed
+ *  (`probe_timeout_s` in backend/app.py: that row's `timeout_ms`, floored at 45 s and capped at
+ *  REQUEST_BUDGET_S = 250 s), and a detection is bounded by the lane ceiling + grace. Both are
+ *  above the 60 s this used to be, which is why it read a slow-but-live key as dead on exactly
+ *  the congested pool the backend ceiling was raised for. See ./http-budget.ts. */
+const MODEL_WAIT_MS = HTTP_PATIENCE_MS;
 
 @Injectable({ providedIn: 'root' })
 export class BackendService {
@@ -63,7 +76,7 @@ export class BackendService {
   probe(providerId: number, modelId: string): Observable<ProbeResult> {
     return this.http
       .post<ProbeResult>(`${API}/providers/${providerId}/probe`, { model_id: modelId })
-      .pipe(timeout(60_000));
+      .pipe(timeout(MODEL_WAIT_MS));
   }
 
   /** Read a .txt/.md/.docx/.pdf into plain text. Parsing happens on this machine
@@ -210,8 +223,9 @@ export class BackendService {
     label?: string;
     model_id?: string;
   }): Observable<UserKeyView> {
-    // Verifies on save when a model is supplied, so "auto-pick a working key" is honest.
-    return this.http.post<UserKeyView>(`${API}/my/keys`, body).pipe(timeout(60_000));
+    // Verifies on save when a model is supplied, so "auto-pick a working key" is honest -- and
+    // that verification is a real call to the provider, so it waits like one.
+    return this.http.post<UserKeyView>(`${API}/my/keys`, body).pipe(timeout(MODEL_WAIT_MS));
   }
 
   deleteMyKey(id: number): Observable<{ deleted: number }> {
@@ -219,9 +233,48 @@ export class BackendService {
   }
 
   verifyMyKey(id: number, modelId: string): Observable<{ ok: boolean; status?: number }> {
+    // No `timeout_seconds` in the body: the backend gives the probe the ceiling of the model it
+    // is probing, and this client has to be willing to see that answer rather than abort it.
     return this.http
       .post<{ ok: boolean; status?: number }>(`${API}/my/keys/${id}/verify`, { model_id: modelId })
-      .pipe(timeout(60_000));
+      .pipe(timeout(MODEL_WAIT_MS));
+  }
+
+  // ---- the caller's ordered using-pool + auto-discovery ------------------
+  //
+  // Both spend the caller's own credential, never the admin's shared one: discovery makes real
+  // provider calls, and the pool decides which model a detection is sent to. That is why the
+  // routes live under /my and why a 409 (no key) is an expected answer rather than a bug.
+
+  myPool(): Observable<PoolResponse> {
+    return this.http.get<PoolResponse>(`${API}/my/pool`).pipe(timeout(8_000));
+  }
+
+  addToPool(provider: string, model: string): Observable<PoolResponse> {
+    return this.http.post<PoolResponse>(`${API}/my/pool`, { provider, model }).pipe(timeout(8_000));
+  }
+
+  removeFromPool(provider: string, model: string): Observable<PoolResponse> {
+    return this.http
+      .delete<PoolResponse>(`${API}/my/pool`, { body: { provider, model } })
+      .pipe(timeout(8_000));
+  }
+
+  /** Write the drag order. This is the only call that changes which model is tried first. */
+  setPoolOrder(order: Array<{ provider: string; model: string }>): Observable<PoolResponse> {
+    return this.http.post<PoolResponse>(`${API}/my/pool/order`, { order }).pipe(timeout(8_000));
+  }
+
+  /** Queue a discovery run. 202 = queued, not finished: poll `discoveryStatus()` for the
+      stage, because screening four models through the engine takes minutes, not seconds. */
+  discover(providerId: number): Observable<DiscoveryEnqueue> {
+    return this.http
+      .post<DiscoveryEnqueue>(`${API}/my/discover`, { provider_id: providerId })
+      .pipe(timeout(15_000));
+  }
+
+  discoveryStatus(): Observable<DiscoveryStatus> {
+    return this.http.get<DiscoveryStatus>(`${API}/my/discover`).pipe(timeout(8_000));
   }
 
   // ---- public config + ranking (the page that replaced /research) --------

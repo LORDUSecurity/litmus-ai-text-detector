@@ -218,6 +218,9 @@ export interface UserKeyView {
   created_at: string;
   provider_name?: string;
   provider_base_url?: string;
+  /** Present on POST /my/keys when saving the key also queued a discovery run — the backend
+      only enqueues once the key has actually verified, so this is never a promise it broke. */
+  discovery?: DiscoveryEnqueue;
 }
 
 export interface KeyGuide {
@@ -303,10 +306,72 @@ export interface RankedModel {
   provisional?: boolean;
   verified_key: boolean;
   admin_key: boolean;
+  /** Whether this model is in the caller's using-pool, and at which of their ranks. */
+  in_pool?: boolean;
+  pool_position?: number | null;
+  your_rank?: number | null;
+  /** Availability, not accuracy: measured from real detections, 'unknown' until one runs. */
+  health?: 'ok' | 'degraded' | 'down' | 'unknown';
+  consecutive_failures?: number;
+}
+
+/** One row of the caller's using-pool, as `pool.pool_view` returns it. `your_rank` is where
+    the user put it; `position` is where it is actually served from — the two differ exactly
+    when a model stopped answering and was pushed to the back (`demoted`). */
+export interface PoolEntry {
+  provider: string;
+  model: string;
+  source: 'user' | 'auto';
+  your_rank: number;
+  position: number;
+  health: 'ok' | 'degraded' | 'down' | 'unknown';
+  consecutive_failures: number;
+  last_error: string;
+  last_ok_at: string | null;
+  demoted: boolean;
+}
+
+export interface PoolResponse {
+  pool: PoolEntry[];
+  note?: string;
+}
+
+/** One auto-discovery run: list a provider's models, screen the untested ones on 2 texts. */
+export interface DiscoveryJob {
+  id: number;
+  provider: string;
+  status: 'queued' | 'running' | 'done' | 'failed';
+  stage: string;
+  n_listed: number;
+  n_screened: number;
+  n_usable: number;
+  error: string;
+  started_at: string | null;
+  finished_at: string | null;
+  created_at: string;
+}
+
+export interface DiscoveryStatus {
+  jobs: DiscoveryJob[];
+  screen_texts: string;
+  note: string;
+}
+
+/** `queued: false` with `status: 'disabled'` means no worker will pick the job up — the
+    backend refuses to write a row it cannot honour, so the page must not say "queued". */
+export interface DiscoveryEnqueue {
+  ok?: boolean;
+  job_id: number | null;
+  queued: boolean;
+  status: string;
+  reason?: string;
+  error?: string;
+  error_code?: string;
 }
 
 export interface RankingResponse {
   ranked: RankedModel[];
+  pool?: PoolEntry[];
   paper_url: string;
   note: string;
 }
