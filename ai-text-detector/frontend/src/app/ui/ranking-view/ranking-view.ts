@@ -26,18 +26,18 @@ import type {
   imports: [CircularMetric],
   styles: `
     /* The fresh-install state has to be explained, not just rendered empty: 48 ranking cards,
-       zero pick buttons. Blue glass like the rest of the system, and it reads in both themes
-       because it uses the shared tokens. */
+       zero pick buttons. It is a note about the deployment, so it carries no hue — the corner
+       cut comes from the shared --chamfer token in styles.css, which is why there is no radius
+       here. (No backticks in this comment: it lives inside a template literal, and one would end
+       the styles property and break the decorator.) */
     .lock-note {
       display: flex;
       gap: 12px;
       align-items: flex-start;
       margin: 0 0 18px;
-      padding: 14px 16px;
+      padding: 16px 18px;
       border: 1px solid var(--line-strong);
-      border-radius: 14px;
-      background: var(--glass-sheen), color-mix(in srgb, var(--accent) 10%, transparent);
-      backdrop-filter: blur(var(--glass-blur));
+      background: var(--panel);
     }
     .lock-note .ico { flex: 0 0 auto; margin-top: 2px; }
     .lock-note strong { display: block; margin-bottom: 4px; }
@@ -45,23 +45,22 @@ import type {
     .rank-lock {
       margin: 8px 0 0;
       font-size: 12px;
-      color: var(--muted, rgba(150, 170, 210, 0.85));
+      color: var(--muted, #9e9e9e);
     }
 
     /* "Which model actually runs on my text?" — the question the ranking table never answered,
        and the one the brief makes the page for ("these ranking are the one used in auto order").
-       Same blue glass as the lock note; it reads in both themes because it is built from tokens. */
+       Neutral by the same rule: it states which lane is authoritative, and blue is reserved for
+       the control that changes it (the using-pool rows below). */
     .lane-authority {
       display: flex;
       flex-wrap: wrap;
       align-items: center;
       gap: 8px 10px;
       margin: 0 0 16px;
-      padding: 12px 15px;
-      border-radius: 14px;
-      border: 1px solid color-mix(in srgb, var(--royal) 42%, transparent);
-      background: var(--glass-sheen), linear-gradient(135deg, var(--accent-a16), transparent);
-      backdrop-filter: blur(var(--glass-blur));
+      padding: 14px 16px;
+      border: 1px solid var(--line-strong);
+      background: var(--panel);
       font-size: 12.5px;
       color: var(--ink-dim);
     }
@@ -125,16 +124,16 @@ import type {
     }
 
     /* Inline slot editor: changing which model holds a rank is one atomic call, so the row owns
-       its own control instead of making the user remove-and-re-add. */
+       its own control instead of making the user remove-and-re-add. No radius here — the shared
+       --chamfer-sm token cuts this select's two right corners, so the padding has to clear them. */
     .pool-row select.pool-change-target {
       min-width: 150px;
       max-width: 240px;
-      padding: 6px 8px;
-      border-radius: 10px;
+      padding: 6px 10px;
       font-size: 12px;
       color: var(--ink);
-      background: var(--panel-2);
-      border: 1px solid var(--line-strong);
+      background: var(--field-bg);
+      border: 1px solid var(--edge);
     }
   `,
   template: `

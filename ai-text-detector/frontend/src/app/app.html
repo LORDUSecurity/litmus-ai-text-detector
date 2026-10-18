@@ -62,8 +62,7 @@
         <div class="user-chip">
           <span>{{ auth.username() }}</span>
           <span class="role" [class.user]="!auth.isAdmin()">{{ auth.isAdmin() ? 'admin' : 'user' }}</span>
-          <button type="button" class="icon-btn" (click)="logout()" aria-label="Sign out" title="Sign out"
-                  style="width:30px;height:30px;border-radius:9px">
+          <button type="button" class="icon-btn sm" (click)="logout()" aria-label="Sign out" title="Sign out">
             <svg class="ico" viewBox="0 0 24 24" aria-hidden="true">
               <path d="M15 4h3a2 2 0 012 2v12a2 2 0 01-2 2h-3M10 8l-4 4 4 4M6 12h11" />
             </svg>

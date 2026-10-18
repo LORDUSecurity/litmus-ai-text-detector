@@ -15,9 +15,11 @@ proves the first launch a user of the installer actually sees.
 
     python tools/verify_exe_bundle.py [substring]
 
-The default substring is the lane-scale note added in round 24. Runs against a throwaway copy of
-the dev database and a throwaway empty one, each on its own port, so it never touches the real
-history or the shipped settings.
+The default substring is the lane-scale note added in round 24. It is searched in *both* served
+halves — `main-*.js` and `styles-*.css` — because Angular folds every component `styles:` into the
+stylesheet, so a CSS-only pass (the sharp/absolute-black one, needle `--chamfer`) is invisible to a
+JS-only grep. Runs against a throwaway copy of the dev database and a throwaway empty one, each on
+its own port, so it never touches the real history or the shipped settings.
 """
 from __future__ import annotations
 
@@ -41,6 +43,8 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT))   # `python tools/x.py` puts tools/ on sys.path, not the repo
                                 # root, and this check reads backend.seed constants
+sys.path.insert(0, str(Path(__file__).resolve().parent))   # …and its sibling tools
+import check_visual_language as vis  # noqa: E402          # the stylesheet rule, run on served bytes
 EXE = ROOT / ".localbuild" / "out" / "AI-Text-Detector.exe"
 DIST = ROOT / "frontend" / "dist" / "frontend" / "browser"
 REAL_DB = ROOT / "backend" / "data" / "detector.sqlite3"
@@ -475,8 +479,6 @@ def main() -> int:
         check(st2 == 200 and len(js) == len(dist_bytes) and sha == dist_sha,
               "the served bundle is byte-identical to dist",
               f"{st2} {len(js)} bytes sha256={sha[:16]}…")
-        check(needle.encode() in js, f"the change under test is in it (contains {needle!r})",
-              f"{js.count(needle.encode())} occurrence(s)")
 
         st3, css = get("/")
         styles = re.findall(r'(styles-[A-Z0-9]{8}\.css)', css.decode("utf-8", "replace"))
@@ -488,6 +490,22 @@ def main() -> int:
             check(d.is_file() and st4 == 200
                   and hashlib.sha256(got).hexdigest() == hashlib.sha256(d.read_bytes()).hexdigest(),
                   "stylesheet too", styles[0])
+
+        # The change under test can live in either half of the bundle, and a CSS-only pass lives only in
+        # the stylesheet: Angular folds every component `styles:` into styles-*.css, so grepping
+        # main-*.js alone would fail a package that did ship the change. Both served bytes are searched
+        # and the report says which one carried it.
+        n_js, n_css = js.count(needle.encode()), served_css.count(needle.encode())
+        check(bool(n_js or n_css), f"the change under test is in what the exe serves (contains {needle!r})",
+              f"main {n_js} occurrence(s), stylesheet {n_css}")
+        # …and the shipped stylesheet is one a parser will *apply*, not merely one that contains the
+        # right strings. Same rule tools/check_visual_language.py holds the source to and the static page
+        # holds its own <style> to — now measured on the compiler's output, where a dropped :root or a
+        # stray top-level token would otherwise be invisible to any grep.
+        breaks = vis.style_guards(served_css.decode("utf-8", "replace"), tokens=True)
+        check(not breaks, "the served stylesheet is read as written",
+              "; ".join(breaks[:4]) if breaks else
+              f"{len(served_css):,} B: :root parsed, absolute black + white, chamfer applied, no glass")
 
         # The serif faces are the third thing a 200 cannot vouch for. The static responder answers an
         # unknown path with index.html and a 200, so a stage that dropped `fonts/` -- a `cp` without

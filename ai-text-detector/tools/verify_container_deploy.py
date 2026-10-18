@@ -29,6 +29,11 @@ import urllib.request
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
+# `python tools/x.py` puts tools/ on sys.path already, but the check is written so that running it
+# from the repo root (`python -m …`, or an IDE that changes cwd) still resolves the sibling module
+# rather than failing at import.
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+import check_visual_language as vis  # noqa: E402  # the same visual-language guard the build runs
 BASE = (sys.argv[1] if len(sys.argv) > 1 else "http://localhost:8080").rstrip("/")
 API = BASE + "/api"
 # Name a lane to score the texts on it instead of the shipped default, e.g.
@@ -183,6 +188,28 @@ def main() -> int:
           "…and the self-hosted serif face is served, not the SPA fallback",
           f"{len(served_face)} B ctype={face_ctype.split(';')[0]!r} "
           f"identical_to_dist={dist_face.is_file() and served_face == dist_face.read_bytes()}")
+
+    # 3e: the stylesheet, which is where a design pass actually lands. The application builder folds
+    # every component's `styles:` into the global styles-*.css, so a chamfer/colour/radius change moves
+    # ZERO bytes in main-*.js and check 3 would have called a stale deploy current. Same reasoning as
+    # the exe bundle check's needle-in-both-halves fix: prove the sheet the container serves is the one
+    # dist built, then prove a parser reads it as written -- nginx's SPA fallback answers an unknown
+    # path with index.html + 200, and a stray top-level `#` line silently drops the `:root` block that
+    # follows it, so neither a status code nor a grep of the file is evidence.
+    sheet = re.findall(r"(styles-[A-Z0-9]{8}\.css)", text)
+    want_sheet = sorted(f.name for f in dist.glob("styles-*.css"))[:1] if dist.is_dir() else []
+    served_css, css_ctype = fetch_raw("/" + sheet[0]) if sheet else (b"", "")
+    dist_css = dist / want_sheet[0] if want_sheet else None
+    same_css = bool(dist_css and dist_css.is_file() and served_css == dist_css.read_bytes())
+    check(bool(sheet) and same_css, "…and the stylesheet it serves is the one dist built",
+          f"served={sheet[:1]} dist={want_sheet} {len(served_css)} B "
+          f"ctype={css_ctype.split(';')[0]!r} identical_to_dist={same_css}")
+    if served_css:
+        breaks = vis.style_guards(served_css.decode("utf-8", "replace"), tokens=True)
+        check(not breaks, "…and that stylesheet is read as it was written",
+              f"{len(served_css):,} B: " + ("; ".join(breaks) if breaks else
+                                            ":root parsed, absolute black + white, "
+                                            "chamfer applied, no radius, no glass"))
 
     # 4-6: an authenticated operator view of the engine.
     op, st, who, _env = admin_opener()

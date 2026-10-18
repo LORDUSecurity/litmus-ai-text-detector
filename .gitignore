@@ -58,3 +58,14 @@ ai-text-detector/.localbuild/
 ai-text-detector/build_local/
 ai-text-detector/AI-Text-Detector.spec
 ai-text-detector/installer/Output/
+
+# --- Sites publication recovery records --------------------------------
+# prepare_site writes these; they embed a base64 copy of the frozen draft plus
+# action/deployment ids for one machine, so they are never committed.
+ai-text-detector/public-site/*.qoder.site
+ai-text-detector/*.qoder.site
+
+# --- Scratch for live probes -------------------------------------------
+# Fonts and payloads the verifier scripts stage in order to fetch them; the
+# real copies live in frontend/public/fonts and public-site/dist/fonts.
+ai-text-detector/.probe/

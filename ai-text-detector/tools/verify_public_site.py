@@ -31,6 +31,7 @@ ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT / "tools"))
 
 import public_ranking_page as gen  # noqa: E402  (reuse its /ranking, its paths, its row markup)
+import check_visual_language as vis  # noqa: E402  (the shipped stylesheet rule, not a copy of it)
 
 DEFAULT_URL = "https://ai-text-ranking-630tcvp9y1c.qoder.website"
 UA = "Mozilla/5.0 (ai-text-detector research verifier)"
@@ -130,6 +131,24 @@ def main() -> int:
             bad("served page is byte-identical to public-site/dist/index.html",
                 f"served {sha(page)} ({len(page):,} B) vs built {sha(local)} ({len(local):,} B)"
                 " — republish, or the release is older than the build")
+
+    # 1b. The served stylesheet is one a parser reaches. Check 1 compares to the build, and the build
+    #     refuses to write a broken sheet -- but a release older than that guard serves a page whose
+    #     token block was eaten by a stray token, and every string a grep would look for is still in
+    #     the file. That is the failure this runs the shipped rule on, against the served bytes.
+    served_style = re.search(rb"<style>(.*?)</style>", page, re.S)
+    if not served_style:
+        bad("the served page carries a <style> block", "no <style>…</style> in the served bytes")
+    else:
+        css = served_style.group(1).decode("utf-8", "replace")
+        breaks = vis.style_guards(css, tokens=True)
+        if breaks:
+            bad("the served stylesheet is read as written",
+                "; ".join(breaks[:4]) + (f" (+{len(breaks) - 4} more)" if len(breaks) > 4 else ""))
+        else:
+            ok("the served stylesheet is read as written",
+               f"{len(css.splitlines())} lines: :root parsed, absolute black + white, chamfer applied, "
+               "no radius, no glass")
 
     # 2. The served row order is this checkout's /ranking order. This is the check the whole task
     #    exists to make unnecessary, so it compares to the route, not to the file.

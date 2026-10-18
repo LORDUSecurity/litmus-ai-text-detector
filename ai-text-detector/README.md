@@ -320,7 +320,7 @@ path with `index.html` and **200** — a status code can never show a missing as
 
 `https://ai-text-ranking-630tcvp9y1c.qoder.website` carries the ranking and the report, and it is a
 release, not a directory — so a green repo says nothing about it. `tools/verify_public_site.py` fetches
-it anonymously and runs 19 checks (current: **19/19**):
+it anonymously and runs 20 checks (current: **20/20**):
 
 ```bash
 python tools/verify_public_site.py                        # the published host
@@ -397,6 +397,43 @@ downloads.
 Regenerate and republish after any change to the ranking, the bands or the report — the site is a frozen
 draft, so a stale page is a page that disagrees with the deployed app.
 
+### The visual language is measured, because a broken stylesheet is invisible to a grep
+
+The interface is sharp: no rounded corners, and every surface that needs one gets its **top-right and
+bottom-right** cut instead (`--chamfer: polygon(…)`, driven by `--cut`). Dark mode is absolute black and
+light mode absolute white — `--bg: #000000` / `#ffffff` — so the theme is a fact about the file, not a
+vibe. Blue means *interactive*: hover, focus, selection, the lane bar. Nothing decorative borrows it.
+The glass that used to sit under the panels is gone, because a cut corner and a translucent panel cannot
+coexist — the outline would leak past the clip. So is the last thing that survived the glass removal:
+`--glass-sheen`, a 5% white gradient down the top of every panel, which meant the dark theme was not
+actually black anywhere but its bottom half. Depth is the hairline edge and the chamfer, and the guard
+names `--glass-sheen` and `--glass-blur` next to `backdrop-filter` so the residue cannot come back under
+its own old name.
+
+`tools/check_visual_language.py` asserts all of that by parsing, not searching:
+
+```bash
+python tools/check_visual_language.py          # 3 surfaces: styles.css, every styles: literal, PAGE_CSS
+python tools/check_visual_language.py --verbose
+```
+
+The reason it parses is a bug I shipped while doing this pass. A `#` comment at the top level of a
+stylesheet is not a comment to CSS: error recovery makes it the *prelude* of the next block, so
+`:root { … }` is dropped while every one of its lines is still sitting in the file. A grep for
+`--chamfer` passes on a page that renders no chamfer at all. The same failure went further: a backtick
+inside a CSS comment inside an Angular `styles: \`…\`` literal **ends the literal**, which truncates the
+`@Component` decorator — `NG1002` plus `NG2012` in every importer, i.e. the app stops compiling while the
+stylesheet looks perfectly fine. A scanner more forgiving than the language is worse than no scanner, so
+`component_styles()` follows JavaScript string semantics and stops at the first unescaped backtick and
+says so.
+
+The rule is enforced where it can actually stop something. `public_ranking_page.py` refuses to write a
+page whose own `<style>` block would not be read as written, and
+`verify_public_site.py --url …` runs the same guard against the **served bytes** (check 1b), which is how
+it caught the previous release: 18/20 with the old glass CSS named (`backdrop-filter` ×6, `blur(` ×6,
+`drop-shadow(` ×1, `border-radius: 999px` at line 49). A rule that only runs on the repo would have been
+green over a live page that broke it.
+
 ### Tuned parameters are not decorative
 
 Every parameter on a `models` row is applied to the detection, not just stored: the
@@ -415,13 +452,13 @@ fitted for a different distribution. See [docs/calibration.md](docs/calibration.
 node n8n/test-normalize.js            # 68 hostile-payload cases against the shipped Code node
 node n8n/test-parse.js                # 14: truncated answers salvage a whole number, never a cut one
 node n8n/test-ensemble.js             # tie-break decision table + the optional-lane contract
-python -m pytest backend/tests -q     # 158: routing, encryption, purger, tuning block, auth gate, off-lane
+python -m pytest backend/tests -q     # 164: routing, encryption, purger, tuning block, auth gate, off-lane
                                       # sanitization, slow-engine-vs-missing-engine labelling, and the
                                       # using-pool: failover precedence, the request budget every later
                                       # attempt shares, which failures a second model cannot fix, and the
                                       # discovery walk -- a refusal costs one call, is recorded without a
                                       # score, and the next id still gets tried
-cd frontend && npx ng test --watch=false   # 104: lane_config composition, key headers, admin card, quote painting,
+cd frontend && npx ng test --watch=false   # 122: lane_config composition, key headers, admin card, quote painting,
                                       # lane-scale note, report-link fallback (blank paper_url -> /research/),
                                       # the using-pool drag/reorder panel, the auto-discovery list, and the
                                       # two request ceilings -- a detect and a key probe are waited out to
@@ -435,6 +472,9 @@ cd frontend && npx ng test --watch=false   # 104: lane_config composition, key h
 node tools/verify-lane-retry.js       # the workflow retries a failing lane (loopback mock, no budget spent)
 node tools/verify-free-lane.js        # a real text judged end-to-end through a free OpenRouter lane
 node benchmark/phrase-match-rate.js   # how many of the model's own quotes the evidence panel can locate (575/575)
+python tools/check_visual_language.py # parses the CSS instead of searching it: chamfer applied, radius 0/50%,
+                                      # no glass, absolute black + white grounds, no Python-style comment
+                                      # eating :root, and no backtick ending a styles: literal (3 surfaces)
 python tools/verify_admin_settings.py # admin surface live: 403 gate, 400 refusals, guide round-trip,
                                       # /n8n/status, labelled ENGINE_UNREACHABLE, one real detect (16 checks)
                                       # runs on a copy of the dev DB; the real one is not written
@@ -465,14 +505,24 @@ python tools/verify_deploy_recipe.py  # container preflight, no daemon needed: C
                                       # of the report are byte-identical and tracked, and dist carries
                                       # them too (40 checks)
 python tools/verify_container_deploy.py # the RUNNING stack through nginx: liveness public, gateway
-                                      # status behind login, served bundle == dist, /research/report.html
+                                      # status behind login, served bundle == dist AND served
+                                      # styles-*.css == dist (byte-for-byte) then parsed by the same
+                                      # visual-language guard the build runs — a design pass moves zero
+                                      # bytes in main-*.js, so the JS comparison alone cannot see it,
+                                      # /research/report.html
                                       # byte-equal to the repo copy + the PDF served as application/pdf,
                                       # admin sign-in, seeded promoted primary, purger on n8n's own
                                       # SQLite, webhook registered, two real labelled corpus texts scored
                                       # with phrase evidence, and the two verdicts on opposite sides
-                                      # (14 checks on the shipped lane; 13 with DETECT_MODEL, which
+                                      # (17 checks on the shipped lane; 16 with DETECT_MODEL, which
                                       # skips separation)
-python tools/verify_exe_bundle.py     # the packaged .exe is proved in two boots (24 checks). Upgrade
+python tools/verify_exe_bundle.py     # the packaged .exe is proved in two boots (31 checks). Its needle
+                                      # is searched in main-*.js AND styles-*.css, because Angular folds
+                                      # every component `styles:` into the stylesheet — a CSS-only change
+                                      # (`--chamfer`: 0 hits in main, 8 in the served sheet) fails a
+                                      # JS-only grep while being perfectly shipped. The served sheet is
+                                      # then parsed, not grepped, by the same rule as the static page.
+                                      # Upgrade
                                       # boot: a throwaway copy of the dev DB, where the boot must switch
                                       # a previously-enabled tie-break row off exactly once, the served
                                       # bundle must hash equal to dist, /research/report.html must equal

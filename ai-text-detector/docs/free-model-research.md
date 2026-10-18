@@ -3952,3 +3952,94 @@ suites, the preflight and the live verifier — **not yet in the container or th
 is the rebuild that follows. Still true from earlier rounds, and unchanged by this one: the shipped n8n
 workflow reports gateway statuses as `no_choices`, so a History row reads `no_choices` where "HTTP 410
 end of life" would be honest, and closing that is a workflow redeploy rather than a backend edit.
+
+## Round 29: the ranking page went public, and the design brief became a measured rule (2026-10-18)
+
+Two asks drove this round. The first: put the technical report on a **public** site whose page carries
+only the ranking table and each model's measured performance, ordered the way the application's own
+auto-order ranks them. The second was a design brief, not a feature request:
+
+> no avoid rounded corner make them sharp with the top right and down right cutted, make the font the
+> why cleaner and interactive and make dark absolute dark and light absolute white, leave blue for
+> interaction light hovering and such
+
+**The public page.** `tools/public_ranking_page.py` reads the same `models` rows `/api/ranking` serves,
+sorts them by the same key the app sorts by (measured rows first, then by the operating point the band
+gives them), and writes one static HTML file — no app framework, no backend, nothing that can be
+broken by a bad deploy. `tools/verify_public_site.py` then checks the **published artifact from
+outside**: 20/20, twice, including "the served page is byte-identical to what the repo built"
+(`0f2a9c2fdf5b3db6`, then the 59,476 B rebuild) and the report PDF served as `application/pdf`.
+
+**The brief became a script.** `tools/check_visual_language.py` reads the surfaces that carry the theme
+and fails on what the brief forbids: a non-zero `border-radius` (everything is a chamfer now —
+`clip-path: polygon()` cuts the **top-right and bottom-right** corners via `--cut/--cut-sm/--cut-xs`),
+a dark ground that is not `#000000` or a light ground that is not `#ffffff`, a radius in a chamfered
+box, and anything frosted (`backdrop-filter`, `blur(`, `drop-shadow(`, `--glass-sheen`). Blue is
+carved out by role rather than by eye: `--grad-cta` fills stay on the surfaces that *are* the selection
+— tabs, the pinned card, the auth submit, the CTA — and the decorative wash behind the Detect banner is
+gone. Three surfaces are checked: `frontend/src/styles.css` (2,541 lines), `ranking-view.ts`'s
+component styles (112), and `PAGE_CSS` inside the site generator (145). It reports
+`PASS: 0 problem(s)`.
+
+**Two failure modes that only a parser can see.** Writing the guard was worth more than the polish,
+because both of these passed every grep we had:
+
+- A stray top-level `#` line — a comment written without `/* */` — is swallowed by CSS error recovery
+  as the *prelude of the next block*. The next block was `:root{…}`, so the whole token file stayed in
+  the stylesheet, every `var()` resolved from a fallback or not at all, and the page still looked
+  plausible. `style_guards()` counts parsed blocks and fails when the token block is not applied.
+- A backtick inside a CSS comment inside an Angular `styles: \`…\`` **closes the template literal**.
+  The build dies with NG1002/NG2012 and the app stops compiling entirely. CSS comments in component
+  styles are therefore backtick-free by rule, and the site generator now runs the same guard on the
+  CSS it is about to write — it refuses to publish a stylesheet a parser would not apply.
+
+The guard is not decorative either way: `verify_public_site.py` check 1b runs it against the **served
+bytes**, and `verify_exe_bundle.py` runs it against the stylesheet the packaged app answers with, so a
+broken sheet fails a deploy check rather than shipping.
+
+**A JS-bundle grep cannot prove a CSS-only change.** While verifying the packaged exe, `--chamfer`
+occurred **0×** in `main-DXYSVFUN.js` and **8×** in `styles-GZL5AEYN.css`: the Angular application
+builder folds every component's `styles:` into the global sheet, so a whole design pass moves zero
+bytes in the JS. The bundle check's needle grep would have failed a correctly shipped change. It now
+searches both halves and reports which one carries it — the 31/31 run prints
+`main 0 occurrence(s), stylesheet 8` — and `verify_container_deploy.py` gained the same pair of checks
+(3e: the served sheet equals dist's, byte for byte; 3f: a parser reads it as written).
+
+**The rebuild, and what it cost.** `ng build` exit 0 in 16.052 s; `ng test` **122 passed** across 8
+files; `pytest` **164 passed**; `verify_deploy_recipe.py` **40/40**; `.localbuild` staging reported
+`STAGE_MATCHES_DIST` (a `cp` merge is how a stale hashed bundle gets served); PyInstaller exit 0, and
+`verify_exe_bundle.py --chamfer` **31/31**; the installer compiled in 23.781 s (45,125,975 B).
+
+Two self-inflicted incidents belong in the record. First: `docker build --target build .` failed with
+`open Dockerfile: no such file or directory` because the Dockerfile lives at `frontend/Dockerfile` and
+I omitted `-f`; the chained `echo` in the same command made the completion notification read
+`exit=0`, which is `tail`'s exit, not the build's. Second: chaining that build with a second
+containerised `ng test` **crashed the WSL VM** (`rpc error: code = Unavailable desc = error reading
+from server: EOF`); the three containers auto-restarted healthy inside a minute, but n8n re-registers
+its webhook roughly 20 minutes after its own boot, so live detects through `:8080` degrade in that
+window. The lesson is not "avoid Docker" — it is one containerised build per invocation, and read
+`FreeVirtualMemory` before believing a build died for logic reasons.
+
+Then host→`127.0.0.1:8080` returned `RemoteDisconnected` on four attempts, including `curl`, while
+`docker ps` reported the container healthy and its own healthcheck passing — the Windows
+ephemeral-port/loopback trap from earlier rounds, where a client dialing a port can be *assigned* that
+port and get a refusal that sticks. `python tools/verify_container_deploy.py` from a fresh process
+answered every route fine. The running container was meanwhile read from inside itself
+(`docker exec … wget -qO- http://127.0.0.1/`), which is how the stale pair
+`main-NPBOP6NA.js` / `styles-LH6W3N7R.css` (built 00:39) was caught serving a page 75 minutes older
+than `dist` (01:54) — a container that says "Up 9 hours (healthy)" is not evidence of what it serves.
+
+After the rebuild, the web container serves `main-DXYSVFUN.js` / `styles-GZL5AEYN.css` and
+`verify_container_deploy.py` passes on the shipped lane, with the two new stylesheet checks green.
+
+**What the design pass did not do.** It did not touch the calibrated bands, the prompt, the parser, or
+anything a verdict depends on — the pages changed are CSS, one component's inline styles, and the site
+generator. It also did not rewrite the dated Round 25–27 entries that record the old glass measurements
+in `check_palette_contrast.py` output and prose: those are history, and the guard now prevents the
+glass returning rather than pretending it never shipped.
+
+**What remains.** Nothing on the artifact side — repo, unit suites, preflight, public site, packaged
+exe, installer and the running container all carry the change. Open from before this round and
+unchanged by it: the shipped n8n workflow still labels gateway failures `no_choices`, and
+`SINGLE_MODEL_SECONDARY_AI` / the stalled NVIDIA pool still mean the tie-break lane cannot be captured
+right now.
