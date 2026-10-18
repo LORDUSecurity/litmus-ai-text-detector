@@ -58,6 +58,11 @@ export class LaneState {
     if (!stillListed) this.model.set(LANE_MODELS[this.lane][0].id);
   }
 
+  /** Back to "no override": the deployed row, or this user's own pool, decides the lane. */
+  clear(): void {
+    this.setFields(defaultLaneFields());
+  }
+
   fields(): LaneFields {
     return {
       provider: this.provider(),
@@ -79,29 +84,26 @@ export class LaneState {
   }
 }
 
-const NVIDIA_PRESET = presetById('nvidia');
+/** What an untouched lane holds: nothing. A blank field means "send no override", so the
+    backend resolves the lane from the admin's deployed row and, failing that, from the signed-in
+    user's own pool — which is the only way "the admin sets the models for everybody" and "auto
+    switching based on the order of the user" can both be true.
 
-function laneFields(lane: Lane): LaneFields {
-  return {
-    provider: NVIDIA_PRESET.id,
-    scheme: NVIDIA_PRESET.scheme,
-    host: NVIDIA_PRESET.host,
-    port: NVIDIA_PRESET.port,
-    path: NVIDIA_PRESET.path,
-    model: LANE_MODELS[lane][0].id,
-  };
-}
-
-/** The defaults are the calibrated configuration: NVIDIA NIM with the
-    benchmarked 550B/120B pair and the env keys. Anything else is a deviation
-    the user asked for, and the result card says so. */
-export function defaultLaneFields(lane: Lane): LaneFields {
-  return laneFields(lane);
+    These fields used to start pre-filled with the pair this file was written against, and
+    `laneConfig()` reads a filled field as an override. Every plain user's Detect therefore named
+    `nvidia/nemotron-3-ultra-550b-a55b` in the request, the backend honoured it
+    (`lane_source: "request"`), the deployed `z-ai/glm-5.3-flash` row was never consulted, and the
+    shared page answered `DETECTION_UNAVAILABLE` / 503 in 7 s — measured 2026-10-17 with a
+    non-admin account, whose form renders no lane fields at all, so nothing on screen could have
+    produced that model id. A non-admin cannot see or edit these fields, so "blank means don't
+    send" only protects a user if blank is also where the form begins. */
+export function defaultLaneFields(): LaneFields {
+  return { provider: '', scheme: 'https', host: '', port: '', path: '', model: '' };
 }
 
 export class DetectionFormState {
-  readonly primary = new LaneState('primary', laneFields('primary'));
-  readonly secondary = new LaneState('secondary', laneFields('secondary'));
+  readonly primary = new LaneState('primary', defaultLaneFields());
+  readonly secondary = new LaneState('secondary', defaultLaneFields());
   readonly text = signal('');
   readonly primaryApiKey = signal('');
   readonly secondaryApiKey = signal('');

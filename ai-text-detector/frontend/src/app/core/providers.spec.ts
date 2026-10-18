@@ -16,6 +16,13 @@ describe('composeBaseUrl', () => {
     expect(composeBaseUrl(presetById('openrouter'))).toBe('https://openrouter.ai/api/v1');
   });
 
+  it('composes nothing when there is no host', () => {
+    // An empty lane means "no override", and the panel prints this value — a bare `https://`
+    // under an empty Host field reads like a half-typed endpoint the user did not choose.
+    expect(composeBaseUrl({ scheme: 'https', host: '', port: '', path: '' })).toBe('');
+    expect(composeBaseUrl({ scheme: 'http', host: '  ', port: '20128', path: '/v1' })).toBe('');
+  });
+
   it('drops the default port for the scheme', () => {
     expect(
       composeBaseUrl({ scheme: 'https', host: 'openrouter.ai', port: '443', path: '/api/v1' }),
@@ -77,10 +84,19 @@ describe('benchmark pair', () => {
     ).toBe(false);
   });
 
-  it('lists the benchmarked model first in both lanes', () => {
-    expect(LANE_MODELS.primary[0].id).toBe(BENCHMARKED_PAIR.primary);
+  it('auto-fills the lane with the model the shipped defaults deploy', () => {
+    // Choosing a provider preset writes entry [0] into the Model field, so [0] has to be the lane
+    // a fresh install actually runs — not the pair the thresholds were once measured on. The 550B
+    // sitting here is what made every untouched form name a retired NVIDIA lane.
+    expect(LANE_MODELS.primary[0].id).toBe('z-ai/glm-5.3-flash');
     expect(LANE_MODELS.secondary[0].id).toBe(BENCHMARKED_PAIR.secondary);
     expect(LANE_MODELS.primary[0].benchmarked).toBe(true);
+    expect(LANE_MODELS.primary[0].id).not.toBe(BENCHMARKED_PAIR.primary);
+  });
+
+  it('says so on the model it retired', () => {
+    const retired = LANE_MODELS.primary.find((m) => m.id === BENCHMARKED_PAIR.primary);
+    expect(retired?.note).toMatch(/retired/i);
   });
 });
 

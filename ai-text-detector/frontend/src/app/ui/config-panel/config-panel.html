@@ -8,18 +8,26 @@
       Detection lanes
     </h2>
     <div class="panel-actions">
-      <button type="button" class="ghost" (click)="resetLanes()">Reset lanes to benchmarked pair</button>
+      <button type="button" class="ghost" (click)="resetLanes()">Clear lane overrides</button>
       <button type="button" class="ghost" (click)="clearKeys()">Clear keys</button>
     </div>
   </header>
 
+  @if (!overridden()) {
+    <p class="notice">
+      <strong>No override from this browser.</strong> Detections run on the lane the deployed
+      <code>models</code> row names, and fall over to the signed-in user's own pool when that row
+      cannot answer. Filling a field below replaces that with a request-named lane, and the result
+      card says which authority decided.
+    </p>
+  }
   @if (!secondaryEnabled()) {
     <p class="notice">
       <strong>Single-lane mode.</strong> Every text gets one model call; answers in the gray zone
       (between the human and AI cuts) come back as REVIEW instead of a tie-break verdict.
       Turn the switch below to expand the second lane.
     </p>
-  } @else if (!pairIsBenchmarked()) {
+  } @else if (overridden() && !pairIsBenchmarked()) {
     <p class="notice">
       The thresholds were calibrated for <code>{{ benchmarkedPair.primary }}</code> over
       <code>{{ benchmarkedPair.secondary }}</code>. With this pair the verdict is indicative only.
@@ -50,6 +58,7 @@
             [ngModel]="lane.state.provider()"
             (ngModelChange)="onProvider(lane.state, $event)"
             [attr.name]="'provider-' + lane.name">
+            <option value="">Deployed lane (no override)</option>
             @for (p of providers; track p.id) {
               <option [value]="p.id">{{ p.label }}</option>
             }

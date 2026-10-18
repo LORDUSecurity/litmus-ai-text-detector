@@ -265,6 +265,24 @@ export class BackendService {
     return this.http.post<PoolResponse>(`${API}/my/pool/order`, { order }).pipe(timeout(8_000));
   }
 
+  /** Change which model fills one slot, keeping the slot. One call, so the user's other ranks
+       are not re-derived from a list that is missing a row while the swap is in flight. */
+  replaceInPool(
+    provider: string,
+    model: string,
+    newProvider: string,
+    newModel: string,
+  ): Observable<PoolResponse> {
+    return this.http
+      .post<PoolResponse>(`${API}/my/pool/replace`, {
+        provider,
+        model,
+        new_provider: newProvider,
+        new_model: newModel,
+      })
+      .pipe(timeout(8_000));
+  }
+
   /** Queue a discovery run. 202 = queued, not finished: poll `discoveryStatus()` for the
       stage, because screening four models through the engine takes minutes, not seconds. */
   discover(providerId: number): Observable<DiscoveryEnqueue> {

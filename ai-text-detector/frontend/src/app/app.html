@@ -103,7 +103,7 @@
               <h3>Cannot reach the detection path</h3>
               <p class="verbatim">{{ n.detail }}</p>
             } @else if (n.kind === 'timeout') {
-              <h3>Timed out after 150 seconds</h3>
+              <h3>Timed out after {{ patienceSeconds }} seconds</h3>
               <p class="verbatim">{{ n.detail }}</p>
             }
           </div>
@@ -147,7 +147,7 @@
     }
 
     @if (view() === 'ranking') {
-      <app-ranking-view (useModel)="useRankedModel($event)" />
+      <app-ranking-view (useModel)="useRankedModel($event)" (clearModel)="clearPickedModel()" />
     }
 
     @if (view() === 'history') {

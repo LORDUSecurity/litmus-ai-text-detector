@@ -68,18 +68,24 @@ export const BENCHMARKED_PAIR: Record<Lane, string> = {
   secondary: 'google/diffusiongemma-26b-a4b-it',
 };
 
+/** The order of each lane's list is not decoration: choosing a provider preset puts entry [0] in
+    the Model field. That is how a retired lane came back — the 550B sat at [0], so every fresh
+    form and every `applyPreset('nvidia')` named it, and the request-override bug made that the
+    lane every plain user hit. Entry [0] is the model the shipped defaults actually deploy
+    (`backend/seed.py` DEFAULT_LANES); the models below it are alternatives an admin names on
+    purpose. */
 export const LANE_MODELS: Record<Lane, ModelOption[]> = {
   primary: [
-    { id: BENCHMARKED_PAIR.primary, note: 'shipped primary · AUC 0.934 dirty · band 0.69/0.40 is calibrated for it', benchmarked: true },
-    { id: 'moonshotai/kimi-k3', note: 'best free lane · AUC 1.000 with 0 wrong on in-sample AND holdout · needs top_p 0.95 (stored row supplies it)', benchmarked: true },
-    { id: 'z-ai/glm-5.3-flash', note: 'AUC 1.000 dirty, 0 wrong · broke OOS on ai-012 · p50 ~8 s — fastest clean lane', benchmarked: true },
+    { id: 'z-ai/glm-5.3-flash', note: 'deployed primary (the shipped default) · AUC 1.000 dirty, 0 wrong · band 0.80/0.55 · p50 ~8 s', benchmarked: true },
+    { id: BENCHMARKED_PAIR.primary, note: 'retired as the shipped lane · 404 then 503 from NVIDIA · 0.69/0.40 was calibrated on it', benchmarked: true },
+    { id: 'moonshotai/kimi-k3', note: 'delisted: NVIDIA answers HTTP 410 since 2026-10-15 · AUC 1.000 with 0 wrong while it served', benchmarked: true },
     { id: 'inclusionai/ling-3.1-flash', note: 'OpenRouter id · best free OR lane (47/48 dirty, 0 wrong at its own 0.63/0.52 band) — pick the OpenRouter provider', benchmarked: true },
     { id: 'meta/muse-glimmer-30b', note: 'AUC 0.986 · strongest clean-text score, but slowest lane', benchmarked: true },
   ],
   secondary: [
-    { id: BENCHMARKED_PAIR.secondary, note: 'AUC 0.953 · tie-break cut 0.90 is calibrated for it', benchmarked: true },
+    { id: BENCHMARKED_PAIR.secondary, note: 'deployed tie-break row (shipped switched off) · AUC 0.953 · cut 0.90 is calibrated for it', benchmarked: true },
     { id: 'meta/muse-glimmer-30b', note: 'AUC 0.986 · holdout wanted cut 0.70, not 0.90', benchmarked: true },
-    { id: BENCHMARKED_PAIR.primary, note: 'AUC 0.934 · holdout wanted cut 0.30-0.65, unstable', benchmarked: true },
+    { id: BENCHMARKED_PAIR.primary, note: 'AUC 0.934 · holdout wanted cut 0.30-0.65, unstable · retired as a primary', benchmarked: true },
   ],
 };
 
@@ -97,6 +103,10 @@ export function providerFor(host: string, port: string): ProviderPreset | null {
 /** A preset is a convenience, not a constraint: every field stays editable. */
 export function composeBaseUrl(preset: Pick<ProviderPreset, 'scheme' | 'host' | 'port' | 'path'>): string {
   const host = preset.host.trim().toLowerCase();
+  // No host is not a malformed URL, it is the absence of an override — and this string is what
+  // the lane card prints under the Host field, so composing `https://` here would advertise an
+  // endpoint nobody chose.
+  if (!host) return '';
   const port = preset.port.trim();
   const bracketed = host.includes(':') && !host.startsWith('[') ? `[${host}]` : host;
   const defaultPort = (preset.scheme === 'http' && port === '80') || (preset.scheme === 'https' && port === '443');

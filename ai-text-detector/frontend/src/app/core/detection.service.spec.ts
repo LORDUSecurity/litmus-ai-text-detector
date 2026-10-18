@@ -3,7 +3,7 @@ import { TestBed } from '@angular/core/testing';
 import { provideHttpClient } from '@angular/common/http';
 import { DetectionService } from './detection.service';
 import { HTTP_PATIENCE_MS } from './http-budget';
-import { DetectionFormState } from './form-state';
+import { DetectionFormState, defaultLaneFields } from './form-state';
 import type { LaneConfig } from './detection.types';
 
 const PRIMARY_KEY = 'nvapi-PRIMARYsecret123';
@@ -86,6 +86,27 @@ describe('DetectionService', () => {
     req.flush({ classification: 'HUMAN_LIKELY' });
   });
 
+  it('sends no lane_config at all from a form nobody has touched', () => {
+    // The shipped bug this spec exists for: the lane fields used to start pre-filled with the
+    // pair this file was written against, and `laneConfig()` treats a filled field as an override.
+    // So every plain user's detection named a retired NVIDIA lane in the request, the backend
+    // honoured it (`lane_source: "request"`), the admin's deployed row was never consulted, and
+    // the answer came back in 7 s as DETECTION_UNAVAILABLE / 503 on the shared page. Measured
+    // 2026-10-17 against the deployed container, whose enabled primary is z-ai/glm-5.3-flash.
+    // A non-admin never sees the fields, so "blank means don't send" only holds if blank is also
+    // where the form starts.
+    const form = new DetectionFormState();
+
+    expect(form.laneConfig()).toEqual({});
+
+    service.detect('some text to judge', form.laneConfig(), form.keys()).subscribe();
+
+    const req = http.expectOne('/api/detect');
+    expect((req.request.body as Record<string, unknown>)['lane_config']).toBeUndefined();
+    expect(req.request.headers.get('x-primary-api-key')).toBeNull();
+    req.flush({ classification: 'HUMAN_LIKELY' });
+  });
+
   it('omits lane_config entirely when every override field is blank', () => {
     const form = new DetectionFormState();
     form.primary.host.set('');
@@ -98,6 +119,20 @@ describe('DetectionService', () => {
     const req = http.expectOne('/api/detect');
     expect((req.request.body as Record<string, unknown>)['lane_config']).toBeUndefined();
     req.flush({ classification: 'HUMAN_LIKELY' });
+  });
+
+  it('leaves nothing to send once the panel clears the overrides', () => {
+    // `Reset lanes to benchmarked pair` used to write a baked model id back into the form, which
+    // is an override — the opposite of what an admin reaches for that button to undo. The cleared
+    // state has to be indistinguishable from a form nobody ever touched.
+    const form = new DetectionFormState();
+    form.primary.applyPreset('nvidia');
+    form.secondary.applyPreset('omniroute');
+    expect(Object.keys(form.laneConfig()).length).toBe(2);
+
+    form.primary.setFields(defaultLaneFields());
+    form.secondary.setFields(defaultLaneFields());
+    expect(form.laneConfig()).toEqual({});
   });
 
   it('sets both key headers when both keys are present', () => {

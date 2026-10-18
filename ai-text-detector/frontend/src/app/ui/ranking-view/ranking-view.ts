@@ -7,6 +7,7 @@ import { CircularMetric } from '../circular-metric/circular-metric';
 import type {
   ConfigProvider,
   DiscoveryJob,
+  LaneAuthority,
   PoolEntry,
   PublicConfig,
   RankedModel,
@@ -46,6 +47,95 @@ import type {
       font-size: 12px;
       color: var(--muted, rgba(150, 170, 210, 0.85));
     }
+
+    /* "Which model actually runs on my text?" — the question the ranking table never answered,
+       and the one the brief makes the page for ("these ranking are the one used in auto order").
+       Same blue glass as the lock note; it reads in both themes because it is built from tokens. */
+    .lane-authority {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 8px 10px;
+      margin: 0 0 16px;
+      padding: 12px 15px;
+      border-radius: 14px;
+      border: 1px solid color-mix(in srgb, var(--royal) 42%, transparent);
+      background: var(--glass-sheen), linear-gradient(135deg, var(--accent-a16), transparent);
+      backdrop-filter: blur(var(--glass-blur));
+      font-size: 12.5px;
+      color: var(--ink-dim);
+    }
+    .lane-authority .ico {
+      width: 15px;
+      height: 15px;
+      fill: none;
+      stroke: currentColor;
+      stroke-width: 2;
+      stroke-linecap: round;
+      stroke-linejoin: round;
+    }
+    .lane-authority .la-lead {
+      display: inline-flex;
+      align-items: center;
+      gap: 7px;
+      color: var(--ink-dim);
+    }
+    .lane-authority .la-model {
+      color: var(--ink);
+      font-weight: 600;
+      word-break: break-word;
+    }
+    .lane-authority .la-pin {
+      border-color: color-mix(in srgb, var(--warn) 55%, transparent);
+      color: var(--warn);
+    }
+    .lane-authority .la-note {
+      flex-basis: 100%;
+      margin: 2px 0 0;
+      line-height: 1.45;
+    }
+
+    /* The printable copy of the study, one click from the table that cites it. Outlined rather
+       than filled so the archival URL (the primary link) stays the louder of the two. */
+    .pdf-link {
+      display: inline-flex;
+      align-items: center;
+      gap: 7px;
+      padding: 8px 14px;
+      border-radius: var(--r-pill);
+      text-decoration: none;
+      font-size: 12.5px;
+      color: var(--accent-2);
+      border: 1px solid color-mix(in srgb, var(--royal) 45%, transparent);
+      background: linear-gradient(135deg, var(--accent-a08), transparent);
+      transition: border-color 0.16s ease, transform 0.12s ease;
+    }
+    .pdf-link:hover {
+      border-color: var(--royal);
+      transform: translateY(-1px);
+    }
+    .pdf-link .ico {
+      width: 14px;
+      height: 14px;
+      fill: none;
+      stroke: currentColor;
+      stroke-width: 2;
+      stroke-linecap: round;
+      stroke-linejoin: round;
+    }
+
+    /* Inline slot editor: changing which model holds a rank is one atomic call, so the row owns
+       its own control instead of making the user remove-and-re-add. */
+    .pool-row select.pool-change-target {
+      min-width: 150px;
+      max-width: 240px;
+      padding: 6px 8px;
+      border-radius: 10px;
+      font-size: 12px;
+      color: var(--ink);
+      background: var(--panel-2);
+      border: 1px solid var(--line-strong);
+    }
   `,
   template: `
     <section class="panel">
@@ -64,7 +154,67 @@ import type {
           </svg>
           {{ paperTitle() }}
         </a>
+        <!-- The same study, printable. The report links it from inside; a user who wants the PDF
+             before deciding to read the whole thing should not have to find that out first. -->
+        <a class="pdf-link" href="/research/report.pdf" target="_blank" rel="noopener noreferrer">
+          <svg class="ico" viewBox="0 0 24 24" aria-hidden="true">
+            <path d="M12 3v11M8 10.5l4 4 4-4" /><path d="M5 19h14" />
+          </svg>
+          PDF
+        </a>
       </div>
+
+      @if (authority(); as a) {
+        <!-- Rendered only from what /ranking reports, and /ranking builds it from the very
+             functions /detect walks. That is the point: #142 shipped a ranking page that named a
+             deployed default no request ever reached, because the answer was being re-derived on
+             the wrong side of the wire. No "lane_authority" in the response means an older
+             backend — so this block says nothing, rather than inventing an answer from the pool it
+             happens to have loaded. -->
+        <div class="lane-authority" role="status">
+          <span class="la-lead">
+            <svg class="ico" viewBox="0 0 24 24" aria-hidden="true">
+              <path d="M4 12h9" /><path d="M10 7.5l4.5 4.5L10 16.5" /><circle cx="18.5" cy="12" r="2.5" />
+            </svg>
+            Your next run is scored by
+          </span>
+          @if (a.next; as n) {
+            <strong class="la-model">{{ n.model }}</strong>
+            <span class="hint">
+              · {{ n.provider }} ·
+              {{ n.source === 'user-pool' ? 'first in your using pool' : 'the deployed default' }}
+            </span>
+            @if (a.failover.length) {
+              <span class="hint">— if it stops answering, in your order: {{ failoverList() }}</span>
+            } @else {
+              <span class="hint">
+                — nothing behind it: if it stops answering, this run has no rescue. Add another
+                model to your pool and the failover has somewhere to go.
+              </span>
+            }
+          } @else {
+            <strong class="la-model">No primary model is enabled</strong>
+            <span class="hint">
+              · neither a deployed default nor an entry in your using pool, so an untouched Detect
+              has no lane to walk. Add a verified key, then put a model in your pool.
+            </span>
+          }
+          <span class="chip">
+            Deployed default:
+            {{ a.deployed_default ? a.deployed_default.model : 'none set' }}
+          </span>
+          <span class="chip" [class.good]="!!a.deployed_tie_break">
+            tie-break lane {{ a.deployed_tie_break ? a.deployed_tie_break.model : 'off' }}
+          </span>
+          @if (pickedModel(); as pm) {
+            <span class="chip la-pin">{{ pm }} — this run only</span>
+            <button type="button" class="ghost release-pick" (click)="releasePick()">
+              Score with my pool's order again
+            </button>
+          }
+          @if (a.note) { <p class="hint la-note">{{ a.note }}</p> }
+        </div>
+      }
 
       @if (noScoringKey()) {
         <!-- Measured on a packaged first boot, 2026-10-16: 48 cards, zero pick buttons, and the page
@@ -132,6 +282,12 @@ import type {
                   } @else {
                     <span class="chip">add a key</span>
                   }
+                  <!-- Two different facts, and a card can carry one, both or neither: the admin's
+                       promoted row, and the row that actually answers this caller's runs (which
+                       is the pool's first healthy entry whenever the user has one). Ranking #1 is
+                       neither of those things on its own. -->
+                  @if (answersRuns(m)) { <span class="chip good">used for your runs</span> }
+                  @if (isDeployedDefault(m)) { <span class="chip lane">deployed default</span> }
                 </div>
                 <div class="rank-stats">
                   <span><b>{{ m.correct }}</b> right</span>
@@ -245,6 +401,32 @@ import type {
                 <button type="button" class="ghost icon-only"
                         [disabled]="i === pool().length - 1 || poolBusy()"
                         [attr.aria-label]="'Move ' + p.model + ' down'" (click)="move(i, i + 1)">↓</button>
+                <!-- One atomic slot change: "remove, add, re-drag" costs the user his rank between
+                     the calls and a half-finished sequence ends with two rows or none. The choices
+                     are limited to models a key can actually pay for and not already in the pool —
+                     the backend refuses the other two, so offering them would only be a delay. -->
+                @if (editing() === p.provider + '/' + p.model) {
+                  <select class="pool-change-target" [value]="changeTarget()"
+                          (change)="onChangeTarget($event)"
+                          [attr.aria-label]="'Model to put in the slot holding ' + p.model">
+                    <option value="">choose a model…</option>
+                    @for (c of poolChangeOptions(); track c.provider + '|' + c.model) {
+                      <option [value]="c.provider + '|' + c.model">
+                        {{ c.model }} · {{ c.provider_name || c.provider }}
+                      </option>
+                    }
+                  </select>
+                  <button type="button" class="ghost icon-only" data-act="save-change"
+                          aria-label="Save the new model in this slot"
+                          [disabled]="!changeTarget() || poolBusy()" (click)="saveChange(p)">✓</button>
+                  <button type="button" class="ghost icon-only" data-act="cancel-change"
+                          aria-label="Cancel changing this slot" (click)="cancelChange()">×</button>
+                } @else {
+                  <button type="button" class="ghost icon-only" data-act="change"
+                          [attr.aria-label]="'Change the model in this slot'"
+                          [disabled]="poolBusy() || poolChangeOptions().length === 0"
+                          (click)="openChange(p)">✎</button>
+                }
                 <button type="button" class="ghost danger" [disabled]="poolBusy()"
                         [attr.aria-label]="'Remove ' + p.model + ' from your using pool'"
                         (click)="removeFromPool(p.provider, p.model)">Remove</button>
@@ -387,10 +569,18 @@ export class RankingView implements OnInit, OnDestroy {
       which a ranking card cannot do from inside itself. This view only reports the intent and
       reads the current value back for the "active" styling, so there is one writer. */
   @Output() readonly useModel = new EventEmitter<RankedModel>();
+  /** Releasing a pin belongs to the shell for the same reason setting it does: `app.ts` also
+      restores the tie-break lane it turned off for that pick, and a child that cleared the signal
+      itself would leave the run silently one lane short. This view only reports the intent. */
+  @Output() readonly clearModel = new EventEmitter<void>();
   readonly pickedModel = this.detection.pickedModel;
 
   pick(m: RankedModel): void {
     this.useModel.emit(m);
+  }
+
+  releasePick(): void {
+    this.clearModel.emit();
   }
 
   readonly loading = signal(true);
@@ -398,6 +588,27 @@ export class RankingView implements OnInit, OnDestroy {
   readonly ranked = signal<RankedModel[]>([]);
   readonly config = signal<PublicConfig | null>(null);
   readonly keys = signal<UserKeyView[]>([]);
+
+  /** What /ranking says will answer the next run — see the `lane-authority` block. Held as a
+      signal so the bar and the per-card chips invalidate together with the table they describe. */
+  readonly authority = signal<LaneAuthority | null>(null);
+
+  readonly failoverList = computed(() =>
+    (this.authority()?.failover ?? []).map((f) => f.model).join('  →  '),
+  );
+
+  /** Read the authority, never the ranking: #1 on the table is a measurement, and the model that
+      answers is whichever the pool puts first that is still answering. Both signal reads, so a
+      re-ranked table or a changed pool re-checks the chip without a zone to do it for them. */
+  answersRuns(m: RankedModel): boolean {
+    const next = this.authority()?.next;
+    return !!next && next.model === m.model;
+  }
+
+  isDeployedDefault(m: RankedModel): boolean {
+    const d = this.authority()?.deployed_default;
+    return !!d && d.model === m.model;
+  }
 
   /** The technical report ships inside this bundle (public/research/), so `/research/report.html` is
       always a valid same-origin target — and the settings validator only accepts an absolute http(s)
@@ -489,6 +700,7 @@ export class RankingView implements OnInit, OnDestroy {
         this.backend.ranking().subscribe({
           next: (r: RankingResponse) => {
             this.ranked.set(r.ranked);
+            if (r.lane_authority !== undefined) this.authority.set(r.lane_authority);
             this.loading.set(false);
           },
           error: (e) => {
@@ -543,8 +755,10 @@ export class RankingView implements OnInit, OnDestroy {
           });
           this.loadKeys();
           this.loadJobs();
-          // Re-rank so "your key ready" reflects the new credential.
-          this.backend.ranking().subscribe({ next: (r) => this.ranked.set(r.ranked) });
+          // Re-rank so "your key ready" — and the bar's "what answers your next run" — reflect
+          // the new credential: a first verified key can move `next` from the deployed default
+          // to this user's pool.
+          this.refreshRanking();
         },
         error: (e) => {
           this.saving.set(false);
@@ -557,7 +771,7 @@ export class RankingView implements OnInit, OnDestroy {
     this.backend.deleteMyKey(id).subscribe({
       next: () => {
         this.loadKeys();
-        this.backend.ranking().subscribe({ next: (r) => this.ranked.set(r.ranked) });
+        this.refreshRanking();
       },
       error: (e) => this.keyMsg.set({ text: this.describe(e), bad: true }),
     });
@@ -620,11 +834,92 @@ export class RankingView implements OnInit, OnDestroy {
     });
   }
 
+  // ---- changing which model holds one slot --------------------------------
+  //
+  // "Edit the model he put in the using pool" is a replace, not a remove-plus-add: the two-call
+  // version leaves the slot empty while it is in flight, and if the second call fails the user has
+  // lost an entry he never meant to lose. One call keeps the rank his too, because the backend
+  // rebuilds the stored order with exactly one entry swapped in place of the old one.
+
+  /** Which row shows its editor, by "provider/model". One at a time: two open selects would make
+      `changeTarget` ambiguous — and in a zoneless app a plain field could not re-check itself. */
+  readonly editing = signal<string | null>(null);
+  /** The chosen replacement, as "provider|model" — the pair shape `POST /my/pool/replace` takes. */
+  readonly changeTarget = signal('');
+
+  private readonly poolKeys = computed(
+    () => new Set(this.pool().map((p) => `${p.provider}/${p.model}`)),
+  );
+
+  /** What a slot may be filled with: a model a key can actually pay for that is not already in the
+      pool. Those are exactly the two states the replace route refuses, so listing anything else
+      would only turn one click into one error message. Deduplicated by pair, because the ranking
+      can show the same model id under two corpora and `@for` cannot track a duplicate key. */
+  readonly poolChangeOptions = computed<RankedModel[]>(() => {
+    const held = this.poolKeys();
+    const seen = new Set<string>();
+    const out: RankedModel[] = [];
+    for (const m of this.ranked()) {
+      const k = `${m.provider}/${m.model}`;
+      if (!(m.verified_key || m.admin_key) || held.has(k) || seen.has(k)) continue;
+      seen.add(k);
+      out.push(m);
+    }
+    return out;
+  });
+
+  openChange(p: PoolEntry): void {
+    this.editing.set(`${p.provider}/${p.model}`);
+    this.changeTarget.set('');
+    this.poolMsg.set(null);
+  }
+
+  cancelChange(): void {
+    this.editing.set(null);
+    this.changeTarget.set('');
+  }
+
+  onChangeTarget(e: Event): void {
+    this.changeTarget.set((e.target as HTMLSelectElement).value);
+  }
+
+  saveChange(p: PoolEntry): void {
+    const target = this.changeTarget();
+    const bar = target.indexOf('|');
+    if (bar <= 0 || bar === target.length - 1) return;
+    const newProvider = target.slice(0, bar);
+    const newModel = target.slice(bar + 1);
+    this.poolBusy.set(true);
+    this.poolMsg.set(null);
+    this.backend.replaceInPool(p.provider, p.model, newProvider, newModel).subscribe({
+      next: (r) => {
+        this.pool.set(r.pool ?? []);
+        this.poolBusy.set(false);
+        this.cancelChange();
+        // The cards' "In your pool at #n" chip and the health badge are both about this row now.
+        this.refreshRanking();
+      },
+      error: (e) => {
+        this.poolBusy.set(false);
+        // Nothing was written, so nothing moved: the row stays exactly as the user left it, and
+        // the editor stays open so he can pick a different model instead of starting over.
+        this.poolMsg.set({ text: this.describe(e), bad: true });
+      },
+    });
+  }
+
   /** Write a new order. The list is moved locally first so the drag feels immediate, then
-      confirmed from the server's answer — the response is the authority, not the guess. */
+      confirmed from the server's answer — the response is the authority, not the guess.
+      The payload is expressed in the USER's rank space: the rows are drawn in served order,
+      which pushes a model that stopped answering to the back, and splicing that list would
+      rewrite a demoted model's stored position — silently making the user's #1 their #3 while
+      the panel promises their rank comes back untouched. With no demotion the two spaces are the
+      same list, so this changes nothing a healthy pool could notice. */
   move(from: number, to: number): void {
     const rows = this.pool();
     if (from === to || from < 0 || to < 0 || from >= rows.length || to >= rows.length) return;
+    const order = this.userOrderFor(from, to);
+    if (!order) return;
     const next = [...rows];
     const [row] = next.splice(from, 1);
     next.splice(to, 0, row);
@@ -632,7 +927,7 @@ export class RankingView implements OnInit, OnDestroy {
     this.poolBusy.set(true);
     this.poolMsg.set(null);
     this.backend
-      .setPoolOrder(next.map((p) => ({ provider: p.provider, model: p.model })))
+      .setPoolOrder(order.map((p) => ({ provider: p.provider, model: p.model })))
       .subscribe({
         next: (r) => {
           this.pool.set(r.pool ?? []);
@@ -644,6 +939,19 @@ export class RankingView implements OnInit, OnDestroy {
           this.loadPool();   // the server kept the old order; show that, not the local guess
         },
       });
+  }
+
+  /** The whole pool ordered by `your_rank`, with the served-space move applied to it. */
+  private userOrderFor(from: number, to: number): PoolEntry[] | null {
+    const rows = this.pool();
+    const key = (r: PoolEntry) => `${r.provider}/${r.model}`;
+    const user = [...rows].sort((a, b) => a.your_rank - b.your_rank || a.position - b.position);
+    const mi = user.findIndex((r) => key(r) === key(rows[from]));
+    const ti = user.findIndex((r) => key(r) === key(rows[to]));
+    if (mi < 0 || ti < 0 || mi === ti) return null;
+    const [moved] = user.splice(mi, 1);
+    user.splice(ti, 0, moved);
+    return user;
   }
 
   onDragStart(i: number, e: DragEvent): void {
@@ -677,6 +985,9 @@ export class RankingView implements OnInit, OnDestroy {
       next: (r) => {
         this.ranked.set(r.ranked);
         if (r.pool) this.pool.set(r.pool);
+        // Only a response that carries an answer may change the claim: an older backend omits
+        // it, and "no data" must not overwrite "what /detect told us" with a guess.
+        if (r.lane_authority !== undefined) this.authority.set(r.lane_authority);
       },
       error: () => undefined,
     });

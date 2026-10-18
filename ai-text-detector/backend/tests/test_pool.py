@@ -532,3 +532,104 @@ def test_a_key_probe_is_given_the_ceiling_the_model_itself_has(client, monkeypat
     # repo's verifiers, ask for a fast failure.
     client.post(f"/my/keys/{kid}/verify", json={"model_id": "slow/lane", "timeout_seconds": 7})
     assert asked[-1] == 7.0, asked
+
+
+# --------------------------------------- the lane authority the page has to tell the truth about
+#
+# "Which model actually answers my runs?" is a question a user can only answer off the Ranking
+# page -- and the page is not the code that resolves a lane. Two live divergences earned this
+# section: the shipped front-end baked a lane into every request, so the deployed default the page
+# named never answered anything (2026-10-17, #142); and a pool the page rendered in one order while
+# /detect walked it in another would make the page a caption instead of a control. So /ranking
+# returns the SAME resolution /detect uses, and the second test below proves it by asking both:
+# the model the page promised to call first, and the model it promised next, have to be the models
+# the app actually calls.
+
+def test_ranking_names_the_deployed_default_when_the_pool_is_empty(client):
+    _seed_providers(client)
+    _register(client, "alice")
+    client.post("/auth/login", json={"username": "alice", "password": "userpass123"})
+    la = client.get("/ranking").get_json()["lane_authority"]
+    assert la["deployed_default"]["model"] == "deployed/primary"
+    assert la["deployed_default"]["provider"] == "nvidia"
+    # The tie-break ships off, so it is named as absent. Reporting a secondary no row enables
+    # would promise a second call that detection never buys -- and never pays for.
+    assert la["deployed_tie_break"] is None
+    assert la["next"]["source"] == "deployed-default"
+    assert la["next"]["model"] == "deployed/primary"
+    assert la["failover"] == []
+
+
+def test_the_pages_next_run_and_failover_are_what_detect_actually_walks(client, monkeypatch):
+    _pool(client, ["m/one", "m/two", "m/three"])
+    la = client.get("/ranking").get_json()["lane_authority"]
+    assert la["next"]["model"] == "m/one" and la["next"]["source"] == "user-pool"
+    assert [f["model"] for f in la["failover"]] == ["m/two", "m/three"]
+
+    calls = _stub_forward_seq(monkeypatch,
+                              [(200, _model_refused("m/one")), (200, _answered("m/two"))])
+    body = client.post("/detect", json={"text": TEXT}).get_json()
+    assert _models_called(calls) == [la["next"]["model"], la["failover"][0]["model"]]
+    assert body["auto_switch"]["to"] == la["failover"][0]["model"]
+
+
+def test_a_model_that_stopped_answering_is_not_offered_as_the_next_run(client):
+    _pool(client, ["m/one", "m/two"])
+    with db.session() as c:
+        for _ in range(3):
+            pool.note_attempt(c, "nvidia", "m/one", False, "404")
+    body = client.get("/ranking").get_json()
+    la = body["lane_authority"]
+    assert la["next"]["model"] == "m/two", "a down entry must not lead the user's runs"
+    # And it must not be promised as the rescue either: pool.next_candidates refuses to pay for
+    # a model that has failed three times in a row, so a page that listed it would be advertising
+    # a switch the app will not make. It stays visible in the pool, marked down, where the user
+    # can see why and remove or re-rank it.
+    assert la["failover"] == []
+    assert [(p["model"], p["health"]) for p in body["pool"]] == [("m/two", "ok"), ("m/one", "down")]
+
+
+def test_no_default_and_no_pool_answers_with_nothing_rather_than_a_made_up_lane(client):
+    _seed_providers(client)
+    with db.session() as c:
+        c.execute("UPDATE models SET enabled = 0")
+    _register(client, "alice")
+    client.post("/auth/login", json={"username": "alice", "password": "userpass123"})
+    la = client.get("/ranking").get_json()["lane_authority"]
+    assert la["deployed_default"] is None
+    assert la["next"] is None
+
+
+# ---------------------------------------------------------------- edit the using pool in place
+#
+# The page has to let a user CHANGE the model he put into a slot, not only take the whole thing
+# apart and rebuild it: "remove, then add, then re-drag" costs three writes, and between them the
+# slot he was holding is gone -- plus a half-finished sequence leaves either two rows or none.
+# One route, one transaction, and the neighbours keep the ranks their owner gave them.
+
+def test_replacing_a_pool_row_keeps_the_slot_it_was_given(client):
+    _pool(client, ["m/one", "m/two", "m/three"])
+    r = client.post("/my/pool/replace", json={"provider": "nvidia", "model": "m/two",
+                                              "new_provider": "nvidia", "new_model": "m/spare"})
+    assert r.status_code == 200, r.get_json()
+    assert [(p["model"], p["your_rank"]) for p in r.get_json()["pool"]] == [
+        ("m/one", 1), ("m/spare", 2), ("m/three", 3)]
+
+
+def test_replace_refuses_a_missing_row_a_collision_and_a_dead_endpoint(client):
+    _pool(client, ["m/one", "m/two"])
+    assert client.post("/my/pool/replace", json={
+        "provider": "nvidia", "model": "m/nope",
+        "new_provider": "nvidia", "new_model": "m/spare"}).status_code == 404
+    # Replacing m/two WITH m/one would collide with a row the user already holds: refuse instead
+    # of letting INSERT-OR-IGNORE quietly delete one of them.
+    r = client.post("/my/pool/replace", json={
+        "provider": "nvidia", "model": "m/two",
+        "new_provider": "nvidia", "new_model": "m/one"})
+    assert r.status_code == 400, r.get_json()
+    assert r.get_json()["error_code"] == "ALREADY_IN_POOL"
+    assert client.post("/my/pool/replace", json={
+        "provider": "nvidia", "model": "m/two",
+        "new_provider": "nope", "new_model": "m/spare"}).status_code == 400
+    # and nothing moved: a refused edit must leave the user's order exactly as he left it
+    assert [p["model"] for p in client.get("/my/pool").get_json()["pool"]] == ["m/one", "m/two"]

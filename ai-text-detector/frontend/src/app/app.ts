@@ -10,6 +10,7 @@ import { LoginView } from './ui/login-view/login-view';
 import { RankingView } from './ui/ranking-view/ranking-view';
 import { HistoryView } from './ui/history-view/history-view';
 import { DetectionService, MAX_TEXT_LENGTH, MIN_TEXT_LENGTH } from './core/detection.service';
+import { HTTP_PATIENCE_MS } from './core/http-budget';
 import { DetectionFormState } from './core/form-state';
 import { AuthService } from './core/auth.service';
 import { MODEL_PATTERN, composeBaseUrl } from './core/providers';
@@ -46,6 +47,13 @@ export class App implements OnInit, OnDestroy {
   readonly auth = inject(AuthService);
 
   readonly form = new DetectionFormState();
+
+  /** Derived from the one constant that actually aborts the request. The card used to print a
+      literal "150 seconds" — the value the client gave up at before #140 raised it to the 360 s
+      that clears nginx's 330 s — so a user who waited the real 6 minutes was told a number the
+      code had already stopped using. Same rule as the timeout chain in the docs: never restate a
+      limit at a tier that cannot read the tier it belongs to. */
+  readonly patienceSeconds = Math.round(HTTP_PATIENCE_MS / 1000);
 
   /** Role-aware nav: everyone gets Detect / Ranking / History; only an admin sees Admin,
       which is where the models, thresholds and shared keys are set for all users. */
@@ -263,8 +271,9 @@ export class App implements OnInit, OnDestroy {
       return {
         kind: 'timeout',
         detail:
-          'No answer within 150 seconds. Free-tier pools queue: a slow lane is not a dead ' +
-          'lane, but nothing came back in time — try again or switch the model in Configuration.',
+          `No answer within ${this.patienceSeconds} seconds. Free-tier pools queue: a slow lane ` +
+          'is not a dead lane, but nothing came back in time — try again or change the pool order ' +
+          'on the Ranking tab.',
       };
     }
     if (!(err instanceof HttpErrorResponse)) {

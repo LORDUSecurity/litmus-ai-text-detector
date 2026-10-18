@@ -111,10 +111,15 @@ Two things about how configuration reaches the database, both learned on 2026-10
   validated, and `nginx:1.27-alpine` / `node:22-alpine` / `python:3.12-slim` likewise.
 - The backend forwards each detection to n8n and waits; with the shared NVIDIA pool a
   verdict can take ~2 minutes. The timeout chain is `lane timeout_ms` (240 s on the shipped primary)
-  → backend wait (+30 s = 270 s) → gunicorn `--timeout` 285 s → nginx `proxy_read_timeout` 330 s, and
+  → backend wait (+30 s = 270 s) → gunicorn `--timeout` 285 s → nginx `proxy_read_timeout` 330 s →
+  the browser's own 360 s (`frontend/src/app/core/http-budget.ts`), and
   each tier must stay above the one inside it. Do not lower them below the slowest lane's timeout.
   The chain moved as one unit on 2026-10-17 because the shipped lane answered a 320-char text in
-  214.2 s -- inside the 240 s ceiling, outside the 180 s one it replaced.
+  214.2 s -- inside the 240 s ceiling, outside the 180 s one it replaced. The last tier is the one
+  that was missing: the UI used to give up at 150 s, *inside* every server tier above it, so a
+  detection the backend was still honouring was reported to the user as a failure while it carried on
+  and landed in History. With a browser tier above nginx, a timeout on screen means the browser
+  itself is stuck -- which is what an operator can act on.
 
 ## How BYOK keys are kept off disk
 

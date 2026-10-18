@@ -1,3 +1,4 @@
+import { Component, signal } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { HttpErrorResponse } from '@angular/common/http';
 import { of, throwError } from 'rxjs';
@@ -5,6 +6,7 @@ import { of, throwError } from 'rxjs';
 import { RankingView } from './ranking-view';
 import { BackendService } from '../../core/backend.service';
 import { AuthService } from '../../core/auth.service';
+import { DetectionService } from '../../core/detection.service';
 import type { PublicConfig, RankingResponse, UserKeyView } from '../../core/backend.types';
 
 /**
@@ -31,6 +33,18 @@ const CONFIG = {
 
 const EMPTY_RANKING = { ranked: [] } as unknown as RankingResponse;
 
+/** A host, so a parent's listener is asserted the way the shell really binds it
+    (`<app-ranking-view (clearModel)="…">`) rather than by poking the child's EventEmitter. */
+@Component({
+  selector: 'app-host-ranking',
+  standalone: true,
+  imports: [RankingView],
+  template: '<app-ranking-view (clearModel)="released = true" />',
+})
+class HostRanking {
+  released = false;
+}
+
 /** The pool/discovery calls the view makes on load. Every stub in this file needs them: the
     component reads them in ngOnInit, and a missing method would fail the spec for the wrong
     reason (a TypeError, not a behaviour change). Fresh mocks per call, so no spec inherits
@@ -40,6 +54,7 @@ const poolStubs = () => ({
   addToPool: vi.fn(),
   removeFromPool: vi.fn(),
   setPoolOrder: vi.fn(),
+  replaceInPool: vi.fn(),
   discover: vi.fn(),
   discoveryStatus: () => of({ jobs: [], screen_texts: 'probe2', note: '' }),
 });
@@ -542,5 +557,352 @@ describe('RankingView using pool', () => {
   it('is absent for a signed-out visitor, who has no pool to order', async () => {
     const { panel } = await build({ signedIn: false, pool: [entry({})] });
     expect(panel()).toBe(null);
+  });
+});
+
+/**
+ * The "which model answers my runs" bar, and the direct PDF link.
+ *
+ * The ranking table answers "which model judges best"; it never answered "so what runs on my
+ * text" — and that second question is the one the brief makes the whole page for ("these ranking
+ * are the one used in auto order"). #142 is what a page that cannot answer it costs: every plain
+ * user's Detect carried a baked lane, so the deployed default the admin had promoted never
+ * answered anything while the page went on naming it. So the bar renders what /ranking reports
+ * from the same functions /detect walks, and it says the three things a user otherwise has to
+ * guess: the model that answers, the order the auto-switch follows behind it, and which one is
+ * the admin's default. `lane_authority` absent (an older backend) renders no bar rather than a
+ * bar built on a client-side guess.
+ */
+describe('RankingView lane authority', () => {
+  const AUTH = (over: any = {}) =>
+    ({
+      deployed_default: { model: 'deployed/primary', provider: 'nvidia' },
+      deployed_tie_break: null,
+      next: { model: 'deployed/primary', provider: 'nvidia', source: 'deployed-default' },
+      failover: [],
+      ...over,
+    }) as any;
+
+  const card = (over: any = {}) =>
+    ({
+      model: 'z-ai/glm-5.3-flash', tag: 'glm', rank: 1, accuracy: 0.94, lane: null,
+      provider: 'nvidia', provider_name: 'NVIDIA NIM', free_tier: true, provisional: false,
+      n_clean: 48, correct: 45, wrong: 0, review: 3, coverage: 0.94,
+      verified_key: true, admin_key: false, in_pool: false, health: 'unknown', ...over,
+    }) as any;
+
+  async function build(opts: { authority?: any; picked?: string | null } = {}) {
+    const backend = {
+      config: () => of(CONFIG),
+      ranking: () => of({ ranked: [card()], lane_authority: opts.authority } as unknown as RankingResponse),
+      myKeys: () => of<UserKeyView[]>([]),
+      addMyKey: vi.fn(),
+      deleteMyKey: () => of({ deleted: 1 }),
+      ...poolStubs(),
+    };
+    await TestBed.configureTestingModule({
+      imports: [HostRanking, RankingView],
+      providers: [
+        { provide: BackendService, useValue: backend },
+        {
+          provide: AuthService,
+          useValue: { isAdmin: () => false, user: () => ({ role: 'user', username: 'nadia' }) },
+        },
+        {
+          provide: DetectionService,
+          useValue: {
+            pickedModel: () => opts.picked ?? null,
+            usePickedModel: vi.fn(),
+            clearPickedModel: vi.fn(),
+          },
+        },
+      ],
+    }).compileComponents();
+
+    const fixture = TestBed.createComponent(HostRanking);
+    fixture.detectChanges();
+    await fixture.whenStable();
+    fixture.detectChanges();
+    return fixture;
+  }
+
+  const bar = (f: ComponentFixture<HostRanking>) =>
+    f.nativeElement.querySelector('.lane-authority') as HTMLElement;
+
+  it('names the model that answers, the admin default, and the tie-break state', async () => {
+    const f = await build({ authority: AUTH() });
+    const text = bar(f).textContent?.replace(/\s+/g, ' ') ?? '';
+    expect(text).toContain('deployed/primary');
+    expect(text, 'the admin row has to be labelled as the admin row').toContain('Deployed default');
+    expect(text).toContain('tie-break lane off');
+  });
+
+  it('lists the auto-switch order the user pool gives him, in his order', async () => {
+    const f = await build({
+      authority: AUTH({
+        next: { model: 'm/one', provider: 'nvidia', source: 'user-pool' },
+        failover: [{ model: 'm/two', provider: 'nvidia' }, { model: 'm/three', provider: 'nvidia' }],
+      }),
+    });
+    const text = bar(f).textContent?.replace(/\s+/g, ' ') ?? '';
+    expect(text).toContain('m/one');
+    const two = text.indexOf('m/two');
+    const three = text.indexOf('m/three');
+    expect(two).toBeGreaterThan(-1);
+    expect(three, 'the second rescue must be named after the first').toBeGreaterThan(two);
+  });
+
+  it('says out loud when a failing model has nothing behind it', async () => {
+    const f = await build({
+      authority: AUTH({ next: { model: 'm/one', provider: 'nvidia', source: 'user-pool' } }),
+    });
+    expect(bar(f).textContent).toContain('nothing behind it');
+  });
+
+  it('marks a pinned model as one run only and releases it from this page', async () => {
+    const f = await build({ authority: AUTH(), picked: 'pinned/model-x' });
+    const text = bar(f).textContent?.replace(/\s+/g, ' ') ?? '';
+    expect(text).toContain('pinned/model-x');
+    expect(text).toContain('this run only');
+    const btn = bar(f).querySelector('button.release-pick') as HTMLButtonElement;
+    expect(btn, 'the bar that names the pin has to be the bar that clears it').toBeTruthy();
+    expect(f.componentInstance.released).toBe(false);
+    btn.click();
+    expect(f.componentInstance.released).toBe(true);
+  });
+
+  it('says nothing is configured instead of naming a model nobody enabled', async () => {
+    const f = await build({
+      authority: AUTH({ deployed_default: null, next: null }),
+    });
+    const text = bar(f).textContent?.replace(/\s+/g, ' ') ?? '';
+    expect(text).toContain('No primary model is enabled');
+    expect(text).not.toContain('deployed/primary');
+  });
+
+  it('renders no claim at all when the backend reports no authority', async () => {
+    const f = await build({ authority: undefined });
+    expect(bar(f)).toBe(null);
+  });
+
+  it('links the printable PDF next to the report, not only inside it', async () => {
+    const f = await build({ authority: AUTH() });
+    const pdf = f.nativeElement.querySelector('a.pdf-link') as HTMLAnchorElement;
+    expect(pdf, 'the research PDF has to be reachable from the ranking in one click').toBeTruthy();
+    expect(pdf.getAttribute('href')).toBe('/research/report.pdf');
+    expect(pdf.getAttribute('target')).toBe('_blank');
+  });
+
+  it('chips the card that answers his runs and the card that is the admin default', async () => {
+    const f = await build({
+      authority: AUTH({
+        deployed_default: { model: 'z-ai/glm-5.3-flash', provider: 'nvidia' },
+        next: { model: 'z-ai/glm-5.3-flash', provider: 'nvidia', source: 'deployed-default' },
+      }),
+    });
+    f.detectChanges();
+    const chips = Array.from(
+      f.nativeElement.querySelectorAll('.rank-card .chip'),
+    ) as HTMLElement[];
+    const labels = chips.map((c) => c.textContent?.trim());
+    expect(labels).toContain('deployed default');
+    expect(labels).toContain('used for your runs');
+  });
+
+  it('does not chip a model that answers neither', async () => {
+    const f = await build({
+      authority: AUTH({
+        deployed_default: { model: 'other/model', provider: 'nvidia' },
+        next: { model: 'other/model', provider: 'nvidia', source: 'deployed-default' },
+      }),
+    });
+    f.detectChanges();
+    const labels = Array.from(
+      f.nativeElement.querySelectorAll('.rank-card .chip'),
+    ).map((c) => (c as HTMLElement).textContent?.trim());
+    expect(labels).not.toContain('used for your runs');
+    expect(labels).not.toContain('deployed default');
+  });
+});
+
+/**
+ * Editing the using pool: change which model fills a slot, without moving anything else.
+ *
+ * Add-then-remove-then-re-drag costs the user his slot between the calls, and a drag that only
+ * ever meant two rows silently rewrote the rank of a third one that happened to be sitting in
+ * the *served* list because it had stopped answering (the panel's own promise is that a demoted
+ * model comes back where the user put it). So a change is one atomic call, and an order write
+ * is expressed in the user's own rank space, not in the health-served order it is drawn in.
+ */
+describe('RankingView pool edit', () => {
+  const entry = (over: any = {}) =>
+    ({
+      provider: 'nvidia', model: 'm/a', source: 'user', your_rank: 1, position: 1,
+      health: 'ok', consecutive_failures: 0, last_error: '', last_ok_at: null,
+      demoted: false, ...over,
+    }) as any;
+
+  const card = (over: any = {}) =>
+    ({
+      model: 'z-ai/glm-5.3-flash', tag: 'glm', rank: 1, accuracy: 0.94, lane: null,
+      provider: 'nvidia', provider_name: 'NVIDIA NIM', free_tier: true, provisional: false,
+      n_clean: 48, correct: 45, wrong: 0, review: 3, coverage: 0.94,
+      verified_key: true, admin_key: false, in_pool: false, health: 'unknown', ...over,
+    }) as any;
+
+  async function build(opts: { pool?: any[]; ranked?: any[]; replace?: any } = {}) {
+    const mocks = {
+      ...poolStubs(),
+      myPool: () => of({ pool: opts.pool ?? [] }),
+      setPoolOrder: vi.fn((order: any[]) =>
+        of({ pool: order.map((o: any, i: number) => entry({ ...o, your_rank: i + 1, position: i + 1 })) })),
+      replaceInPool: vi.fn(() => opts.replace ?? of({
+        pool: [entry({ model: 'z-ai/glm-5.3-flash' })],
+      })),
+    };
+    const backend = {
+      config: () => of(CONFIG),
+      ranking: () => of({ ranked: opts.ranked ?? [] } as unknown as RankingResponse),
+      myKeys: () => of<UserKeyView[]>([]),
+      addMyKey: vi.fn(),
+      deleteMyKey: () => of({ deleted: 1 }),
+      ...mocks,
+    };
+    await TestBed.configureTestingModule({
+      imports: [RankingView],
+      providers: [
+        { provide: BackendService, useValue: backend },
+        {
+          provide: AuthService,
+          useValue: { isAdmin: () => false, user: () => ({ role: 'user', username: 'nadia' }) },
+        },
+        {
+          provide: DetectionService,
+          useValue: { pickedModel: () => null, usePickedModel: vi.fn(), clearPickedModel: vi.fn() },
+        },
+      ],
+    }).compileComponents();
+
+    const fixture = TestBed.createComponent(RankingView);
+    fixture.detectChanges();
+    await fixture.whenStable();
+    fixture.detectChanges();
+    return { fixture, mocks };
+  }
+
+  const rows = (f: ComponentFixture<RankingView>) =>
+    Array.from(f.nativeElement.querySelectorAll('.pool-row')) as HTMLElement[];
+
+  function drag(f: ComponentFixture<RankingView>, from: number, to: number) {
+    const r = rows(f);
+    r[from].dispatchEvent(new Event('dragstart', { bubbles: true }));
+    f.detectChanges();
+    r[to].dispatchEvent(new Event('dragover', { bubbles: true }));
+    f.detectChanges();
+    r[to].dispatchEvent(new Event('drop', { bubbles: true }));
+    f.detectChanges();
+  }
+
+  it('opens an editor on the row that offers only models he can pay for and not one he already holds', async () => {
+    const { fixture } = await build({
+      pool: [entry({ model: 'm/a' })],
+      ranked: [
+        card({}),
+        card({ model: 'm/a', rank: 2, verified_key: true, in_pool: true }),
+        card({ model: 'm/nokey', rank: 3, verified_key: false, admin_key: false }),
+      ],
+    });
+    const change = rows(fixture)[0].querySelector('button[data-act="change"]') as HTMLButtonElement;
+    expect(change, 'an entry the user put in the pool must be editable, not only removable')
+      .toBeTruthy();
+    change.click();
+    fixture.detectChanges();
+    const select = rows(fixture)[0].querySelector('select.pool-change-target') as HTMLSelectElement;
+    expect(select).toBeTruthy();
+    const values = Array.from(select.options).map((o) => o.value);
+    expect(values).toContain('nvidia|z-ai/glm-5.3-flash');
+    expect(values, 'a model already in the pool cannot replace another one').not.toContain('nvidia|m/a');
+    expect(values, 'a model with no key behind it cannot be run').not.toContain('nvidia|m/nokey');
+  });
+
+  it('changes the model in place with one atomic call and shows the answer', async () => {
+    const { fixture, mocks } = await build({
+      pool: [entry({ model: 'm/a' })],
+      ranked: [card({})],
+    });
+    (rows(fixture)[0].querySelector('button[data-act="change"]') as HTMLButtonElement).click();
+    fixture.detectChanges();
+    const select = rows(fixture)[0].querySelector('select.pool-change-target') as HTMLSelectElement;
+    select.value = 'nvidia|z-ai/glm-5.3-flash';
+    select.dispatchEvent(new Event('change', { bubbles: true }));
+    fixture.detectChanges();
+    (rows(fixture)[0].querySelector('button[data-act="save-change"]') as HTMLButtonElement).click();
+    await fixture.whenStable();
+    fixture.detectChanges();
+
+    expect(mocks.replaceInPool.mock.calls.length).toBe(1);
+    expect(mocks.replaceInPool.mock.calls[0]).toEqual(['nvidia', 'm/a', 'nvidia', 'z-ai/glm-5.3-flash']);
+    expect(rows(fixture).length).toBe(1);
+    expect(rows(fixture)[0].textContent).toContain('z-ai/glm-5.3-flash');
+    expect(rows(fixture)[0].textContent).not.toContain('m/a');
+  });
+
+  it('reports a refused change and leaves the row exactly as it was', async () => {
+    const { fixture, mocks } = await build({
+      pool: [entry({ model: 'm/a' })],
+      ranked: [card({})],
+      replace: throwError(
+        () => new HttpErrorResponse({ status: 400, error: { error: 'that model is already in your pool' } }),
+      ),
+    });
+    (rows(fixture)[0].querySelector('button[data-act="change"]') as HTMLButtonElement).click();
+    fixture.detectChanges();
+    const select = rows(fixture)[0].querySelector('select.pool-change-target') as HTMLSelectElement;
+    select.value = 'nvidia|z-ai/glm-5.3-flash';
+    select.dispatchEvent(new Event('change', { bubbles: true }));
+    // Flush before clicking, exactly as the successful spec does: choosing a model is what
+    // enables "save", and a zoneless app only re-checks that binding when the scheduler runs.
+    // Without this the synthetic click lands on a still-disabled control, which jsdom correctly
+    // ignores -- measured 2026-10-18, the click was silently dropped and no status ever rendered.
+    fixture.detectChanges();
+    (rows(fixture)[0].querySelector('button[data-act="save-change"]') as HTMLButtonElement).click();
+    await fixture.whenStable();
+    fixture.detectChanges();
+
+    expect(mocks.removeFromPool.mock.calls.length, 'a refused swap must not delete the old row')
+      .toBe(0);
+    const status = fixture.nativeElement.querySelector('.pool-panel .doc-status');
+    expect(status.textContent).toContain('already in your pool');
+    expect(status.classList.contains('bad')).toBe(true);
+    expect(rows(fixture)[0].textContent).toContain('m/a');
+  });
+
+  it('cancels the editor without writing anything', async () => {
+    const { fixture, mocks } = await build({ pool: [entry({ model: 'm/a' })], ranked: [card({})] });
+    (rows(fixture)[0].querySelector('button[data-act="change"]') as HTMLButtonElement).click();
+    fixture.detectChanges();
+    (rows(fixture)[0].querySelector('button[data-act="cancel-change"]') as HTMLButtonElement).click();
+    fixture.detectChanges();
+    expect(rows(fixture)[0].querySelector('select.pool-change-target')).toBe(null);
+    expect(mocks.replaceInPool.mock.calls.length).toBe(0);
+  });
+
+  it('writes an order in the user ranks, so a demoted row keeps the rank he gave it', async () => {
+    // Served order is a (health, rank) read: c is the user's #1 but stopped answering, so it is
+    // drawn last. Moving a row here must not quietly make c his #3.
+    const { fixture, mocks } = await build({
+      pool: [
+        entry({ model: 'm/a', your_rank: 2, position: 1 }),
+        entry({ model: 'm/b', your_rank: 3, position: 2 }),
+        entry({ model: 'm/c', your_rank: 1, position: 3, health: 'down', demoted: true }),
+      ],
+    });
+    drag(fixture, 0, 1);
+    await fixture.whenStable();
+    expect(mocks.setPoolOrder.mock.calls[0][0]).toEqual([
+      { provider: 'nvidia', model: 'm/c' },
+      { provider: 'nvidia', model: 'm/b' },
+      { provider: 'nvidia', model: 'm/a' },
+    ]);
   });
 });

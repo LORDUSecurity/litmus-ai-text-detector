@@ -336,6 +336,25 @@ export interface PoolResponse {
   note?: string;
 }
 
+/** Which lane actually answers, reported by `/ranking` from the same functions `/detect` walks
+    (`pool_primary_lane`, `default_models`, `pool.next_candidates`) — never re-derived here.
+    The ranking says which model judges best; this says which one the user's runs are scored with
+    and what a failover would switch to. `next.source` distinguishes "your pool's first entry"
+    from "the admin's deployed default", and `failover` omits any model marked down, because the
+    engine refuses to switch to one that has already failed three times in a row. */
+export interface LaneRef {
+  model: string;
+  provider: string;
+}
+
+export interface LaneAuthority {
+  deployed_default: LaneRef | null;
+  deployed_tie_break: LaneRef | null;
+  next: (LaneRef & { source: 'user-pool' | 'deployed-default' }) | null;
+  failover: LaneRef[];
+  note?: string;
+}
+
 /** One auto-discovery run: list a provider's models, screen the untested ones on 2 texts. */
 export interface DiscoveryJob {
   id: number;
@@ -373,6 +392,9 @@ export interface RankingResponse {
   ranked: RankedModel[];
   pool?: PoolEntry[];
   paper_url: string;
+  /** Absent on an older backend: the page then says nothing about who answers rather than
+      guessing it client-side from the pool it happens to have loaded. */
+  lane_authority?: LaneAuthority;
   note: string;
 }
 

@@ -13,11 +13,14 @@ import {
 } from '../../core/providers';
 import {
   DetectionFormState,
-  defaultLaneFields,
   type LaneState,
 } from '../../core/form-state';
 
-const PREFS_KEY = 'aidetect.prefs.v1';
+/** v2: the v1 record stored the lane fields *including the baked defaults this panel used to
+    start with*, so an admin who ever opened this tab kept a nemotron override pinned to every
+    later request from that browser — restored after the shipped code stopped pre-filling it.
+    The version bump is the migration: stale prefs are simply not read. Keys were never stored. */
+const PREFS_KEY = 'aidetect.prefs.v2';
 const KEY_PATTERN = /^[A-Za-z0-9._:+\/-]+$/;
 
 interface LanePrefs {
@@ -57,6 +60,11 @@ export class ConfigPanel implements OnInit {
   readonly health = signal<BackendHealth | null>(null);
   readonly healthFailed = signal(false);
 
+  /** True when at least one lane field carries an override. Nothing does on a fresh form: the
+      deployed row and the user's own pool are the authority, and this panel exists to deviate
+      from them deliberately, not by accident. */
+  readonly overridden = computed(() => Object.keys(this.state.laneConfig()).length > 0);
+
   readonly pairIsBenchmarked = computed(() => {
     const p = this.state.primary.model().trim();
     const s = this.state.secondary.model().trim();
@@ -67,8 +75,16 @@ export class ConfigPanel implements OnInit {
       construction, so a field initializer would read undefined here. */
   readonly secondaryEnabled = computed(() => this.state.secondaryEnabled());
 
-  readonly warnPrimaryHost = computed(() => !isKnownHost(this.state.primary.host()));
-  readonly warnSecondaryHost = computed(() => !isKnownHost(this.state.secondary.host()));
+  /** An empty host is "no override", not a suspicious host — warning about it would train the
+      admin to ignore the one warning that matters. */
+  readonly warnPrimaryHost = computed(() => {
+    const host = this.state.primary.host().trim();
+    return host !== '' && !isKnownHost(host);
+  });
+  readonly warnSecondaryHost = computed(() => {
+    const host = this.state.secondary.host().trim();
+    return host !== '' && !isKnownHost(host);
+  });
 
   /** The primary card always renders; the secondary card is an OPTIONAL expansion.
       Off is the honest single-lane mode: gray-zone answers become REVIEW instead
@@ -111,7 +127,10 @@ export class ConfigPanel implements OnInit {
   }
 
   onProvider(state: LaneState, id: string): void {
-    state.applyPreset(id);
+    // The first option is "no override": choosing it must clear the lane, not compose a URL out
+    // of a preset the admin never picked.
+    if (!id) state.clear();
+    else state.applyPreset(id);
     this.save();
   }
 
@@ -133,7 +152,9 @@ export class ConfigPanel implements OnInit {
   }
 
   hostLabel(state: LaneState): string {
-    const preset = providerFor(state.host(), state.port());
+    const host = state.host().trim();
+    if (!host) return 'no override — the deployed lane and your pool decide';
+    const preset = providerFor(host, state.port());
     return preset ? preset.label : 'custom endpoint';
   }
 
@@ -207,9 +228,12 @@ export class ConfigPanel implements OnInit {
     }
   }
 
+  /** Clears both overrides, which is what the button is for: an admin who wants a specific pair
+      can name it in the fields. "Reset" used to write the retired NVIDIA pair back into the form,
+      i.e. it installed an override under a label that promised the opposite. */
   resetLanes(): void {
-    this.state.primary.setFields(defaultLaneFields('primary'));
-    this.state.secondary.setFields(defaultLaneFields('secondary'));
+    this.state.primary.clear();
+    this.state.secondary.clear();
     this.save();
   }
 

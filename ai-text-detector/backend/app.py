@@ -174,13 +174,41 @@ def default_models() -> tuple[sqlite3.Row | None, sqlite3.Row | None]:
     return primary, secondary
 
 
+def pool_primary_lane(c: sqlite3.Connection, user_id: int) -> dict | None:
+    """The lane a plain Detect resolves from this user's ordered pool, or None.
+
+    One function for two callers on purpose. /detect synthesises the request's primary lane from
+    it; /ranking reports it as the user's "next run". The Ranking page is the only place a user
+    can read which model will answer their runs, so it must not re-derive that answer and be free
+    to drift from the request path -- a page that promises an order the app does not walk turns
+    the ranking into a caption instead of a control (#142 is the shipped version of exactly that:
+    the deployed default the page named never answered anything, because every request carried a
+    baked override).
+
+    The order is `pool.effective_order`, i.e. the user's own ranking with anything that stopped
+    answering served last, so the page cannot name a down model as the first call.
+    `provider_base_url_by_name` and `host_allowed` read through `conn()` -- the same request
+    connection this caller passes -- so they are not a second source of truth.
+    """
+    rows = pool.effective_order(db.pool_list(c, user_id))
+    if not rows:
+        return None
+    top = rows[0]
+    base = provider_base_url_by_name(top["provider"])
+    if not base or not host_allowed(base):
+        return None
+    return {"base_url": base, "model": top["model_id"], "provider": top["provider"]}
+
+
 def model_by_id(model_id: str | None) -> sqlite3.Row | None:
     """The stored row for a model id, so its tuned parameters can follow the model.
 
-    The Angular form always sends lane_config, which means the DB-derived lane
-    branch never runs -- yet the page is still asking for the very model the DB
-    row describes. Matching on model_id keeps the tuning attached to the model
-    rather than to whichever code path built the lane.
+    A request that names a lane -- the Ranking tab's "Score with this model", or a pool entry
+    synthesised into a lane by pool_primary_lane() -- carries a model id and no calibration, and
+    this is how the admin's stored band gets attached to it. Matching on model_id keeps the
+    tuning attached to the model rather than to whichever code path built the lane. (Before
+    #142 the Angular form sent a baked lane_config on EVERY request, which meant the
+    DB-derived default-lane branch never ran; an untouched form now sends nothing.)
     """
     if not model_id:
         return None
@@ -840,20 +868,18 @@ def register_routes(app: Flask) -> None:
         #
         # The order used here is pool.effective_order(), not the stored one: a model marked
         # `down` by three consecutive non-answers sinks to the back for this request without
-        # anyone editing the user's ranking, and comes back when it answers again.
-        pool_rows: list = []
+        # anyone editing the user's ranking, and comes back when it answers again. That rule
+        # lives in pool_primary_lane(), which /ranking reads for the same answer it reads here,
+        # so the page cannot promise an order the request path does not walk.
         pool_used = False
-        if user is not None:
-            pool_rows = pool.effective_order(db.pool_list(conn(), user["id"]))
-        if not lane_config and pool_rows:
-            top = pool_rows[0]
-            base = provider_base_url_by_name(top["provider"])
-            if base and host_allowed(base):
+        if user is not None and not lane_config:
+            syn = pool_primary_lane(conn(), user["id"])
+            if syn:
                 # Synthesised as a plain lane_config and then handled by the same branch a
                 # caller-named primary takes, so the tie-break policy, the base_url fill, the
                 # BYOK-first key pick and the tuning resolution stay one code path instead of
                 # growing a parallel one that can drift from it.
-                lane_config = {"primary": {"base_url": base, "model": top["model_id"]}}
+                lane_config = {"primary": {"base_url": syn["base_url"], "model": syn["model"]}}
                 pool_used = True
 
         if not lane_config:
@@ -1653,6 +1679,47 @@ def register_routes(app: Flask) -> None:
             return jsonify(error="that model is not in your pool"), 404
         return jsonify({"pool": pool.pool_view(conn(), user["id"])})
 
+    @app.route("/my/pool/replace", methods=["POST"])
+    def my_pool_replace():
+        """Change which model fills one slot of the caller's pool, keeping the slot.
+
+        The page's edit control needs this as one action: "remove, then add, then re-drag" costs
+        three round trips, leaves the held slot empty between them, and a half-finished sequence
+        ends with either two rows or none. The neighbours keep the ranks their owner gave them
+        because the new order is built from the caller's STORED order (not the health-served one)
+        with exactly one entry replaced.
+        """
+        user = auth.current_user()
+        if user is None:
+            return jsonify(error="authentication required", error_code="AUTH_REQUIRED"), 401
+        b = request.get_json(silent=True) or {}
+        old_prov = (b.get("provider") or "").strip()
+        old_model = (b.get("model") or "").strip()
+        new_prov = (b.get("new_provider") or old_prov).strip()
+        new_model = (b.get("new_model") or "").strip()
+        if not new_model or not MODEL_PATTERN.match(new_model):
+            return jsonify(error="new_model required and must match ^[A-Za-z0-9._:/@+-]+$"), 400
+        base = provider_base_url_by_name(new_prov)
+        if not base or not host_allowed(base):
+            return jsonify(error="no enabled provider by that name, or its host is not allowed",
+                           error_code="PROVIDER_NOT_SUPPORTED"), 400
+        rows = db.pool_list(conn(), user["id"])
+        old_key, new_key = (old_prov, old_model), (new_prov, new_model)
+        if not any((r["provider"], r["model_id"]) == old_key for r in rows):
+            return jsonify(error="that model is not in your pool"), 404
+        if any((r["provider"], r["model_id"]) == new_key for r in rows):
+            # INSERT OR IGNORE would silently no-op the add and then DELETE the row the user was
+            # editing: a collision has to be refused, not absorbed.
+            return jsonify(error="that model is already in your pool",
+                           error_code="ALREADY_IN_POOL"), 400
+        wanted = [new_key if (r["provider"], r["model_id"]) == old_key
+                  else (r["provider"], r["model_id"]) for r in rows]
+        db.pool_remove(conn(), user["id"], *old_key)
+        db.pool_add(conn(), user["id"], new_prov, new_model, source="user")
+        db.pool_set_positions(conn(), user["id"], wanted)
+        conn().commit()
+        return jsonify({"pool": pool.pool_view(conn(), user["id"])})
+
     @app.route("/my/pool/order", methods=["POST"])
     def my_pool_order():
         """Write the caller's drag order. This is the only route that changes `position`,
@@ -1903,10 +1970,43 @@ def register_routes(app: Flask) -> None:
             e["your_rank"] = hit["your_rank"] if hit else None
             e["health"] = (hit["health"] if hit else health.get(e["model"])) or "unknown"
             e["consecutive_failures"] = hit["consecutive_failures"] if hit else 0
+        # ---- who answers this caller's next run -------------------------------------
+        #
+        # Read through the same functions /detect walks (pool_primary_lane, default_models,
+        # pool.next_candidates), never re-derived: this block is the page's answer to "which
+        # model is used for my runs, and what gets switched to when it stops answering", and
+        # an answer invented beside the real one is how a ranking page becomes decoration.
+        default_primary, default_secondary = default_models()
+        deployed_default = ({"model": default_primary["model_id"],
+                             "provider": default_primary["provider_name"]}
+                            if default_primary else None)
+        deployed_tie_break = ({"model": default_secondary["model_id"],
+                               "provider": default_secondary["provider_name"]}
+                              if default_secondary else None)
+        top = pool_primary_lane(conn(), user["id"]) if user else None
+        if top is not None:
+            next_run = {"model": top["model"], "provider": top["provider"],
+                        "source": "user-pool"}
+            failover = [{"model": c["model"], "provider": c["provider"]}
+                        for c in pool.next_candidates(conn(), user["id"], {top["model"]})]
+        elif deployed_default is not None:
+            next_run = {**deployed_default, "source": "deployed-default"}
+            failover = []
+        else:
+            next_run, failover = None, []
         return jsonify({
             "ranked": out,
             "pool": pool_rows,
             "paper_url": setting("paper_url", ""),
+            "lane_authority": {
+                "deployed_default": deployed_default,
+                "deployed_tie_break": deployed_tie_break,
+                "next": next_run,
+                "failover": failover,
+                "note": "an untouched Detect names no lane: your pool's first entry answers, "
+                        "then the models you ranked behind it; with no pool the admin's deployed "
+                        "default answers. A model marked down is neither first nor a rescue.",
+            },
             "note": f"full captures (>= {MEASURED_MIN_TEXTS} texts) ranked first, then probes; "
                     f"each model at its own saved band, wrong-first then coverage",
         })
