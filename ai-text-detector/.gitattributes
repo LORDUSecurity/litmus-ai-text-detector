@@ -32,6 +32,11 @@ Dockerfile      text eol=lf
 *.css           text eol=lf
 *.sql           text eol=lf
 
+# The deposit CSVs are uploaded byte-for-byte to a research repository, and `zenodo_package.py` prints
+# their sha256 as the manifest an operator checks against. A checkout that converted LF to CRLF would
+# change those bytes and invalidate the manifest, so the endings are pinned like the deploy contract.
+*.csv           text eol=lf
+
 # --- Windows-only sources: the tooling that reads them wants CRLF ---
 *.iss           text eol=crlf
 *.bat           text eol=crlf

@@ -4043,3 +4043,70 @@ exe, installer and the running container all carry the change. Open from before 
 unchanged by it: the shipped n8n workflow still labels gateway failures `no_choices`, and
 `SINGLE_MODEL_SECONDARY_AI` / the stalled NVIDIA pool still mean the tie-break lane cannot be captured
 right now.
+
+## Round 30: "public" meant a research repository, so the tables became a deposit (2026-10-18)
+
+Round 29 published the ranking as a web page. The brief was met literally and missed the intent: *"when
+i said public i meant in a research site like reseach gate or maybe zenedo"*. A host that serves bytes
+makes the report **reachable**; a repository that mints a DOI makes it **citable**, and only the second
+one survives the site. So this round moved the artifact into `research-zenodo/` and made it a deposit —
+and in doing so found a false statement in the repo's own runbook.
+
+**The runbook was wrong about its own history.** `research-zenodo/zenodo-deposit.md` opened with
+"This is version 2 … publish it as a **new version of the same deposit**". No such deposit exists. It
+was checked against Zenodo's public search rather than against memory:
+
+    GET /api/records?q="Free-Tier LLM Gateways as AI-Text Detectors"   -> {"hits": {"total": 0}}
+    GET /api/records?q="Quota Regimes, Availability Churn"             -> {"hits": {"total": 0}}
+
+and the only `zenodo.org` strings anywhere in the tree are a made-up record id in a front-end unit
+spec. "Version 2" was the *text's* version (Part I, then Part I + II) leaking into the *record's*
+version field. The file now says **first upload**, keeps `v1` as the version label, and explains when
+"New version" does become correct (after the DOI exists, when §8 is rewritten to name it).
+
+**The vocabulary came from live records, not from the docs.** Zenodo's documentation page renders
+`license: "cc-by"` and `publication_type: "preprint"`; reading actual 2026 preprints through
+`/api/records?type=publication&subtype=preprint` gives `license: {"id": "cc-by-4.0"}` and
+`resource_type: {"type": "publication", "subtype": "preprint"}` — `cc-by` is a *different* licence, so
+the shorthand in the runbook would have mislicensed the deposit. `GET /api/deposit/depositions` answers
+**403 without a token**, which is how the deposit endpoint was confirmed live without an account.
+
+**A report with numbers and no data is a request to the author.** §8 promises "append-only per-row
+JSONL … with a run manifest" and a "reproduction checklist available on request". Attached to a DOI
+those stop being a favour. `tools/zenodo_package.py` writes `research-zenodo/deposit/`:
+
+| File | Rows | Source |
+| --- | --- | --- |
+| `model-ranking.csv` | 48 | `GET /ranking`, in route order — the same call the app and the public page use |
+| `per-text-scores.csv` | 3,937 | `benchmark_results` joined to `benchmark_runs`, opened `mode=ro` |
+| `runs-manifest.csv` | 144 | every run's generation parameters (`temperature`, `top_p`, `max_tokens`, `concurrency`, endpoint) |
+| `README.md` | — | column dictionary, plus the four-step recipe to re-derive any figure |
+
+No corpus text is exported: `text_id`, `label`, `answered`, `error_class`, `ai_probability`,
+`confidence` only. The corpus is third-party HC3 data and the report's non-redistribution claim holds.
+
+**The check that makes it citable is the re-score, not the row count.** `--check` filters the per-text
+file to a run, applies *that model's own exported band and confidence gate*, and requires the ranking
+file's `correct` / `wrong` / `decided` / `accuracy_on_decided` to fall out of it. **48/48 rows
+reproduce exactly** — so a reader who follows the README lands on the numbers the report prints, and
+the two files cannot silently describe different measurements. Row counts against the live tables
+(3,937 / 144) and route-order equality are separate checks. 7/7 pass, twice, and the generator opens
+the database read-only so an accidental write is impossible rather than merely unplanned.
+
+**Two refusals, both earned.** Loopback masking: two models were captured through a gateway on this
+machine, so `endpoint` prints *local gateway (measuring machine)*, and a byte-level scan over every
+written file fails the run if any secret-shaped (`sk-`, `Bearer`, `api_key=`), loopback-shaped
+(`127.0.0.1`, `localhost`) or local-path-shaped string survives — the scan runs against what was
+written, not against a field list, so a new column cannot smuggle one through. And `metadata.json` is
+refused without `--author`: a DOI mints a citation, the report carries no byline, and nothing in the
+repo is authoritative for the name, so it is the one field that has to come from the user. The builder
+was proved against a throwaway directory (`upload_type`/`publication_type`, `cc-by-4.0`, `language:
+eng`, 8 keywords, both HC3 DOIs as `references`, a description that now names the three CSVs),
+together with its two refusal paths — empty author, and a malformed ORCID.
+
+**What this round did not do.** It published nothing: the deposit is a directory of files and a
+runbook, and the account, the name and the publish click are the user's. The Qoder Sites page from
+Round 29 is still live and untouched (taking it down is also the user's call). pytest, `ng test` and
+`ng build` were not re-run, because nothing in the backend, the workflow or the bundle changed — the
+diff is one new tool, three generated CSVs, a column dictionary, a corrected runbook and this entry.
+

@@ -397,6 +397,29 @@ downloads.
 Regenerate and republish after any change to the ranking, the bands or the report — the site is a frozen
 draft, so a stale page is a page that disagrees with the deployed app.
 
+### The citable deposit is generated from the same rows
+
+`research-zenodo/deposit/` is what gets uploaded to a research repository (Zenodo: DOI, versioned, no
+cost; ResearchGate mirrors it afterwards but mints no DOI). It is built by the same call the page uses,
+so the deposit and the deployed app cannot disagree about what rank 1 means:
+
+```bash
+python tools/zenodo_package.py --dataset-only        # the three CSVs + the column dictionary
+python tools/zenodo_package.py --author "Family, Given"   # …plus deposit/metadata.json
+python tools/zenodo_package.py --check               # re-verify the files already on disk
+```
+
+`model-ranking.csv` is `GET /ranking` in route order (48 rows), `per-text-scores.csv` is every capture
+in `benchmark_results` (3,937 rows: text id, ground-truth label, answered/error class, probability,
+confidence — no corpus text, which is third-party HC3 data), and `runs-manifest.csv` is every run with
+its generation parameters (144 rows). The check that makes the pair worth citing re-scores the per-text
+file at each model's own exported band and requires the ranking file's `correct` / `wrong` /
+`decided` / `accuracy` columns to fall out of it: **48/48 rows reproduce** (7/7 checks, 2026-10-18).
+The tool opens the database read-only, refuses to write any file whose bytes still look like a secret,
+a loopback address or a local path (2 rows are labelled *local gateway (measuring machine)* instead of
+print one), and refuses to write `metadata.json` without an author name — a DOI mints a citation, and
+an invented byline is not a placeholder you can ship.
+
 ### The visual language is measured, because a broken stylesheet is invisible to a grep
 
 The interface is sharp: no rounded corners, and every surface that needs one gets its **top-right and
