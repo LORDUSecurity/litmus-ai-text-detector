@@ -101,3 +101,4 @@ ai-text-detector/detector.db
 # The original September build prompt: how the pipeline was specified to an
 # agent. Kept on disk for reference, not published with the repo.
 /prompt.txt
+ai-text-detector/backend/detector.db
