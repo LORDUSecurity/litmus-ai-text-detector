@@ -1,5 +1,5 @@
 # syntax=docker/dockerfile:1
-# Flask backend (gunicorn) for the AI text detector.
+# Flask backend (gunicorn) for Litmus, the AI text detector.
 #
 # Build context is the REPO ROOT (see docker-compose.yml: build.context: .), so the
 # COPY paths below are relative to the root and the single root .dockerignore governs

@@ -122,10 +122,10 @@
         </p>
 
         @if (lane.warnHost) {
-          <p class="warn">
-            Not a recognised provider host. The workflow checks its own
-            <code>ALLOWED_LLM_HOSTS</code> and may reject this — that answer is the
-            authoritative one.
+          <p class="notice warn">
+            Not a recognised provider host. {{ hostChecker() }} checks its own
+            <code>ALLOWED_LLM_HOSTS</code> and may reject this — that answer is the authoritative
+            one.
           </p>
         }
 
@@ -157,7 +157,7 @@
             type="password"
             autocomplete="off"
             spellcheck="false"
-            placeholder="leave empty to use the key already in n8n's environment"
+            placeholder="leave empty to use the key this install already holds"
             [class.bad]="keyError(lane.key())"
             [ngModel]="lane.key()"
             (ngModelChange)="lane.key.set($event)"
@@ -205,22 +205,29 @@
   <p class="muted small">{{ modelIdNote }}</p>
 
   <footer class="purge-status">
-    @if (health(); as h) {
+    @if (nativeEngine()) {
+      <!-- Nothing on the other side of this request keeps a copy of it: the scoring happens in the
+           same process that received the text, and no execution log is written, so there is no row
+           for a purger to delete and no key left behind to delete it from. -->
+      <span class="ok-dot" title="nothing outside this process stores this request"></span>
+      This install scores text in its own process — a request is not written to an execution log, so
+      a key typed here is used and forgotten.
+    } @else if (health(); as h) {
       @if (h.purge_enabled) {
         <span class="ok-dot" title="execution rows are being deleted"></span>
         Purge gateway active — rows deleted since start: {{ h.rows_purged ?? 0 }}.
-        This page talks to n8n only through it, so a key cannot sit on disk from a call
+        This page talks to the workflow only through it, so a key cannot sit on disk from a call
         made here.
       } @else {
         <span class="bad-dot"></span>
         Purge gateway is reachable but reports <code>purge_enabled=false</code>. A BYOK key
-        would remain in n8n's execution database.
+        would remain in the workflow's execution database.
       }
     } @else if (healthFailed()) {
       <span class="bad-dot"></span>
       Cannot reach the backend on <code>/api/gateway-health</code>. Start it with
-      <code>python -m backend.app</code> (port 8787) before sending a BYOK key — without it
-      nothing purges n8n's execution rows.
+      <code>python -m backend.app</code> (port 8787) before sending a BYOK key — while the backend
+      is down nothing can answer whether a scoring call leaves the key behind.
     } @else {
       <span class="muted">Checking the backend…</span>
     }

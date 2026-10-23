@@ -60,6 +60,19 @@ export class ConfigPanel implements OnInit {
   readonly health = signal<BackendHealth | null>(null);
   readonly healthFailed = signal(false);
 
+  /** Whether this process answers `/detect` inside itself. Read from the engine status the backend
+      already sends, not from a name written into the template, because the purge footer's subject --
+      execution rows a workflow wrote -- does not exist on a packaged install, and a red dot there
+      would accuse the user's own machine of leaving a key on a disk it never wrote. */
+  readonly nativeEngine = computed(() => this.health()?.n8n?.on_request_path === false);
+
+  /** Who refuses a host outside `ALLOWED_LLM_HOSTS`. The warning has to name the thing that will
+      actually reject the call, or a local user goes looking for a workflow that was never installed. */
+  readonly hostChecker = computed(() => {
+    if (!this.health()) return 'The backend';
+    return this.nativeEngine() ? 'The engine in this process' : 'The workflow';
+  });
+
   /** True when at least one lane field carries an override. Nothing does on a fresh form: the
       deployed row and the user's own pool are the authority, and this panel exists to deviate
       from them deliberately, not by accident. */

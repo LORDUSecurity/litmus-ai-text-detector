@@ -1,5 +1,6 @@
 /** Shapes returned by the Flask backend (port 8787). Field names mirror the SQLite
     columns on purpose, so a DB change shows up here as a type error. */
+import type { DetectionResult } from './detection.types';
 
 export interface ApiKeyView {
   id: number;
@@ -111,6 +112,18 @@ export interface DetectionRow {
   error_code: string | null;
 }
 
+/** One stored run, as `/detections/<id>` answers: the list row plus the body that was
+    recorded with it and — from schema v7 — the text that was analyzed.
+
+    `payload` is partial because a failed run stores the *error* body there, not a verdict; a
+    reader has to check `classification` before treating it as one. `text` is null on every row
+    saved before the column existed, which the History sheet says out loud rather than leaving an
+    empty panel where the analyzed text should be. */
+export type DetectionDetail = DetectionRow & {
+  payload: Partial<DetectionResult>;
+  text: string | null;
+};
+
 export interface N8nWorkflowRow {
   id: string;
   name: string;
@@ -122,9 +135,17 @@ export interface N8nWorkflowRow {
 export interface N8nStatus {
   n8n_url: string;
   workflow_id: string;
-  reachable: boolean;
+  /** Absent when the answer says the workflow is not on the request path: a local install has no
+      server to probe, so there is no reachability to report. Typed optional because reading an
+      absent field as `false` is how a card ends up calling a working app unreachable. */
+  reachable?: boolean;
   healthz?: number;
   healthz_error?: string;
+  /** False on a packaged install, which scores text in its own process and never contacts the
+      workflow. It is how a lane note can tell the admin whether a leg that does not answer will be
+      replaced by the next model, or simply left unanswered. */
+  on_request_path?: boolean;
+  note?: string;
   db_readable: boolean;
   db_error?: string;
   workflow?: N8nWorkflowRow | null;
@@ -195,7 +216,14 @@ export interface ExtractResult {
 
 export interface SessionUser {
   id: number;
+  /** The legacy handle. Sign-up is addressed by e-mail now, but this column still exists and
+      still signs in, because every account created before then has only it. Never shown when the
+      person gave us a name. */
   username: string;
+  /** Null on an account that predates e-mail sign-up and has not been given one yet. */
+  email: string | null;
+  /** What the person typed at sign-up; falls back to the handle on a legacy account. */
+  display_name: string;
   role: 'admin' | 'user';
   theme: 'dark' | 'light';
   created_at: string;
@@ -204,6 +232,12 @@ export interface SessionUser {
 
 export interface AuthResponse {
   user: SessionUser | null;
+  /** Which deployment this backend is. `local` means a single-owner packaged install with no
+      sign-in page at all, so one built front-end can serve both; `accounts` is the hosted build.
+      It rides on /auth/me because that is the only route read before anyone is signed in.
+      Optional: a backend built before this change simply omits it, and the page then behaves as
+      it always did -- show the gate. */
+  auth_mode?: 'local' | 'accounts';
 }
 
 /** A user's OWN key for an endpoint the admin allows. The plaintext is never returned —
@@ -232,9 +266,10 @@ export interface KeyGuide {
 
 /**
  * Admin-writable settings behind GET/POST `/settings` (a plain user gets 403 on both).
- * `n8n_url` and `webhook_path` are how the backend reaches the detection engine — the workflow
- * webhook — and are what a packaged local app has to change when n8n is not on its own machine.
- * Blank means "use the built-in default" (http://localhost:5678 + /webhook/ai-detect-ai).
+ * `n8n_url` and `webhook_path` name the workflow webhook a *hosted* deploy forwards `/detect` to;
+ * a packaged single-owner install answers `/detect` in its own process and reads neither, which is
+ * why `/n8n/status` says whether the workflow is on the request path before the UI offers to edit
+ * it. Blank means "use the built-in default" (http://localhost:5678 + /webhook/ai-detect-ai).
  */
 export interface AdminSettings {
   paper_url: string;
@@ -268,6 +303,10 @@ export interface ConfigProvider {
   label: string;
   base_url: string;
   free_tier: boolean;
+  /** True for a gateway the caller runs himself (OmniRoute), which is the only case a key may
+      carry its own endpoint: the seeded address belongs to whichever box has it. `POST /my/keys`
+      refuses an override for anything else, so the form must not offer one. */
+  self_hosted: boolean;
   host: string;
   has_admin_key: boolean;
   models: ConfigProviderModel[];
@@ -334,6 +373,78 @@ export interface PoolEntry {
 export interface PoolResponse {
   pool: PoolEntry[];
   note?: string;
+}
+
+/** What the last discovery probe concluded about one model, in the engine's own words.
+    `dead` is a refusal (410 delisted, 404 function id, `no_choices`); `slow` and `busy` are the
+    pool being saturated, which does not retire the model -- it stays pickable and is asked again;
+    `pending` answered only after a retry and is waiting for the user's accept-or-refuse;
+    `declined` is the user's own `no`. `unknown` means the id was never probed. */
+export type ProbeStatus = 'usable' | 'pending' | 'declined' | 'slow' | 'busy' | 'dead' | 'unknown';
+
+export interface PoolOption {
+  provider: string;
+  provider_id: number;
+  provider_name: string;
+  base_url: string;
+  free_tier: boolean;
+  host: string;
+  model: string;
+  measured: boolean;
+  timeout_ms: number | null;
+  notes: string;
+  probe_status: ProbeStatus;
+  probe_note: string;
+  answer_ms: number | null;
+  verified_key: boolean;
+  admin_key: boolean;
+  needs_key: boolean;
+  in_pool: boolean;
+  your_rank: number | null;
+  health: PoolEntry['health'];
+  offered: boolean;
+  offer_seconds_left: number | null;
+}
+
+export interface PoolOptionsResponse {
+  options: PoolOption[];
+  window_s: number;
+  fast_ms: number;
+  note: string;
+}
+
+/** The body `/my/catalog/decision` answers with: the row as it now stands, plus the pool the
+    decision may have appended to. */
+export interface CatalogDecision {
+  provider: string;
+  model: string;
+  decision: 'accept' | 'refuse';
+  probe_status: ProbeStatus;
+  pool: PoolEntry[];
+}
+
+/** What `POST /my/pool/auto-rank` answers with. `ranked` is how many of his models a capture could
+    actually place; the rest are `unranked` and stay at the back in the order he gave them, because
+    a missing measurement is not a verdict about a model. */
+export interface AutoRankResponse {
+  pool: PoolEntry[];
+  ranked: number;
+  unranked: number;
+  note?: string;
+}
+
+/** What `POST /my/probe` answers with: one 8-token round trip on the caller's own credential.
+    It is the user's version of the admin's `ProbeResult` and carries less — no base_url, no reply
+    excerpt — and it writes nothing: no health row, no catalogue status, no discovery job. */
+export interface MyProbeResult {
+  ok: boolean;
+  status?: number | null;
+  latency_ms?: number;
+  provider?: string;
+  model?: string;
+  error_code?: string;
+  error?: string;
+  detail?: string;
 }
 
 /** Which lane actually answers, reported by `/ranking` from the same functions `/detect` walks

@@ -1,18 +1,22 @@
 import { Component, OnInit, Output, EventEmitter, inject, signal } from '@angular/core';
 import { BackendService } from '../../core/backend.service';
 import { CircularMetric } from '../circular-metric/circular-metric';
+import { HistorySheet } from '../history-sheet/history-sheet';
 import type { DetectionRow } from '../../core/backend.types';
 import type { DetectionResult } from '../../core/detection.types';
+import { verdictLabel, verdictPillClass, verdictTone } from '../../core/verdict-words';
 
 /** The signed-in user's own saved runs (the backend scopes the list to the session, and
-    reads someone else's id as 404). Clicking a row pulls the stored payload back and hands
-    it to the shell so the Detect tab reopens with that verdict. The original text is not
-    stored, so a reopened run shows its scores and evidence but cannot repaint the phrase
-    highlights — the row says as much rather than pretending. */
+    reads someone else's id as 404). Clicking a row opens that run in a sheet over the list — the
+    ring, its scale, and the text it scored with the model's quotes painted on it — so reading a
+    past verdict does not move you off the page you were reading. The sheet carries one way onward:
+    "Open on Detect" hands the stored verdict to the shell, which is what the `reopen` output below
+    is for. Runs saved before the backend kept the analyzed text still open; the sheet says the
+    writing predates storage instead of showing an empty panel. */
 @Component({
   selector: 'app-history-view',
   standalone: true,
-  imports: [CircularMetric],
+  imports: [CircularMetric, HistorySheet],
   template: `
     <section class="panel">
       <div class="panel-head">
@@ -35,7 +39,8 @@ import type { DetectionResult } from '../../core/detection.types';
         <div class="history-list">
           @for (r of rows(); track r.id) {
             <div class="history-row" (click)="open(r)" role="button" tabindex="0"
-                 (keydown.enter)="open(r)">
+                 (keydown.enter)="open(r)"
+                 (keydown.space)="open(r); $event.preventDefault()">
               <span class="verdict-pill" [class]="pillClass(r.classification)">
                 {{ label(r.classification) }}
               </span>
@@ -74,6 +79,11 @@ import type { DetectionResult } from '../../core/detection.types';
         </div>
       }
     </section>
+
+    @if (sheet(); as s) {
+      <app-history-sheet [row]="s.row" [result]="s.result" [text]="s.text"
+                         (closed)="closeSheet()" (reopen)="reopenFromSheet($event)" />
+    }
   `,
 })
 export class HistoryView implements OnInit {
@@ -82,8 +92,16 @@ export class HistoryView implements OnInit {
   readonly rows = signal<DetectionRow[]>([]);
   readonly loading = signal(false);
 
-  /** Emits the stored full result so the shell can reopen it on the Detect tab. */
-  @Output() reopen = new EventEmitter<DetectionResult>();
+  /** The run whose sheet is open. Null means the list is on screen alone. */
+  readonly sheet = signal<{
+    row: DetectionRow;
+    result: DetectionResult | null;
+    text: string | null;
+  } | null>(null);
+
+  /** Emits the stored verdict with the writing it was reached on, so the shell can reopen the run on
+      the Detect tab rather than only its number. */
+  @Output() reopen = new EventEmitter<{ result: DetectionResult; text: string | null }>();
 
   ngOnInit(): void {
     this.reload();
@@ -104,56 +122,39 @@ export class HistoryView implements OnInit {
     this.backend.detection(row.id).subscribe({
       next: (d) => {
         // Only a stored verdict can be reopened. A failed run stores the error body as its payload
-        // ({"error", "detail", "config_used"}), and handing that to the Detect tab would render a
-        // verdict panel out of a non-result. A row with no score has nothing to reopen.
+        // ({"error", "detail", "config_used"}), and handing that to a verdict panel — or to the
+        // Detect tab — would build a score out of a non-result. The sheet still opens, because the
+        // reader clicked this row and an unresponsive click is its own bug; it just shows no verdict.
         const p = d.payload as unknown as DetectionResult | null;
-        if (p && typeof p === 'object' && typeof (p as DetectionResult).classification === 'string') {
-          this.reopen.emit(p);
-        }
+        const verdict =
+          p && typeof p === 'object' && typeof p.classification === 'string' ? p : null;
+        this.sheet.set({ row, result: verdict, text: d.text ?? null });
       },
-      error: () => undefined,
+      error: () => this.sheet.set({ row, result: null, text: null }),
     });
   }
 
+  closeSheet(): void {
+    this.sheet.set(null);
+  }
+
+  /** Leaving the list for the Detect tab has to dismiss the sheet, or it is still mounted over a
+      page the reader cannot see and greets them when they come back. */
+  reopenFromSheet(reopened: { result: DetectionResult; text: string | null }): void {
+    this.sheet.set(null);
+    this.reopen.emit(reopened);
+  }
+
   label(c: string | null): string {
-    switch (c) {
-      case 'AI_GENERATED':
-        return 'AI';
-      case 'HUMAN_LIKELY':
-        return 'Human';
-      case 'REVIEW_REQUIRED':
-        return 'Review';
-      case 'DETECTION_UNAVAILABLE':
-        return 'Unavailable';
-      default:
-        return '—';
-    }
+    return verdictLabel(c);
   }
 
   pillClass(c: string | null): string {
-    switch (c) {
-      case 'AI_GENERATED':
-        return 'verdict-pill ai';
-      case 'HUMAN_LIKELY':
-        return 'verdict-pill human';
-      case 'REVIEW_REQUIRED':
-        return 'verdict-pill review';
-      default:
-        return 'verdict-pill none';
-    }
+    return verdictPillClass(c);
   }
 
-  tone(c: string | null): 'red' | 'green' | 'amber' | 'blue' {
-    switch (c) {
-      case 'AI_GENERATED':
-        return 'red';
-      case 'HUMAN_LIKELY':
-        return 'green';
-      case 'REVIEW_REQUIRED':
-        return 'amber';
-      default:
-        return 'blue';
-    }
+  tone(c: string | null): 'red' | 'green' | 'amber' | 'neutral' {
+    return verdictTone(c);
   }
 
   when(iso: string): string {

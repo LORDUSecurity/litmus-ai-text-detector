@@ -1,4 +1,6 @@
-# Production stack for the AI text detector.
+# Production stack for Litmus, the AI text detector. The image, volume and service names keep
+# the old "ai-text-detector" spelling on purpose: renaming them would orphans the persisted
+# backend_data / n8n_data volumes on every deploy already running this file.
 #
 #   docker compose up -d --build
 #   # then open http://localhost:8080  (sign in with ADMIN_USERNAME / ADMIN_PASSWORD)

@@ -27,9 +27,19 @@ from . import db
 # whole account once its daily cap is spent -- which is a property of the key, not of the
 # model, so every model on that endpoint would fall at once. Transient failures still
 # count (a pool that is always busy is not usable) but they can never reach `down`.
+#
+# The timeout family belongs here for the same reason and was missing: measured on this
+# deployment, the same NVIDIA account serves one model in 1.4 s and another in 269 s, and the
+# gateway 504s at ~302 s whatever the client asks for. Running out of time is therefore a
+# property of the pool at a minute, and three slow detections used to demote the model, re-rank
+# the user's pool, and drop it out of the failover chain -- for a reason that says nothing about
+# the model. `ENGINE_TIMEOUT` is the code /detect records when the engine accepted the
+# connection but its lane did not finish; `504`/`timed out` are the same finding in the
+# provider's own words.
 TRANSIENT_MARKERS = (
     "429", "503", "rate_limit", "rate limit", "ratelimit", "quota", "overloaded",
     "capacity", "too_many_requests", "too many requests", "resource_exhausted", "retry",
+    "timeout", "timed out", "etimedout", "504", "gateway time",
 )
 
 # Failures that mean the model itself did not produce an answer this app can use are
@@ -85,28 +95,46 @@ def note_detection(conn: sqlite3.Connection, body: dict, provider_for_base_url) 
     `skipped` legs are left alone entirely: the tie-break lane only runs on a gray-zone
     text, so "not called" is the normal state of a healthy secondary and counting it would
     demote a model for never being asked.
+
+    A tie-break that walked the pool reports one lane in `evidence.models` -- the leg that
+    answered, or the last one dialled -- so the refusals before it are visible only in
+    `secondary_walk.attempts`. They are folded too, or a model that 404s on every gray-zone
+    text would sit at the top of the pool never being marked, and be dialled again next time.
+    The leg that ran last is both the final attempt and the answer's secondary lane, so an
+    attempt already counted from `evidence` is not counted twice.
     """
     out: list[dict] = []
     if not isinstance(body, dict):
         return out
     models = ((body.get("evidence") or {}).get("models")) or []
     cfg = body.get("config_used") or {}
-    for leg in models:
+    folded: set[tuple[str, str]] = set()
+
+    def fold(leg: dict, lane: str) -> None:
         if not isinstance(leg, dict) or leg.get("skipped"):
-            continue
+            return
         model_id = leg.get("model")
         if not model_id:
-            continue
-        lane = leg.get("lane") or "primary"
-        base_url = ((cfg.get(lane) or {}).get("base_url")) or ""
+            return
+        # The leg's own endpoint first: on a walk every attempt dialled a different one, and
+        # `config_used.secondary` describes only the leg the lane ended up on.
+        base_url = leg.get("base_url") or ((cfg.get(lane) or {}).get("base_url")) or ""
         provider = provider_for_base_url(base_url) if base_url else ""
         kind = classify(bool(leg.get("ok")), leg.get("error_code"), leg.get("error_detail"))
         if provider:
             note_attempt(conn, provider, str(model_id), kind == "ok",
                          leg.get("error_code"), leg.get("error_detail"))
+        folded.add((str(model_id), str(base_url)))
         if kind != "ok":
             out.append({"lane": lane, "model": str(model_id), "provider": provider,
                         "kind": kind, "error_code": leg.get("error_code")})
+
+    for leg in models:
+        fold(leg, (leg.get("lane") if isinstance(leg, dict) else None) or "primary")
+    for attempt in ((body.get("secondary_walk") or {}).get("attempts")) or []:
+        if (str(attempt.get("model") or ""), str(attempt.get("base_url") or "")) in folded:
+            continue
+        fold(attempt, "secondary")
     return out
 
 

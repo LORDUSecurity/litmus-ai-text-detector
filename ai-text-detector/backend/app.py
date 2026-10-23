@@ -1,4 +1,4 @@
-"""Flask backend for the AI text detector.
+"""Flask backend for Litmus, the AI text detector.
 
 Replaces tools/detector-gateway.js. Keeps the two endpoints the Angular service already
 speaks (POST /detect, GET /gateway-health) and adds the DB-owned configuration surface:
@@ -23,7 +23,7 @@ from pathlib import Path
 
 from flask import Flask, g, jsonify, request
 
-from . import auth, db, discovery, extract, pool
+from . import auth, db, discovery, engine, extract, pool, security
 from .purge import N8N_DB, Purger, WORKFLOW_ID
 
 PORT = int(os.environ.get("BACKEND_PORT", "8787"))
@@ -86,6 +86,7 @@ def create_app() -> Flask:
     with db.session() as _c:
         db.seed_admin(_c)
     auth.init_auth(app)
+    security.init(app)
 
     register_routes(app)
     return app
@@ -114,6 +115,9 @@ def provider_public(row: sqlite3.Row) -> dict:
     d = dict(row)
     d["enabled"] = bool(d["enabled"])
     d["free_tier"] = bool(d["free_tier"])
+    # Whether this endpoint is a box the deployment does not serve. The key form shows an
+    # endpoint+port field only for these, so the flag has to reach the browser as a bool.
+    d["self_hosted"] = bool(d.get("self_hosted"))
     return d
 
 
@@ -174,6 +178,47 @@ def default_models() -> tuple[sqlite3.Row | None, sqlite3.Row | None]:
     return primary, secondary
 
 
+def key_target(c: sqlite3.Connection, user_id: int | None, prov) -> dict:
+    """The provider row as this caller's key sees it: unchanged, except dialled at the endpoint the
+    key was saved with when it names one.
+
+    For NVIDIA, OpenRouter and Gemini a provider and its endpoint are the same thing, so this is a
+    no-op copy. For a self-hosted gateway they are not -- one row, many boxes -- and every path that
+    spends a credential (verify, the Test button, discovery) has to ask the owner's router, not the
+    address the seed recorded. `lane_base_url` does the same job for a detection lane; this is the
+    shape the probe and discovery helpers take, so `_probe_with_key` keeps its four arguments.
+    """
+    out = dict(prov)
+    if user_id is None:
+        return out
+    row = db.user_key_row_for_provider(c, user_id, out["id"])
+    if row is not None and row["base_url"]:
+        out["base_url"] = row["base_url"]
+    return out
+
+
+def lane_base_url(c: sqlite3.Connection, user_id: int | None, provider_name: str) -> str:
+    """Where a lane built on this provider is actually dialled, for this caller.
+
+    `provider_base_url_by_name` answers for the deployment, and that is right wherever a provider
+    and its endpoint are one thing. A self-hosted gateway is not: one shared `omniroute` row covers
+    every owner's box, and the address that belongs to *this* caller is the one written on the key
+    they saved. So the key answers first, and a key that names no endpoint leaves the answer exactly
+    where it was.
+    """
+    if not provider_name:
+        return ""
+    prov = c.execute("SELECT id, base_url FROM providers WHERE name = ? AND enabled = 1",
+                     (provider_name,)).fetchone()
+    if prov is None:
+        return ""
+    if user_id is not None:
+        key = db.user_key_row_for_provider(c, user_id, prov["id"])
+        if key is not None and key["base_url"]:
+            return key["base_url"]
+    return prov["base_url"]
+
+
 def pool_primary_lane(c: sqlite3.Connection, user_id: int) -> dict | None:
     """The lane a plain Detect resolves from this user's ordered pool, or None.
 
@@ -194,10 +239,32 @@ def pool_primary_lane(c: sqlite3.Connection, user_id: int) -> dict | None:
     if not rows:
         return None
     top = rows[0]
-    base = provider_base_url_by_name(top["provider"])
-    if not base or not host_allowed(base):
+    base = lane_base_url(c, user_id, top["provider"]) or provider_base_url_by_name(top["provider"])
+    if not base or not endpoint_for_lane(c, base, user_id):
         return None
     return {"base_url": base, "model": top["model_id"], "provider": top["provider"]}
+
+
+def pool_tie_break_order(c: sqlite3.Connection, user_id: int,
+                         primary_model: str | None) -> list[sqlite3.Row]:
+    """The caller's pool BELOW the model that answered as primary, in walk order.
+
+    Starts immediately after `primary_model` rather than at the top of the pool: the model that
+    just scored the text cannot be the one that corroborates it, and the entry the user ranked
+    next is the one they said they would rather have. This is the second lane's version of the
+    primary's own failover walk, done inside one detection so a non-answer does not cost the
+    user a second full call to the model that already answered.
+
+    Empty when the primary is the pool's last entry, or is not in the pool at all. That is the
+    pool having nothing to offer, not a misconfiguration, and the caller falls back to the row
+    that owns the lane.
+    """
+    rows = pool.effective_order(db.pool_list(c, user_id))
+    want = (primary_model or "").strip()
+    pos = next((i for i, r in enumerate(rows) if (r["model_id"] or "").strip() == want), None)
+    if pos is None:
+        return []
+    return rows[pos + 1:]
 
 
 def model_by_id(model_id: str | None) -> sqlite3.Row | None:
@@ -255,7 +322,8 @@ def tuning_block(primary: sqlite3.Row | None, secondary: sqlite3.Row | None) -> 
     return tuning
 
 
-def active_key(provider_id: int, lane: str | None = None) -> str | None:
+def active_key(provider_id: int, lane: str | None = None,
+               rotate: bool = True) -> str | None:
     """One key for a provider, honouring a lane's own key and rotating over the rest.
 
     A key labelled "<lane> lane" serves that lane: the label is the operator saying which
@@ -266,6 +334,10 @@ def active_key(provider_id: int, lane: str | None = None) -> str | None:
 
     Stalest-use-first, never-used-before-stamped, so a rotation survives a restart without
     in-process state that would leak between tests and workers.
+
+    `rotate=False` answers "which credential would pay for this endpoint" and writes nothing:
+    a tie-break walk lists its legs before it dials any of them, and stamping every account on
+    the list would spend a rotation for calls that never happened.
     """
     row = None
     if lane:
@@ -283,13 +355,14 @@ def active_key(provider_id: int, lane: str | None = None) -> str | None:
         ).fetchone()
     if not row:
         return None
-    conn().execute(
-        "UPDATE api_keys SET last_used_at = strftime('%Y-%m-%d %H:%M:%f','now') WHERE id = ?",
-        (row["id"],),
-    )
-    # Committed here rather than left to the route: a probe returns without writing anything,
-    # so an uncommitted stamp would roll back at teardown and every probe would pick the same key.
-    conn().commit()
+    if rotate:
+        conn().execute(
+            "UPDATE api_keys SET last_used_at = strftime('%Y-%m-%d %H:%M:%f','now') WHERE id = ?",
+            (row["id"],),
+        )
+        # Committed here rather than left to the route: a probe returns without writing anything,
+        # so an uncommitted stamp would roll back at teardown and every probe would pick the same key.
+        conn().commit()
     try:
         return db.decrypt_key(row["key_cipher"])
     except ValueError:
@@ -297,7 +370,7 @@ def active_key(provider_id: int, lane: str | None = None) -> str | None:
 
 
 def stored_key_for(lane: str, base_url: str | None, model_id: str | None,
-                   user_id: int | None = None) -> str | None:
+                   user_id: int | None = None, rotate: bool = True) -> str | None:
     """The stored credential for a lane the caller named explicitly.
 
     A key belongs to a provider and a provider is its endpoint, so the host being called
@@ -310,6 +383,10 @@ def stored_key_for(lane: str, base_url: str | None, model_id: str | None,
     has to hold on the path the pick actually takes. It did not -- this returned active_key()
     only, so a user shown "your key ready" was silently billed to the shared account, and with
     no shared key the run went out with no credential at all (test_auth, 2026-10-16).
+
+    `rotate` is passed straight to active_key() and only ever means anything on that shared path:
+    a caller's own key has no use stamp to spend. The tie-break walk reads it as False, because it
+    names the credential that WOULD pay for each candidate leg and may never dial it.
     """
     want = host_of(base_url or "")
     if not want:
@@ -317,6 +394,12 @@ def stored_key_for(lane: str, base_url: str | None, model_id: str | None,
         want = host_of(row["provider_base_url"]) if row else ""
     if not want:
         return None
+    # Before any host matching: a self-hosted key's address belongs to no provider row, so the
+    # loop below cannot find it by host. The credential saved FOR this endpoint pays for it.
+    if user_id is not None and base_url:
+        own = db.user_key_for_endpoint(conn(), user_id, base_url)
+        if own:
+            return own
     for p in conn().execute("SELECT id, base_url FROM providers WHERE enabled = 1"):
         if host_of(p["base_url"]) != want:
             continue
@@ -324,7 +407,7 @@ def stored_key_for(lane: str, base_url: str | None, model_id: str | None,
             own = db.user_key_for_provider(conn(), user_id, p["id"])
             if own:
                 return own
-        return active_key(p["id"], lane)
+        return active_key(p["id"], lane, rotate=rotate)
     return None
 
 
@@ -339,11 +422,84 @@ def host_of(base_url: str) -> str:
     return host.strip("[]").lower()
 
 
+def allowed_hosts(c=None) -> tuple[str, ...]:
+    """The endpoint allowlist, in the form the in-process engine takes it.
+
+    One reader for both engines: this list decides which lane `/detect` may name, and the workflow
+    and `engine.normalize()` each re-check the URL they were handed against their own copy. If the
+    two defaults drifted, a deploy would accept a lane at request time and the engine would reject
+    it as `LANE_CONFIG_INVALID` -- so the default is the engine's constant, not a fourth copy.
+
+    `c` lets a caller outside a request supply its own connection. The discovery worker is one: it
+    has a `db.session()` of its own and no `g` to read, and a second copy of this parse is exactly
+    the drift this function was written to prevent.
+    """
+    raw = db.get_setting(c or conn(), "allowed_llm_hosts", engine.DEFAULT_ALLOWED_HOSTS)
+    return tuple(h.strip().lower() for h in (raw or engine.DEFAULT_ALLOWED_HOSTS).split(",") if h.strip())
+
+
 def host_allowed(base_url: str) -> bool:
-    allow = {h.strip().lower() for h in setting(
-        "allowed_llm_hosts", "localhost,127.0.0.1,::1,integrate.api.nvidia.com,openrouter.ai"
-    ).split(",") if h.strip()}
-    return host_of(base_url) in allow
+    return host_of(base_url) in set(allowed_hosts())
+
+
+def owner_endpoint(raw: str) -> tuple[str, str]:
+    """Canonicalise and vet an endpoint the *owner* of a self-hosted gateway named.
+
+    Returns `("", code)` when the URL must be refused, `(canonical_url, "")` when it may be saved
+    and dialled.
+
+    The shape is judged by `engine.check_base_url` -- the same validator a lane is re-checked with
+    at detect time -- so a URL accepted here cannot later be rejected as `LANE_CONFIG_INVALID`, and
+    the stored string is the engine's own canonical form (lowercased host, no trailing slash,
+    no credentials, API root rather than `/chat/completions`). Two rulers for one gate has bitten
+    this app before; see `allowed_hosts()`.
+
+    What that validator cannot do is decide *trust*: it matches the host against the deployment's
+    allowlist, and an owner's own box is exactly the address the allowlist does not know. So the
+    exchange rate is set here, in one visible line, the way the operator chose it: an https endpoint
+    is believed anywhere, because that is what a gateway hosted on the web looks like, while a plain
+    http one still has to be on the allowlist -- which already names loopback, so your own machine
+    works and a stranger's LAN address does not. A dotted path segment is the one thing the engine's
+    validator waves through (`.` is a legal path character) and this app will not store: a URL that
+    walks out of its own API root is not a gateway address.
+    """
+    value = (raw or "").strip()
+    host = host_of(value)
+    scheme = value.split("://", 1)[0].lower()
+    if not host or scheme not in ("http", "https"):
+        return "", "ENDPOINT_INVALID"
+    if ".." in value.split("://", 1)[1]:
+        return "", "ENDPOINT_INVALID"
+    checked = engine.check_base_url(value, allowed_hosts=(host,) + tuple(allowed_hosts()))
+    if not checked.get("ok"):
+        return "", "ENDPOINT_INVALID"
+    if scheme == "http" and host not in set(allowed_hosts()):
+        return "", "HOST_NOT_ALLOWED"
+    return checked["value"], ""
+
+
+def key_hosts(c, user_id: int | None) -> tuple[str, ...]:
+    """Hosts the caller's own saved keys name, ready to join the engine's allowlist.
+
+    Widening the list a *detection* is checked against is the other half of saving an endpoint:
+    without it the in-process engine would reject the gateway its owner just verified, because the
+    deployment's `allowed_llm_hosts` has never heard of it. Scoped to the caller's own rows, so one
+    user's box cannot open that host for anybody else's lane.
+    """
+    if user_id is None:
+        return ()
+    out = []
+    for url in db.user_key_endpoints(c, user_id):
+        h = host_of(url)
+        if h:
+            out.append(h)
+    return tuple(out)
+
+
+def endpoint_for_lane(c, base_url: str, user_id: int | None) -> bool:
+    """May this lane be dialled at `base_url` -- on the deployment's list, or at a host whose
+    owner saved a key for it?"""
+    return host_allowed(base_url) or host_of(base_url) in set(key_hosts(c, user_id))
 
 
 def provider_name_for_base_url(base_url: str) -> str:
@@ -477,9 +633,11 @@ def forward(url: str, payload: dict, headers: dict, timeout: float) -> tuple[int
             "error_code": "ENGINE_UNREACHABLE", "method": "ENGINE_UNREACHABLE",
             "classification": "DETECTION_UNAVAILABLE", "review_required": False,
             "engine_url": url,
-            "hint": "The detection engine is the n8n workflow at that URL. The packaged local app "
-                    "defaults to http://localhost:5678, so it needs n8n on this machine, or an "
-                    "admin has to point Settings -> detection engine at a reachable n8n.",
+            "hint": "This deployment answers detections with the n8n workflow at that URL, and that "
+                    "URL did not answer. Start n8n, or point Settings -> detection engine at a "
+                    "reachable one. A single-user local install needs neither: with "
+                    "DETECTION_ENGINE=python (which is what LOCAL_SINGLE_USER=1 defaults to) the "
+                    "text is scored in this process.",
         }, (time.time() - t0) * 1000
     ms = (time.time() - t0) * 1000
     try:
@@ -487,6 +645,41 @@ def forward(url: str, payload: dict, headers: dict, timeout: float) -> tuple[int
     except (json.JSONDecodeError, UnicodeDecodeError):
         return status, {"error": "non-JSON response from n8n",
                         "detail": raw[:400].decode("utf-8", "replace")}, ms
+
+
+def engine_url() -> str:
+    """The webhook address of the workflow engine, as this deployment is configured."""
+    return (setting("n8n_url", "http://localhost:5678").rstrip("/")
+            + setting("webhook_path", "/webhook/ai-detect-ai"))
+
+
+def run_detection(payload: dict, headers: dict, timeout: float,
+                  extra_hosts: tuple[str, ...] = ()) -> tuple[int, dict, float]:
+    """Ask whichever engine this deployment runs, through one contract.
+
+    A `LOCAL_SINGLE_USER` install -- the packaged exe -- answers inside this process. It already
+    holds the model rows, the decrypted keys and the text; making it start a second program on
+    :5678 to score a paragraph was the bug this closes. A hosted container keeps forwarding to n8n,
+    because every band in the ranking was measured through that workflow and that is what is
+    deployed. `DETECTION_ENGINE=n8n|python` overrides the derived choice in either direction.
+
+    Same `(status, body, latency_ms)` either way, so lane resolution, the failover walk,
+    `record_detection` and `lane_source` never learn which engine answered -- and
+    `tools/engine_parity.py` is what guarantees they would not have needed to.
+
+    `extra_hosts` carries the endpoints the caller's own keys name. The in-process engine re-checks
+    every lane against its own copy of the allowlist, so a gateway this app accepted at save time
+    would come back `LANE_CONFIG_INVALID` here -- the pair-of-rulers trap `allowed_hosts()` is
+    documented against. It reaches the n8n workflow the same way it always has: through the
+    workflow's own `ALLOWED_LLM_HOSTS`, which this function cannot widen, so a hosted deploy has to
+    list an owner's box in Settings for that lane to answer.
+    """
+    if engine.native_enabled():
+        t0 = time.time()
+        status, resp = engine.detect(payload, headers=headers, timeout=timeout,
+                                     allowed_hosts=allowed_hosts() + tuple(extra_hosts))
+        return status, resp, (time.time() - t0) * 1000
+    return forward(engine_url(), payload, headers, timeout)
 
 
 def _lane_view(lane: dict | None) -> dict:
@@ -527,9 +720,14 @@ REQUEST_BUDGET_S = 250.0
 # Error codes that say the ENGINE or the REQUEST failed, not the model. Retrying another
 # model against a dead engine, a bad text, or a disallowed host spends budget to reproduce
 # the same answer.
+#
+# PROVIDER_KEY_MISSING / BYOK_DISABLED are the in-process engine's own rejections (#172): both
+# refuse the request before a lane is called, so no candidate could answer differently, and the
+# walk would stamp `failover` attempts onto an answer that says "add a key on the Configuration
+# page". The first is the packaged first boot with zero stored keys.
 NO_FAILOVER_CODES = frozenset({
     "ENGINE_UNREACHABLE", "ENGINE_TIMEOUT", "INPUT_REJECTED", "LANE_CONFIG_INVALID",
-    "NO_PRIMARY_MODEL", "PAYLOAD_TOO_LARGE",
+    "NO_PRIMARY_MODEL", "PAYLOAD_TOO_LARGE", "PROVIDER_KEY_MISSING", "BYOK_DISABLED",
 })
 
 
@@ -625,7 +823,7 @@ def _pid_by_name(name: str) -> int | None:
 
 def record_detection(body: dict, status: int, latency_ms: float, primary_model: str | None,
                      secondary_model: str | None, text_length: int | None = None,
-                     secondary_off: bool = False) -> int:
+                     secondary_off: bool = False, text: str | None = None) -> int:
     cs = body.get("component_scores") or {}
     internal = body.get("_internal") or {}
     versions = body.get("versions") or {}
@@ -655,14 +853,15 @@ def record_detection(body: dict, status: int, latency_ms: float, primary_model: 
     user_id = user["id"] if user else None
     cur = conn().execute(
         """INSERT INTO detections
-           (document_id, text_fingerprint, text_length, classification, ai_probability,
+           (document_id, text_fingerprint, text_length, text, classification, ai_probability,
             confidence, method, review_required, deciding_lane, primary_model, secondary_model,
             latency_ms, http_status, error_code, warnings, payload_json, user_id)
-           VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)""",
+           VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)""",
         (body.get("document_id"), internal.get("text_fingerprint"),
          # A failed forward has no workflow `internal` block, so without the caller's length the row
          # renders "? chars" and the user cannot tell a 429-char paragraph from a 4-char word.
          internal.get("text_length") if internal.get("text_length") is not None else text_length,
+         text,
          body.get("classification"), body.get("ai_probability"), body.get("confidence"),
          body.get("method"), 1 if body.get("review_required") else 0, cs.get("deciding_lane"),
          primary_model, secondary_model, int(latency_ms), status, body.get("error_code"),
@@ -726,6 +925,126 @@ def _probe_with_key(prov, model_id: str, key: str, timeout_s: float) -> dict:
             "latency_ms": int((time.time() - t0) * 1000)}
 
 
+# ---- ranking: measured models, best first ------------------------------
+
+# Half the 48-text corpus. Under this a run has been sampled, not measured: it can show a
+# score, but it must not lead the table the admin points users at -- one lucky text beats
+# 47 honest ones under a pure fewest-wrong sort.
+MEASURED_MIN_TEXTS = 24
+
+
+def measured_ranking(user) -> list[dict]:
+    """Every measured model, scored at its OWN saved band and sorted best first.
+
+    One sort, two readers: `/ranking` renders this list and `/my/pool/auto-rank` orders the
+    caller's pool by it, so the page and the pool cannot disagree about which model judges
+    best. An order written twice is how #142 happened -- the front-end baked its own lane,
+    and the deployed default the page named never answered anything.
+
+    A band is per model, so each run is re-scored at the row the engine would actually use
+    for it: applying another model's cut would misreport it. Sorted by fewest wrong, then
+    most decided, then accuracy, then coverage, so a model that never errs outranks one that
+    defers less but guesses wrong. Sample size is a sorting tier, not a caption: a run over
+    at least MEASURED_MIN_TEXTS texts ranks among the full captures, and shorter runs keep
+    their scores but follow, flagged `provisional`. A run with no clean row measured nothing
+    and is left out rather than shown as a model with no score.
+
+    `user` may be None -- a signed-out visitor sees the measurement with no key lit.
+    """
+
+    bands = {}
+    for m in conn().execute(
+            """SELECT model_id, provider_id, lane, ai_prob_threshold, human_prob_threshold,
+                      secondary_decision_threshold FROM models"""):
+        bands.setdefault(m["model_id"], m)
+    runs = conn().execute("SELECT * FROM benchmark_runs ORDER BY id").fetchall()
+    best: dict[str, dict] = {}
+    for run in runs:
+        rows = [dict(r) for r in conn().execute(
+            """SELECT label, ok, error_code, ai_probability, confidence
+               FROM benchmark_results WHERE run_id = ?""", (run["id"],)).fetchall()]
+        if not rows:
+            continue
+        mrow = bands.get(run["model"])
+        ai_cut = float(mrow["ai_prob_threshold"]) if mrow and mrow["ai_prob_threshold"] is not None else 0.69
+        hu_cut = float(mrow["human_prob_threshold"]) if mrow and mrow["human_prob_threshold"] is not None else 0.40
+        gate = float(mrow["secondary_decision_threshold"]) if mrow and mrow["secondary_decision_threshold"] is not None else 0.0
+        clean = [r for r in rows if r.get("ok") and r.get("ai_probability") is not None and r.get("label")]
+        correct = wrong = review = 0
+        for r in clean:
+            conf = r.get("confidence") if isinstance(r.get("confidence"), (int, float)) else 1.0
+            sure = conf >= gate
+            p = r["ai_probability"]
+            verdict = "AI" if (sure and p >= ai_cut) else "HUMAN" if (sure and p <= hu_cut) else None
+            if verdict is None:
+                review += 1
+            elif verdict == r["label"]:
+                correct += 1
+            else:
+                wrong += 1
+        decided = correct + wrong
+        entry = {
+            "model": run["model"], "tag": run["tag"], "corpus": run["corpus"],
+            "provider": run["provider"],
+            "n_rows": len(rows), "n_clean": len(clean),
+            "correct": correct, "wrong": wrong, "review": review, "decided": decided,
+            "accuracy": round(correct / decided, 4) if decided else None,
+            "coverage": round(decided / len(clean), 4) if clean else None,
+            "band": {"ai": ai_cut, "human": hu_cut, "gate": gate},
+            "lane": (mrow["lane"] if mrow else None),
+        }
+        prev = best.get(run["model"])
+        # Keep the run with the most clean rows for this model (its fullest measurement).
+        if prev is None or entry["n_clean"] > prev["n_clean"]:
+            best[run["model"]] = entry
+    # Attach endpoint + the caller's verified-key availability.
+    out = []
+    for entry in best.values():
+        if not entry["n_clean"]:
+            continue  # every row errored or went unparsed: nothing was measured
+        entry["provisional"] = entry["n_clean"] < MEASURED_MIN_TEXTS
+        mrow = bands.get(entry["model"])
+        prov = None
+        if mrow is not None:
+            prov = conn().execute("SELECT id, name, base_url, free_tier FROM providers WHERE id = ?",
+                                  (mrow["provider_id"],)).fetchone()
+        if prov is not None:
+            entry["provider_id"] = prov["id"]
+            entry["provider_name"] = prov["name"]
+            entry["base_url"] = prov["base_url"]
+            entry["free_tier"] = bool(prov["free_tier"])
+            entry["host"] = host_of(prov["base_url"])
+            entry["verified_key"] = bool(user and db.user_key_for_provider(conn(), user["id"], prov["id"]))
+            entry["admin_key"] = bool(conn().execute(
+                "SELECT 1 FROM api_keys WHERE provider_id = ? AND is_active = 1 LIMIT 1",
+                (prov["id"],)).fetchone())
+        else:
+            entry["provider_id"] = None
+            entry["verified_key"] = False
+            entry["admin_key"] = False
+        out.append(entry)
+    out.sort(key=lambda e: (e["provisional"], e["wrong"], -(e["decided"] or 0),
+                            -(e["accuracy"] or 0), -(e["coverage"] or 0)))
+    for i, e in enumerate(out):
+        e["rank"] = i + 1
+    # Health and pool membership, so the page can show why a model that measured well is
+    # being served last: the ranking is a measurement, the health column is availability,
+    # and a model can be the best judge on the corpus and still have stopped answering.
+    health = {r["model_id"]: r["state"] for r in conn().execute(
+        "SELECT model_id, state FROM model_health")}
+    pool_rows = pool.pool_view(conn(), user["id"]) if user else []
+    in_pool = {(r["provider"], r["model"]): r for r in pool_rows}
+    for e in out:
+        key = (e.get("provider_name") or e.get("provider") or "", e["model"])
+        hit = in_pool.get(key)
+        e["in_pool"] = hit is not None
+        e["pool_position"] = hit["position"] if hit else None
+        e["your_rank"] = hit["your_rank"] if hit else None
+        e["health"] = (hit["health"] if hit else health.get(e["model"])) or "unknown"
+        e["consecutive_failures"] = hit["consecutive_failures"] if hit else 0
+    return out
+
+
 def register_routes(app: Flask) -> None:
 
     @app.route("/healthz", methods=["GET"])
@@ -756,6 +1075,10 @@ def register_routes(app: Flask) -> None:
             **purger.status(),
             "db_path": str(db.DB_PATH),
             "db_counts": db.counts(conn()),
+            # Which engine answers /detect for this process, before anything else: an operator
+            # reading a red `n8n.reachable` below needs to know whether that engine is even on the
+            # request path, and a benchmark run has to record the implementation that produced it.
+            "detection_engine": engine.ENGINE_NAME if engine.native_enabled() else "n8n",
             "n8n": n8n_status(),
             "defaults": {
                 "primary_model": primary["model_id"] if primary else None,
@@ -833,6 +1156,19 @@ def register_routes(app: Flask) -> None:
                 "error": "Field 'text' is required and must be a non-empty string (>= 10 chars).",
                 "error_code": "INPUT_REJECTED", "review_required": False, "method": "INPUT_REJECTED",
             }), 400
+        # The in-process engine already refuses past its own ceiling, and a request that only
+        # reaches the workflow never gets that far: it would post a multi-megabyte body through n8n
+        # and pay for a lane that cannot read it. `engine.max_text_length()` is the same number the
+        # engine reads, including its env override, so the two deploys cannot disagree about what
+        # one detection is allowed to be. Measured the engine's way, because an emoji in the text
+        # is two UTF-16 units there and one Python character here.
+        ceiling = engine.max_text_length()
+        if engine.js_len(text) > ceiling:
+            return jsonify({
+                "classification": "DETECTION_UNAVAILABLE",
+                "error": f"Field 'text' is longer than {ceiling} characters.",
+                "error_code": "TEXT_TOO_LONG", "review_required": False, "method": "TEXT_TOO_LONG",
+            }), 413
 
         # A caller may still override a lane explicitly (that is the UI contract).
         # Otherwise the lanes come from the DB: provider endpoint + model + tuned params,
@@ -882,6 +1218,82 @@ def register_routes(app: Flask) -> None:
                 lane_config = {"primary": {"base_url": syn["base_url"], "model": syn["model"]}}
                 pool_used = True
 
+        # ---- the tie-break lane, in the caller's own order -----------------------------
+        #
+        # Two rules decide this lane, and both came from the owner: it starts at the pool entry
+        # ranked just after the model that answered, and on a non-answer it keeps going down for
+        # every model ranked below -- the same logique the primary's failover walk uses, but
+        # inside the one request, because re-posting /detect would bill the primary again for a
+        # leg the user already paid for.
+        #
+        # How far it goes is theirs; how far it CAN go is the clock. The engine refuses to start a
+        # leg that cannot finish inside the request's budget, so the list is offered whole and the
+        # legs that no longer fit are reported as skipped rather than dialled into a gateway
+        # timeout that carries no verdict at all.
+        #
+        # Walking is the in-process engine's own ability: the shipped workflow's validator
+        # rejects an unknown `lane_config` field, so `candidates` travels only when
+        # `engine.native_enabled()`. On a hosted deploy the lane still STARTS at the next pooled
+        # model -- that is a plain `base_url` + `model` -- it just cannot walk.
+        def tie_break_entry(model_id: str, provider_name: str) -> dict | None:
+            """A lane the tie-break may dial, or None when this app may not dial it.
+
+            A candidate the request names and the engine then refuses is a `LANE_CONFIG_INVALID`
+            on the whole body, so an endpoint outside the allowlist is dropped here instead of
+            sent: one pool entry on a gateway this deploy has not opened must not cost the user
+            the other legs, or the detection itself.
+            """
+            uid = user["id"] if user else None
+            row = model_by_id(model_id)
+            base = (lane_base_url(conn(), uid, provider_name)
+                    or provider_base_url_by_name(provider_name)
+                    or (row["provider_base_url"] if row else ""))
+            if not base or not endpoint_for_lane(conn(), base, uid):
+                return None
+            return {"base_url": base, "model": model_id}
+
+        def tie_break_for(primary_id: str | None) -> dict | None:
+            """Resolve the second lane for a primary that answered as `primary_id`.
+
+            The head is the pool entry below it; everything under the head walks after it. A pool
+            with nothing below falls back to the admin's enabled `models` row, because the walk is
+            a pool property and a one-entry pool has none to spend. A head naming the primary
+            itself is refused here rather than sent -- one model cannot corroborate itself, and
+            doing it here is what keeps a failover candidate from re-creating that collision with
+            the lane that used to sit above it.
+            """
+            below = (pool_tie_break_order(conn(), user["id"], primary_id)
+                     if (pool_used and user is not None) else [])
+            head: dict | None = None
+            rest: list[dict] = []
+            for r in below:
+                entry = tie_break_entry(r["model_id"], r["provider"])
+                if entry is None:
+                    continue
+                if head is None:
+                    head = entry
+                else:
+                    rest.append(entry)
+            if head is None and secondary is not None:
+                head = tie_break_entry(secondary["model_id"], secondary["provider_name"])
+            if head is None or head["model"].strip() == (primary_id or "").strip():
+                return None
+            # `engine.normalize` accepts only base_url/model/enabled/candidates on a lane, so the
+            # head's own cut travels in `tuning` (whose tie-break value `tuning_block` reads from
+            # the secondary row) while each candidate carries its cut beside it: a substituted leg
+            # is read on the ruler of the model that actually answered.
+            lane = {"base_url": head["base_url"], "model": head["model"]}
+            if rest and engine.native_enabled():
+                for e in rest:
+                    # `rotate=False`: these are legs that may never be dialled, and stamping every
+                    # account on the offer would spend a rotation for calls that did not happen.
+                    key = stored_key_for("secondary", e["base_url"], e["model"],
+                                         user_id=user["id"] if user else None, rotate=False)
+                    if key:
+                        e["api_key"] = key
+                lane["candidates"] = rest
+            return lane
+
         if not lane_config:
             if primary is None:
                 return jsonify({
@@ -894,9 +1306,14 @@ def register_routes(app: Flask) -> None:
             for row, lane in ((primary, "primary"), (secondary, "secondary")):
                 if row is None:
                     continue
-                if not host_allowed(row["provider_base_url"]):
+                # The provider row is the deployment's answer to "which endpoint"; a caller's own
+                # key is the answer for their box, and only a self-hosted provider can have one.
+                uid = user["id"] if user else None
+                base = (lane_base_url(conn(), uid, row["provider_name"])
+                        or row["provider_base_url"])
+                if not endpoint_for_lane(conn(), base, uid):
                     return lane_config_invalid(lane)
-                lane_config[lane] = {"base_url": row["provider_base_url"], "model": row["model_id"]}
+                lane_config[lane] = {"base_url": base, "model": row["model_id"]}
                 header = f"x-{lane}-api-key"
                 if header not in headers:
                     # BYOK first: a user's own verified key pays for the call; only fall back
@@ -952,17 +1369,30 @@ def register_routes(app: Flask) -> None:
                 row = model_by_id(cfg.get("model"))
                 if row is None:
                     continue
-                if not host_allowed(row["provider_base_url"]):
+                base = (lane_base_url(conn(), user["id"] if user else None,
+                                      row["provider_name"]) or row["provider_base_url"])
+                if not endpoint_for_lane(conn(), base, user["id"] if user else None):
                     return lane_config_invalid(lane)
-                cfg["base_url"] = row["provider_base_url"]
-            if (not secondary_off and "secondary" not in lane_config and secondary):
+                cfg["base_url"] = base
+            if not secondary_off and "secondary" not in lane_config:
+                # The row owns the lane, not the request body -- and now the engine is told so.
                 # Naming only a primary does not opt the tie-break out: `lane_config.secondary`
-                # absent means the workflow answers with its own default second model, so the call
-                # really is a two-lane call. Describing it as single-lane made the history row claim
-                # `secondary_model = NULL` for a lane that ran (and hid the collision below). The
-                # packaged first boot hit both on 2026-10-16, because its default second model is
-                # also the model the Ranking tab invites you to pick as the scorer.
-                secondary_model = secondary["model_id"]
+                # absent means "whatever the engine's env default says", and the app used to write
+                # the deployed row's id into its own bookkeeping while leaving the lane absent. The
+                # leg that answered was then some other model entirely: the packaged first boot hit
+                # both at once on 2026-10-16, because the env default happened to be the model the
+                # Ranking tab invites you to pick as the scorer, and a History row claimed a
+                # tie-break by a model that had never been dialled.
+                resolved = tie_break_for(primary_model)
+                if resolved is not None:
+                    lane_config["secondary"] = resolved
+                    secondary_model = resolved["model"]
+                elif secondary is not None:
+                    # Nothing this request may dial: no pool entry below the primary, and the
+                    # deployed row's endpoint is not one this app is allowed to name. The lane
+                    # stays absent, so the engine's default answers -- and the row that was
+                    # supposed to own it is at least recorded, rather than logged as no lane.
+                    secondary_model = secondary["model_id"]
             if (not secondary_off and primary_model and secondary_model
                     and primary_model.strip() == secondary_model.strip()):
                 # A model cannot corroborate itself: same input, same stored tuning, so the
@@ -996,9 +1426,6 @@ def register_routes(app: Flask) -> None:
             tuning = caller_tuning if isinstance(caller_tuning, dict) else tuning_block(
                 model_by_id(primary_model), model_by_id(secondary_model))
 
-        url = setting("n8n_url", "http://localhost:5678").rstrip("/") + \
-            setting("webhook_path", "/webhook/ai-detect-ai")
-
         def build_payload(lane_cfg: dict, tune: dict) -> dict:
             p = {k: v for k, v in body.items() if k not in ("lane_config", "tuning")}
             p["lane_config"] = lane_cfg
@@ -1015,8 +1442,10 @@ def register_routes(app: Flask) -> None:
         # min(): a single lane at the shipped 240 s ceiling is what the 270 s -> 285 s -> 330 s
         # chain above is derived from, so the budget must never cut that call short.
         deadline = time.time() + max(timeout, REQUEST_BUDGET_S)
+        # Endpoints this caller's own keys name, for the engine's re-check of every lane it dials.
+        lane_hosts = key_hosts(conn(), user["id"] if user else None)
         payload = build_payload(lane_config, tuning)
-        status, resp, latency = forward(url, payload, headers, timeout)
+        status, resp, latency = run_detection(payload, headers, timeout, lane_hosts)
 
         # ---- failover: the next model in the caller's own order ------------------------
         #
@@ -1056,7 +1485,8 @@ def register_routes(app: Flask) -> None:
                 if len(failover) >= MAX_FAILOVER_ATTEMPTS:
                     break
                 left = deadline - time.time()
-                base = provider_base_url_by_name(cand["provider"])
+                base = (lane_base_url(conn(), user["id"] if user else None, cand["provider"])
+                        or provider_base_url_by_name(cand["provider"]))
                 entry = {"from": primary_model, "to": cand["model"],
                          "provider": cand["provider"]}
                 if left < FAILOVER_RESERVE_S:
@@ -1064,25 +1494,52 @@ def register_routes(app: Flask) -> None:
                                         f"({left:.0f}s < {FAILOVER_RESERVE_S:.0f}s)")
                     failover.append(entry)
                     break
-                if not base or not host_allowed(base):
+                if not base or not endpoint_for_lane(conn(), base,
+                                                     user["id"] if user else None):
                     entry["skipped"] = "endpoint is not in allowed_llm_hosts"
                     failover.append(entry)
                     continue
                 tried.add(cand["model"])
+                cand_cfg = {"primary": {"base_url": base, "model": cand["model"]}}
+                if pool_used:
+                    # The tie-break moves with the primary, so it is resolved again rather than
+                    # carried over: the head that served the model which just failed to answer is
+                    # that failed model's neighbour, and the entry the user ranked below THIS
+                    # candidate is the one the second lane should start at. With nothing left
+                    # below, the lane is switched off instead of left pointing at a leg that may
+                    # name the new primary itself -- one model cannot corroborate itself.
+                    cand_lane = tie_break_for(cand["model"])
+                    secondary_off = cand_lane is None
+                    secondary_model = None if cand_lane is None else cand_lane["model"]
+                    cand_cfg["secondary"] = cand_lane or {"enabled": False}
+                else:
+                    cand_cfg["secondary"] = lane_config.get("secondary") or {"enabled": False}
+                cand_headers = {k: v for k, v in headers.items() if k != "x-primary-api-key"}
+                if pool_used:
+                    # ...and the credential is re-resolved with it. A lane aimed at a second
+                    # gateway, still paid for with the first one's key, comes back 401 -- which is
+                    # a refusal the health table files against the MODEL, freezing a healthy model
+                    # for a mistake the request made.
+                    if secondary_off:
+                        cand_headers.pop("x-secondary-api-key", None)
+                    else:
+                        sec_key = stored_key_for("secondary", cand_cfg["secondary"]["base_url"],
+                                                 secondary_model, user_id=user["id"])
+                        if sec_key:
+                            cand_headers["x-secondary-api-key"] = sec_key
+                        else:
+                            cand_headers.pop("x-secondary-api-key", None)
                 cand_row = model_by_id(cand["model"])
                 cand_tuning = caller_tuning if isinstance(caller_tuning, dict) else tuning_block(
                     cand_row, model_by_id(secondary_model))
-                cand_cfg = {"primary": {"base_url": base, "model": cand["model"]}}
-                cand_cfg["secondary"] = lane_config.get("secondary") or {"enabled": False}
-                cand_headers = {k: v for k, v in headers.items() if k != "x-primary-api-key"}
                 cand_key = (db.user_key_for_provider(conn(), user["id"], _pid_by_name(cand["provider"]))
                             if user else None) or active_key(_pid_by_name(cand["provider"]), "primary")
                 if cand_key:
                     cand_headers["x-primary-api-key"] = cand_key
                 cand_timeout = float(cand_tuning.get("request_timeout_ms") or 90000) / 1000.0 + 30.0
                 payload = build_payload(cand_cfg, cand_tuning)
-                status, resp, latency = forward(url, payload, cand_headers,
-                                                min(cand_timeout, left))
+                status, resp, latency = run_detection(payload, cand_headers,
+                                                      min(cand_timeout, left))
                 lane_config, tuning, primary_model = cand_cfg, cand_tuning, cand["model"]
                 entry["ok"] = not no_verdict(status, resp)
                 entry["error_code"] = None if entry["ok"] else (
@@ -1124,9 +1581,18 @@ def register_routes(app: Flask) -> None:
 
         # record_detection fills any lane the caller did not name from the workflow's own
         # config_used, so an overridden primary does not leave the tie-break lane unattributed.
+        if isinstance(resp, dict):
+            # A tie-break that walked the pool dialled several models and reports one lane, and
+            # `config_used.secondary` names the endpoint the lane ENDED UP on. History has to name
+            # the model whose reply actually decided -- the same question `auto_switch` answers for
+            # the primary, and the same one a row naming `deployed/tie` for a text scored by
+            # something else used to make unanswerable.
+            walked = resp.get("secondary_walk")
+            if isinstance(walked, dict) and walked.get("switched_to"):
+                secondary_model = walked["switched_to"]
         det_id = record_detection(resp, status, latency, primary_model, secondary_model,
                                  text_length=len(payload.get("text") or ""),
-                                 secondary_off=secondary_off)
+                                 secondary_off=secondary_off, text=payload.get("text"))
         if isinstance(resp, dict):
             resp["backend_detection_id"] = det_id
         return jsonify(resp), status
@@ -1167,10 +1633,11 @@ def register_routes(app: Flask) -> None:
         try:
             cur = conn().execute(
                 """INSERT INTO providers (name, label, base_url, auth_header, auth_prefix,
-                       free_tier, enabled, notes)
-                   VALUES (?,?,?,?,?,?,?,?)""",
+                       free_tier, self_hosted, enabled, notes)
+                   VALUES (?,?,?,?,?,?,?,?,?)""",
                 (name, b.get("label", name), base_url, b.get("auth_header", "Authorization"),
                  b.get("auth_prefix", "Bearer "), 1 if b.get("free_tier", True) else 0,
+                 1 if b.get("self_hosted") else 0,
                  1 if b.get("enabled", True) else 0, b.get("notes", "")),
             )
             conn().commit()
@@ -1189,7 +1656,7 @@ def register_routes(app: Flask) -> None:
         for f in ("label", "base_url", "auth_header", "auth_prefix", "notes"):
             if f in b:
                 fields[f] = str(b[f])[:500]
-        for f in ("free_tier", "enabled"):
+        for f in ("free_tier", "enabled", "self_hosted"):
             if f in b:
                 fields[f] = 1 if b[f] else 0
         if "base_url" in fields and not host_of(fields["base_url"]):
@@ -1477,24 +1944,53 @@ def register_routes(app: Flask) -> None:
         if not host_allowed(prov["base_url"]):
             return jsonify(error="that endpoint host is not allowed",
                            error_code="HOST_NOT_ALLOWED"), 400
+        # Which address this credential is for. The provider row answers that on its own wherever a
+        # provider and its endpoint are the same thing -- NVIDIA, OpenRouter, Gemini each have one.
+        # A self-hosted gateway is the case the owner knows better than the deployment does: the
+        # same omniroute row runs at a different address for every person who has one, so a key for
+        # it carries the box it belongs to. Naming an endpoint for a provider NOT flagged that way
+        # stays refused -- posting an attacker's URL at a common provider is exactly what the guard
+        # in front of this line was built for, and that guard is unchanged.
+        named = (b.get("base_url") or "").strip()
+        row_url = (prov["base_url"] or "").rstrip("/")
+        endpoint = ""
+        if named and named.rstrip("/") != row_url:
+            if not prov["self_hosted"]:
+                return jsonify(error="that provider's endpoint is fixed; only a self-hosted "
+                                     "gateway can be named on a key",
+                               error_code="PROVIDER_NOT_SUPPORTED"), 400
+            endpoint, code = owner_endpoint(named)
+            if code:
+                return jsonify(error=("that endpoint is not a diallable gateway API root"
+                                      if code == "ENDPOINT_INVALID" else
+                                      "that http endpoint is off the allowlist; an https one is "
+                                      "trusted anywhere"),
+                               error_code=code), 400
+            if endpoint == row_url:
+                endpoint = ""  # the row already says this address: no override to store
         label = (b.get("label") or "my key").strip()[:80] or "my key"
-        kid = db.add_user_key(conn(), user["id"], prov["id"], plain, label)
+        kid = db.add_user_key(conn(), user["id"], prov["id"], plain, label, endpoint)
+        # The address to dial, in the shape `_probe_with_key` and discovery already take. Substituted
+        # inside the provider mapping rather than passed as a fifth argument, because the probe's
+        # signature is the contract five test stubs and the admin probe share.
+        target = {**dict(prov), "base_url": endpoint or row_url}
         # Verify immediately if a model was supplied, so "auto-pick a working key" is honest.
         verified = False
         model_id = (b.get("model_id") or "").strip()
         if model_id and MODEL_PATTERN.match(model_id):
-            res = _probe_with_key(prov, model_id, plain,
+            res = _probe_with_key(target, model_id, plain,
                                   probe_timeout_s(model_id, b.get("timeout_seconds"), prov["id"]))
             verified = bool(res.get("ok"))
             db.set_user_key_verified(conn(), kid, user["id"], verified)
         row = db.get_user_key(conn(), kid, user["id"])
         d = db.user_key_public(row)
         d["provider_name"] = prov["name"]
+        d["provider_base_url"] = prov["base_url"]
         if verified:
             # Same trigger as the explicit verify route: saving a key with a model_id probes
             # it inline, and a key that just answered is the moment its budget can be spent
             # on finding out what else that endpoint serves.
-            d["discovery"] = enqueue_discovery(user, prov, plain, "key saved and verified")
+            d["discovery"] = enqueue_discovery(user, target, plain, "key saved and verified")
         return jsonify(d), 201
 
     @app.route("/my/keys/<int:kid>", methods=["DELETE"])
@@ -1520,13 +2016,27 @@ def register_routes(app: Flask) -> None:
         if not model_id or not MODEL_PATTERN.match(model_id):
             return jsonify(error="model_id required and must match ^[A-Za-z0-9._:/@+-]+$"), 400
         prov = conn().execute("SELECT * FROM providers WHERE id = ?", (row["provider_id"],)).fetchone()
-        if prov is None or not host_allowed(prov["base_url"]):
+        if prov is None:
             return jsonify(ok=False, error_code="HOST_NOT_ALLOWED"), 400
+        # Dial where this key lives, not where the seed put the row. The owner of a self-hosted
+        # gateway named his own box when he saved the credential, and verifying the deployment's
+        # default address instead would answer a question about somebody else's router.
+        own = (row["base_url"] or "").strip()
+        if own:
+            # Re-gated on every verify, not only at save: `allowed_llm_hosts` is an admin setting
+            # that can move underneath a stored http endpoint, and a URL that was trusted the day
+            # it was written is not trusted forever.
+            _again, code = owner_endpoint(own)
+            if code:
+                return jsonify(ok=False, error_code=code), 400
+        elif not host_allowed(prov["base_url"]):
+            return jsonify(ok=False, error_code="HOST_NOT_ALLOWED"), 400
+        target = {**dict(prov), "base_url": own or prov["base_url"]}
         try:
             key = db.decrypt_key(row["key_cipher"])
         except ValueError:
             return jsonify(ok=False, error_code="KEY_UNREADABLE"), 500
-        res = _probe_with_key(prov, model_id, key,
+        res = _probe_with_key(target, model_id, key,
                               probe_timeout_s(model_id, b.get("timeout_seconds"), prov["id"]))
         db.set_user_key_verified(conn(), kid, user["id"], bool(res.get("ok")))
         out = {**res, "provider": prov["name"], "model": model_id}
@@ -1534,8 +2044,54 @@ def register_routes(app: Flask) -> None:
             # A key that just proved it works is the only trustworthy moment to spend its
             # budget on discovery: before this the app cannot tell an unusable model from an
             # unusable credential, and screening on a broken key would mark good models dead.
-            out["discovery"] = enqueue_discovery(user, prov, key, "key verified")
+            out["discovery"] = enqueue_discovery(user, target, key, "key verified")
         return jsonify(out)
+
+    @app.route("/my/probe", methods=["POST"])
+    def my_probe():
+        """Ask one model, in one sentence, whether it answers THIS caller right now.
+
+        The Ranking card could only "score with this model", so the cheap question -- is it
+        awake? -- used to cost a whole detection. `_probe_with_key` already exists and the admin
+        has had it since #20 (`POST /providers/<id>/probe`), but that path is behind
+        `_admin_required`, so a plain user on a hosted deploy could not be given a test button at
+        all. This is the user-facing half, and it is what the card's Test button calls.
+
+        It spends the caller's own credential and never the deployment's: "does this answer me" is
+        a question about his quota and his key, and answering it with someone else's would make
+        the result a lie. So no stored key for that endpoint is a refusal (409), the same shape
+        `/my/discover` uses.
+
+        And it writes nothing. Health is measured from real detections, catalogue rows from
+        discovery -- a probe that ran out of time must not mark a lane down, re-rank a pool, or
+        retire a model, because a timeout is not a verdict.
+        """
+        user = auth.current_user()
+        if user is None:
+            return jsonify(error="authentication required", error_code="AUTH_REQUIRED"), 401
+        b = request.get_json(silent=True) or {}
+        model_id = (b.get("model_id") or "").strip()
+        if not model_id or not MODEL_PATTERN.match(model_id):
+            return jsonify(error="model_id required and must match ^[A-Za-z0-9._:/@+-]+$"), 400
+        prov = _resolve_provider(b.get("provider_id"), b.get("base_url"))
+        if prov is None:
+            return jsonify(error="that endpoint is not one this app supports",
+                           error_code="PROVIDER_NOT_SUPPORTED"), 400
+        # Dial the box this caller's key belongs to, not the seed's default address.
+        target = key_target(conn(), user["id"], prov)
+        if not endpoint_for_lane(conn(), target["base_url"], user["id"]):
+            return jsonify(error="that endpoint host is not allowed",
+                           error_code="HOST_NOT_ALLOWED"), 400
+        key = db.user_key_for_provider(conn(), user["id"], prov["id"])
+        if not key:
+            return jsonify({
+                "ok": False, "error_code": "NO_USER_KEY",
+                "error": "a test call runs on your own key for that endpoint; add and verify "
+                         "one first",
+            }), 409
+        res = _probe_with_key(target, model_id, key,
+                              probe_timeout_s(model_id, b.get("timeout_seconds"), prov["id"]))
+        return jsonify({**res, "provider": prov["name"], "model": model_id})
 
     # ---- auto-discovery: bring the provider's free models in, screen them, rank them ----
 
@@ -1607,7 +2163,7 @@ def register_routes(app: Flask) -> None:
                 "ok": False, "error_code": "NO_USER_KEY",
                 "error": "discovery runs on your own key for that endpoint; add and verify one first",
             }), 409
-        out = enqueue_discovery(user, prov, key, "requested")
+        out = enqueue_discovery(user, key_target(conn(), user["id"], prov), key, "requested")
         if not out.get("queued") and out.get("status") == "disabled":
             return jsonify({"ok": False, "error_code": "DISCOVERY_DISABLED", **out}), 503
         return jsonify({"ok": True, **out}), 202
@@ -1641,6 +2197,122 @@ def register_routes(app: Flask) -> None:
                     "non-answers) is served last until it answers again, and your rank is "
                     "restored untouched when it does",
         })
+
+    @app.route("/my/pool/options", methods=["GET"])
+    def my_pool_options():
+        """Every model this app knows the caller may pick, and what the last probe said about it.
+
+        `/ranking` cannot be the picker's only source of truth: it is a measurement, so a model
+        whose lane ran out of time -- or that was never asked a text -- is simply absent from it.
+        Absence on that page reads as "unavailable", which is exactly the mistake this rule set
+        exists to stop. Here the row that matters is the `models` row (the thing that makes a
+        model pinnable at all), joined to the last probe so a card can show `slow`, `busy` or
+        `pending` in the engine's own words instead of the user inferring `dead` from a blank.
+
+        A live `pending` offer is sorted first, because it is the one entry waiting on him.
+        """
+        user = auth.current_user()
+        if user is None:
+            return jsonify(error="authentication required", error_code="AUTH_REQUIRED"), 401
+        window = discovery.DECISION_WINDOW_S
+        rows = conn().execute(
+            """SELECT m.provider_id, p.name AS provider, p.base_url, p.free_tier,
+                      m.model_id, m.measured, m.timeout_ms, m.notes,
+                      c.probe_status, c.probe_note, c.latency_ms,
+                      CAST(strftime('%s', datetime(c.probed_at, ?)) - strftime('%s', 'now')
+                           AS INTEGER) AS offer_left
+               FROM models m
+               JOIN providers p ON p.id = m.provider_id AND p.enabled = 1
+               LEFT JOIN catalog_models c ON c.provider = p.name AND c.model_id = m.model_id
+               WHERE m.enabled = 1""", (f"+{window} seconds",)).fetchall()
+        mine = {(r["provider"], r["model"]): r for r in pool.pool_view(conn(), user["id"])}
+        out = []
+        for r in rows:
+            status = r["probe_status"] or "unknown"
+            left = r["offer_left"]
+            offer = status == "pending" and left is not None and left > 0
+            hit = mine.get((r["provider"], r["model_id"]))
+            admin_key = bool(conn().execute(
+                "SELECT 1 FROM api_keys WHERE provider_id = ? AND is_active = 1 LIMIT 1",
+                (r["provider_id"],)).fetchone())
+            own_key = bool(db.user_key_for_provider(conn(), user["id"], r["provider_id"]))
+            out.append({
+                "provider": r["provider"], "provider_id": r["provider_id"],
+                "provider_name": r["provider"], "base_url": r["base_url"],
+                "free_tier": bool(r["free_tier"]), "host": host_of(r["base_url"]),
+                "model": r["model_id"], "measured": bool(r["measured"]),
+                "timeout_ms": r["timeout_ms"], "notes": r["notes"] or "",
+                "probe_status": status, "probe_note": r["probe_note"] or "",
+                "answer_ms": r["latency_ms"],
+                "verified_key": own_key, "admin_key": admin_key,
+                "needs_key": not (own_key or admin_key),
+                "in_pool": hit is not None,
+                "your_rank": hit["your_rank"] if hit else None,
+                "health": hit["health"] if hit else "unknown",
+                "offered": offer,
+                "offer_seconds_left": left if offer else None,
+            })
+        out.sort(key=lambda e: (0 if e["offered"] else 1, 0 if e["measured"] else 1,
+                                e["provider"], e["model"]))
+        return jsonify({
+            "options": out, "window_s": window, "fast_ms": discovery.FAST_ANSWER_MS,
+            "note": "a model with no rank is not a broken model: `slow` and `busy` are the pool "
+                    "being saturated at that minute, so the row stays pickable and the next "
+                    "discovery run tries it again. `pending` is a model that only answered after "
+                    "we asked twice -- it is yours to accept or refuse while the window holds."})
+
+    @app.route("/my/catalog/decision", methods=["POST"])
+    def my_catalog_decision():
+        """Accept or refuse a model that answered the screen only after a timeout.
+
+        The job holds the evidence ("it answered in 3 s, but the first ask timed out") and the
+        user holds the judgement ("do I want this in the lane that scores my texts"), so this is
+        the route that hands him the decision instead of spending his call budget on a pin he
+        never agreed to. Accept appends to his pool at the end and marks the catalogue row
+        `usable`, which ends the offer. Refuse marks it `declined` and leaves the `models` row
+        exactly where it was: a `no` today is not a deletion, and the same card can add it later.
+        """
+        user = auth.current_user()
+        if user is None:
+            return jsonify(error="authentication required", error_code="AUTH_REQUIRED"), 401
+        b = request.get_json(silent=True) or {}
+        model_id = (b.get("model") or "").strip()
+        provider = (b.get("provider") or "").strip()
+        decision = (b.get("decision") or "").strip().lower()
+        if not model_id or not MODEL_PATTERN.match(model_id) or not provider or len(provider) > 60:
+            return jsonify(error="provider and model required, model must match "
+                                 "^[A-Za-z0-9._:/@+-]+$"), 400
+        if decision not in ("accept", "refuse"):
+            return jsonify(error="decision must be 'accept' or 'refuse'",
+                           error_code="BAD_DECISION"), 400
+        cat = conn().execute(
+            "SELECT probe_status FROM catalog_models WHERE provider = ? AND model_id = ?",
+            (provider, model_id)).fetchone()
+        if cat is None:
+            return jsonify(error="that model has no probe on that endpoint to decide about",
+                           error_code="NOT_OFFERED"), 404
+        if decision == "accept":
+            base = provider_base_url_by_name(provider)
+            if not base:
+                return jsonify(error="no enabled provider by that name",
+                               error_code="PROVIDER_NOT_SUPPORTED"), 400
+            if not host_allowed(base):
+                return jsonify(error="that endpoint host is not allowed",
+                               error_code="HOST_NOT_ALLOWED"), 400
+            # source='user', not 'auto': this one he said yes to, so it is his row to order.
+            db.pool_add(conn(), user["id"], provider, model_id, source="user")
+        conn().execute(
+            """UPDATE catalog_models SET probe_status = ?,
+                   probe_note = probe_note || ?
+               WHERE provider = ? AND model_id = ?""",
+            ("usable" if decision == "accept" else "declined",
+             f" -- accepted into the pool by user {user['id']}" if decision == "accept"
+             else f" -- refused by user {user['id']}; still pickable",
+             provider, model_id))
+        conn().commit()
+        return jsonify({"provider": provider, "model": model_id, "decision": decision,
+                        "probe_status": "usable" if decision == "accept" else "declined",
+                        "pool": pool.pool_view(conn(), user["id"])})
 
     @app.route("/my/pool", methods=["POST"])
     def my_pool_add():
@@ -1743,6 +2415,48 @@ def register_routes(app: Flask) -> None:
         conn().commit()
         return jsonify({"pool": pool.pool_view(conn(), user["id"])})
 
+    @app.route("/my/pool/auto-rank", methods=["POST"])
+    def my_pool_auto_rank():
+        """Order the caller's pool by the measurement the Ranking page already reports.
+
+        "Rank them for me, best to unranked" is a question this app already answers once, and a
+        second sort written beside it is how a page becomes a caption: #142 was the front-end
+        keeping its own lane, and the offline audits were bands hand-copied from a ruler that had
+        moved. So this route reads the order out of `measured_ranking` -- the same scored, sorted
+        list /ranking draws -- and only ever permutes rows he already holds.
+
+        A model with no capture has no measurement, and no measurement is not a removal: those
+        rows go behind the judged ones and keep their relative order among themselves. Nothing is
+        added either -- bringing a model in is the picker's job, and a silent add would spend his
+        calls on a lane he never chose.
+        """
+        user = auth.current_user()
+        if user is None:
+            return jsonify(error="authentication required", error_code="AUTH_REQUIRED"), 401
+        rows = db.pool_list(conn(), user["id"])
+        order_of = {e["model"]: e["rank"] for e in measured_ranking(user)}
+        judged = [r for r in rows if r["model_id"] in order_of]
+        judged.sort(key=lambda r: order_of[r["model_id"]])
+        tail = [r for r in rows if r["model_id"] not in order_of]
+        if not judged:
+            return jsonify({
+                "pool": pool.pool_view(conn(), user["id"]),
+                "ranked": 0, "unranked": len(tail),
+                "note": "nothing in your pool has a measurement to rank on: no measurement has "
+                        "been captured for these models yet. Run a detection, or let discovery "
+                        "screen a model, then rank again.",
+            })
+        db.pool_set_positions(conn(), user["id"],
+                              [(r["provider"], r["model_id"]) for r in judged + tail])
+        conn().commit()
+        return jsonify({
+            "pool": pool.pool_view(conn(), user["id"]),
+            "ranked": len(judged), "unranked": len(tail),
+            "note": f"ordered by the Ranking table's own measurement: {len(judged)} ranked best "
+                    f"first, {len(tail)} left at the back in your order because no capture "
+                    f"exists to judge them on",
+        })
+
     # ---- public config: paper link, key guides, supported endpoints --------
 
     @app.route("/config", methods=["GET"])
@@ -1760,6 +2474,10 @@ def register_routes(app: Flask) -> None:
             providers.append({
                 "id": p["id"], "name": p["name"], "label": p["label"],
                 "base_url": p["base_url"], "free_tier": bool(p["free_tier"]),
+                # The key form reads this: one fixed address needs a key and nothing else, while a
+                # gateway the owner runs needs the address his box actually lives at. Same flag
+                # POST /my/keys checks before it accepts a per-key endpoint.
+                "self_hosted": bool(p["self_hosted"]),
                 "host": host_of(p["base_url"]),
                 "has_admin_key": bool(conn().execute(
                     "SELECT 1 FROM api_keys WHERE provider_id = ? AND is_active = 1 LIMIT 1",
@@ -1802,11 +2520,13 @@ def register_routes(app: Flask) -> None:
         return jsonify(out)
 
     # Validated on write, because two of these keys are load-bearing for the whole product:
-    # /detect posts to setting("n8n_url") + setting("webhook_path"), so a scheme-less engine URL
-    # ("localhost:5678") raises inside the forwarder and every detection answers 502 ENGINE_UNREACHABLE
-    # until someone edits the settings table from a shell -- and the packaged local exe is exactly
-    # the install where the engine URL has to be changed and there is no shell. Blank is legal for
-    # all three (it falls back to the built-in default); a present value has to be usable.
+    # when the workflow is the engine, `run_detection` posts to setting("n8n_url") +
+    # setting("webhook_path"), so a scheme-less engine URL ("localhost:5678") raises inside the
+    # forwarder and every detection answers 502 ENGINE_UNREACHABLE until someone edits the settings
+    # table from a shell. A single-user local install answers in-process and never reads them -- but
+    # an admin can still point it at a workflow with DETECTION_ENGINE=n8n, and the hosted container
+    # is the deploy where this field decides everything, so the check stays. Blank is legal for all
+    # three (it falls back to the built-in default); a present value has to be usable.
     def setting_problem(key: str, value: str) -> str | None:
         if not value:
             return None
@@ -1854,122 +2574,18 @@ def register_routes(app: Flask) -> None:
         conn().commit()
         return jsonify(ok=True, written=written)
 
-    # ---- ranking: measured models, best first ------------------------------
-
-    # Half the 48-text corpus. Under this a run has been sampled, not measured: it can show a
-    # score, but it must not lead the table the admin points users at -- one lucky text beats
-    # 47 honest ones under a pure fewest-wrong sort.
-    MEASURED_MIN_TEXTS = 24
 
     @app.route("/ranking", methods=["GET"])
     def ranking():
         """The ranked model table that replaces the old research/benchmark panel.
 
-        One row per measured model, scored at ITS OWN saved band (the deployed decision
-        rule), not a single global cut -- a band is per model and applying another model's
-        cut would misreport it. Sorted by fewest wrong, then most decided, then accuracy,
-        so a model that never errs outranks one that defers less but guesses wrong. Each
-        row carries whether the caller has a verified key for that endpoint, which is what
-        lets the UI 'pick a working key automatically'.
-
-        Sample size is a sorting tier, not a caption. Fewest-wrong-first made a 1-text probe
-        with 0 errors outrank a 48-text capture with 1 -- and this table is the page that
-        claims "the best result we found", so a lucky probe must not lead it. Rows measured
-        over at least MEASURED_MIN_TEXTS texts rank among themselves first; shorter runs keep
-        their scores but follow, flagged `provisional`. A run with no clean row is not a
-        measurement at all and is left out rather than shown as a model with no score.
+        The measurement and the sort are `measured_ranking`, shared with /my/pool/auto-rank so
+        the order this page shows and the order the pool can be ranked into are one thing. This
+        route adds what only the page needs: whose key is behind each row, and which lane would
+        actually answer this caller's next run.
         """
         user = auth.current_user()
-        bands = {}
-        for m in conn().execute(
-                """SELECT model_id, provider_id, lane, ai_prob_threshold, human_prob_threshold,
-                          secondary_decision_threshold FROM models"""):
-            bands.setdefault(m["model_id"], m)
-        runs = conn().execute("SELECT * FROM benchmark_runs ORDER BY id").fetchall()
-        best: dict[str, dict] = {}
-        for run in runs:
-            rows = [dict(r) for r in conn().execute(
-                """SELECT label, ok, error_code, ai_probability, confidence
-                   FROM benchmark_results WHERE run_id = ?""", (run["id"],)).fetchall()]
-            if not rows:
-                continue
-            mrow = bands.get(run["model"])
-            ai_cut = float(mrow["ai_prob_threshold"]) if mrow and mrow["ai_prob_threshold"] is not None else 0.69
-            hu_cut = float(mrow["human_prob_threshold"]) if mrow and mrow["human_prob_threshold"] is not None else 0.40
-            gate = float(mrow["secondary_decision_threshold"]) if mrow and mrow["secondary_decision_threshold"] is not None else 0.0
-            clean = [r for r in rows if r.get("ok") and r.get("ai_probability") is not None and r.get("label")]
-            correct = wrong = review = 0
-            for r in clean:
-                conf = r.get("confidence") if isinstance(r.get("confidence"), (int, float)) else 1.0
-                sure = conf >= gate
-                p = r["ai_probability"]
-                verdict = "AI" if (sure and p >= ai_cut) else "HUMAN" if (sure and p <= hu_cut) else None
-                if verdict is None:
-                    review += 1
-                elif verdict == r["label"]:
-                    correct += 1
-                else:
-                    wrong += 1
-            decided = correct + wrong
-            entry = {
-                "model": run["model"], "tag": run["tag"], "corpus": run["corpus"],
-                "provider": run["provider"],
-                "n_rows": len(rows), "n_clean": len(clean),
-                "correct": correct, "wrong": wrong, "review": review, "decided": decided,
-                "accuracy": round(correct / decided, 4) if decided else None,
-                "coverage": round(decided / len(clean), 4) if clean else None,
-                "band": {"ai": ai_cut, "human": hu_cut, "gate": gate},
-                "lane": (mrow["lane"] if mrow else None),
-            }
-            prev = best.get(run["model"])
-            # Keep the run with the most clean rows for this model (its fullest measurement).
-            if prev is None or entry["n_clean"] > prev["n_clean"]:
-                best[run["model"]] = entry
-        # Attach endpoint + the caller's verified-key availability.
-        out = []
-        for entry in best.values():
-            if not entry["n_clean"]:
-                continue  # every row errored or went unparsed: nothing was measured
-            entry["provisional"] = entry["n_clean"] < MEASURED_MIN_TEXTS
-            mrow = bands.get(entry["model"])
-            prov = None
-            if mrow is not None:
-                prov = conn().execute("SELECT id, name, base_url, free_tier FROM providers WHERE id = ?",
-                                      (mrow["provider_id"],)).fetchone()
-            if prov is not None:
-                entry["provider_id"] = prov["id"]
-                entry["provider_name"] = prov["name"]
-                entry["base_url"] = prov["base_url"]
-                entry["free_tier"] = bool(prov["free_tier"])
-                entry["host"] = host_of(prov["base_url"])
-                entry["verified_key"] = bool(user and db.user_key_for_provider(conn(), user["id"], prov["id"]))
-                entry["admin_key"] = bool(conn().execute(
-                    "SELECT 1 FROM api_keys WHERE provider_id = ? AND is_active = 1 LIMIT 1",
-                    (prov["id"],)).fetchone())
-            else:
-                entry["provider_id"] = None
-                entry["verified_key"] = False
-                entry["admin_key"] = False
-            out.append(entry)
-        out.sort(key=lambda e: (e["provisional"], e["wrong"], -(e["decided"] or 0),
-                                -(e["accuracy"] or 0), -(e["coverage"] or 0)))
-        for i, e in enumerate(out):
-            e["rank"] = i + 1
-        # Health and pool membership, so the page can show why a model that measured well is
-        # being served last: the ranking is a measurement, the health column is availability,
-        # and a model can be the best judge on the corpus and still have stopped answering.
-        health = {r["model_id"]: r["state"] for r in conn().execute(
-            "SELECT model_id, state FROM model_health")}
-        pool_rows = pool.pool_view(conn(), user["id"]) if user else []
-        in_pool = {(r["provider"], r["model"]): r for r in pool_rows}
-        for e in out:
-            key = (e.get("provider_name") or e.get("provider") or "", e["model"])
-            hit = in_pool.get(key)
-            e["in_pool"] = hit is not None
-            e["pool_position"] = hit["position"] if hit else None
-            e["your_rank"] = hit["your_rank"] if hit else None
-            e["health"] = (hit["health"] if hit else health.get(e["model"])) or "unknown"
-            e["consecutive_failures"] = hit["consecutive_failures"] if hit else 0
+        out = measured_ranking(user)
         # ---- who answers this caller's next run -------------------------------------
         #
         # Read through the same functions /detect walks (pool_primary_lane, default_models,
@@ -1996,7 +2612,7 @@ def register_routes(app: Flask) -> None:
             next_run, failover = None, []
         return jsonify({
             "ranked": out,
-            "pool": pool_rows,
+            "pool": pool.pool_view(conn(), user["id"]) if user else [],
             "paper_url": setting("paper_url", ""),
             "lane_authority": {
                 "deployed_default": deployed_default,
@@ -2258,6 +2874,16 @@ def summarize_run(results: list[dict], ai_cut: float = 0.69, hu_cut: float = 0.4
 def n8n_status() -> dict:
     url = setting("n8n_url", "http://localhost:5678") if "conn" in g else "http://localhost:5678"
     out: dict = {"n8n_url": url, "workflow_id": WORKFLOW_ID}
+    if engine.native_enabled():
+        # A local install scores text in this process, so this server is not on the request path
+        # and its absence says nothing about whether detections work. Probing it would spend five
+        # seconds of a socket timeout to print a red `reachable: false` next to an app that just
+        # answered a detect -- so the status says which engine is in use and stops there.
+        out["on_request_path"] = False
+        out["note"] = (f"this process answers /detect with the {engine.ENGINE_NAME} engine; the "
+                       "n8n workflow is not contacted")
+        return out
+    out["on_request_path"] = True
     try:
         with urllib.request.urlopen(url.rstrip("/") + "/healthz", timeout=5) as resp:
             out["healthz"] = resp.status

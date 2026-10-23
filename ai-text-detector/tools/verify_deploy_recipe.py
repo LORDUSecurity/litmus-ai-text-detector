@@ -20,6 +20,9 @@ file the build reads as a name rather than as code:
   * a compose service whose build context or dockerfile is not where the file says it is;
   * a timeout chain that no longer nests -- lane ceiling + grace above gunicorn above nginx, because
     an outer tier shorter than the wait inside it silently converts a slow detection into a 502;
+  * an nginx config that does not parse (a missing `;` in a header line is an `nginx -t` failure on
+    the deploy host and nothing else sees it), and a request-hardening policy that covers `/api/*`
+    but not the static document nginx serves itself -- see the `the hardened deploy` block;
   * a served copy of the technical report that has drifted from the copy the deposit package cites,
     or that the built bundle does not carry (the link then lands on the SPA fallback, which answers
     200 with index.html instead of the report -- a working page with a citation that is not one);
@@ -143,6 +146,101 @@ def copy_sources(dockerfile: Path) -> list[tuple[str, list[str]]]:
     return out
 
 
+# ---------------------------------------------------------------- nginx structure
+class NginxSyntax(Exception):
+    pass
+
+
+def nginx_statements(text: str) -> list[tuple[tuple[str, ...], str, str]]:
+    """Split an nginx config into (block-stack, directive, args).
+
+    Not a full lexer -- nginx's real one is a generated parser -- but it enforces the three things
+    that actually break a deploy, none of which any other file in this repo can see: an unbalanced
+    brace, an unterminated quote, and a directive that forgot its `;`. Comments (`#` to end of line,
+    outside quotes) and quoted strings ('...' and "...", which may contain `;` and `#` -- the CSP and
+    the JSON error body both do) are handled, because a header value that trips the scanner is
+    exactly the case worth covering.
+    """
+    out: list[tuple[tuple[str, ...], str, str]] = []
+    stack: list[str] = []
+    buf, quote = "", ""
+    line = 1
+    i = 0
+    while i < len(text):
+        c = text[i]
+        if c == "\n":
+            line += 1
+        if quote:
+            buf += c
+            if c == quote:
+                quote = ""
+            i += 1
+            continue
+        if c == "#" and not buf.strip():
+            i = text.find("\n", i)
+            if i == -1:
+                break
+            continue
+        if c in "'\"":
+            quote = c
+            buf += c
+            i += 1
+            continue
+        if c in ";{}":
+            stmt = buf.strip()
+            buf = ""
+            if c == "{":
+                if not stmt:
+                    raise NginxSyntax(f"line {line}: `{{` with no block name")
+                stack.append(re.sub(r"\s+", " ", stmt))
+                i += 1
+                continue
+            if c == "}":
+                if not stack:
+                    raise NginxSyntax(f"line {line}: `}}` closes nothing")
+                stack.pop()
+                if stmt:
+                    raise NginxSyntax(f"line {line}: `{stmt[:40]}` needs `;`, not `{{`/`}}`")
+                i += 1
+                continue
+            if not stmt:
+                raise NginxSyntax(f"line {line}: stray `;`")
+            name, _, args = stmt.partition(" ")
+            out.append((tuple(stack), name, re.sub(r"\s+", " ", args).strip()))
+            i += 1
+            continue
+        buf += c
+        i += 1
+    if quote:
+        raise NginxSyntax("an unterminated quote")
+    if stack:
+        raise NginxSyntax(f"`{stack[-1]}` is never closed")
+    return out
+
+
+def unquote(nginx_value: str) -> str:
+    """The value nginx would actually send: the trailing `always` flag off, one layer of quotes off.
+
+    Order matters twice over. `"nosniff" always` has its quote at the far end, so a helper that
+    strips quotes first finds nothing to strip and reports a header that is present as absent. And
+    the quote layer is one matching pair, not a character class -- `strip("'\"")` also eats the
+    closing quote of the last CSP directive, `... frame-ancestors 'self'"`, which then "differs" from
+    the app's own policy by a single character.
+    """
+    nginx_value = nginx_value.removesuffix(" always").strip()
+    if len(nginx_value) > 1 and nginx_value[0] == nginx_value[-1] and nginx_value[0] in "'\"":
+        # One matching pair and nothing else: `.strip("\"'")` eats the closing quote of the last
+        # CSP directive (`... frame-ancestors 'self'"`), so it reports a policy that differs by one
+        # character from the one the app sends.
+        return nginx_value[1:-1]
+    return nginx_value
+
+
+def in_block(statements, label: str, directive: str | None = None):
+    return [(name, args) for (stack, name, args) in statements
+            if stack and stack[-1] == label and (directive is None or name == directive)]
+
+
 def main() -> int:
     if os.name != "nt":                           # paths below are written repo-relative anyway
         pass
@@ -216,6 +314,76 @@ def main() -> int:
     check("proxy_pass" in ngx and "api" in ngx.lower(), "nginx.conf reverse-proxies the API")
     check(re.search(r"try_files.*index\.html", ngx, re.S) is not None,
           "nginx.conf falls back to index.html for SPA routes")
+
+    # ---------------------------------------------------------------- the hardened deploy
+    #
+    # In this stack nginx, not Flask, answers the document that IS the application: index.html, the
+    # hashed bundles and /research/report.html are files it serves straight off disk. So the request
+    # hardening has two halves that have to agree, and neither one is compiled by anything -- a
+    # missing `;` in a header line is a `nginx -t` failure on the deploy host, and a CSP edited on
+    # one side only is a policy that quietly stops covering the page. Both are checked here, because
+    # this is the half that runs with no daemon.
+    sys.path.insert(0, str(REPO))
+    try:
+        blocks = nginx_statements(ngx)
+        check(True, "nginx.conf parses: balanced braces, closed quotes, every directive ends in `;`")
+    except NginxSyntax as exc:
+        blocks = []
+        check(False, "nginx.conf parses", str(exc))
+
+    # The guard needs teeth: a parser that accepts anything protects nothing, and the header checks
+    # below would read an empty statement list as "absent from `location /`" forever.
+    broken = {"a directive that ends in `}` not `;`": 'server { listen 80 }',
+              "an unbalanced brace": 'server { location / { try_files $uri /index.html; }',
+              "an unterminated quote": 'server { add_header CSP "default-src; }',
+              "a stray semicolon": 'server { ; listen 80; }'}
+    for label, snippet in broken.items():
+        try:
+            nginx_statements(snippet)
+            check(False, f"the nginx parser rejects {label}")
+        except NginxSyntax:
+            check(True, f"the nginx parser rejects {label}")
+    plain = "default-src 'self'; frame-ancestors 'self'"
+    check(unquote('"nosniff" always') == "nosniff" and unquote(plain) == plain,
+          "…and reads a quoted value without eating the directive's own quotes")
+
+    static_loc = in_block(blocks, "location /")
+    served_headers = {}
+    for name, args in static_loc:
+        if name == "add_header":
+            head, _, rest = args.partition(" ")
+            served_headers[head] = rest
+    check(bool(static_loc), "nginx.conf keeps a `location /` block for static traffic",
+          f"{len(static_loc)} directive(s)")
+
+    from backend import security as security_mod   # the Python half of the same policy
+
+    csp_served = served_headers.get("Content-Security-Policy", "")
+    check(csp_served.endswith(" always"),
+          "…with `always`, so a 404 or a 413 carries the policy too")
+    check(unquote(csp_served) == security_mod.CSP,
+          "…and serves the SAME Content-Security-Policy the Flask layer sets",
+          f"nginx: {csp_served[:55]}… / flask: {security_mod.CSP[:55]}…")
+    for header, value in security_mod.RESPONSE_HEADERS.items():
+        got = served_headers.get(header, "")
+        check(unquote(got) == value,
+              f"…and the {header} the app sets is on static responses too",
+              got[:60] or "absent from `location /`")
+    check(len(served_headers) == len(security_mod.RESPONSE_HEADERS),
+          "nginx adds exactly the app header set, no stale extras",
+          ", ".join(sorted(served_headers)))
+
+    api_loc = in_block(blocks, "location /api/", "limit_req")
+    check(bool(api_loc), "nginx.conf rate-limits the API location",
+          "; ".join(a for _, a in api_loc) or "absent")
+    zone = re.search(r"limit_req_zone\s+\$(\w+)\s+zone=auth", ngx)
+    mapped = re.findall(r"^\s+(/api/auth/\w+)\s+\$binary_remote_addr;", ngx, re.M)
+    check(bool(zone) and sorted(mapped) == ["/api/auth/login", "/api/auth/register"],
+          "…and only the two sign-in routes have a non-empty key, so a detection never queues "
+          "behind someone else's login attempts",
+          f"zone=${zone.group(1) if zone else '?'} mapped={mapped}")
+    check(re.search(r"^\s*server_tokens off;", ngx, re.M) is not None,
+          "nginx.conf does not advertise its version")
 
     # The timeout chain: lane -> backend wait -> gunicorn -> nginx. Every tier has to clear the one
     # inside it, or the outer layer kills a request the inner layer was still legitimately waiting

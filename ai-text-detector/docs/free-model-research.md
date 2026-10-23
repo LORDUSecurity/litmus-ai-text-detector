@@ -3971,8 +3971,10 @@ outside**: 20/20, twice, including "the served page is byte-identical to what th
 (`0f2a9c2fdf5b3db6`, then the 59,476 B rebuild) and the report PDF served as `application/pdf`.
 
 **The brief became a script.** `tools/check_visual_language.py` reads the surfaces that carry the theme
-and fails on what the brief forbids: a non-zero `border-radius` (everything is a chamfer now —
-`clip-path: polygon()` cuts the **top-right and bottom-right** corners via `--cut/--cut-sm/--cut-xs`),
+and fails on what the brief forbids: a non-zero `border-radius` (softness is not in this language —
+the only allowed radius is `50%` on a round object, while the signature is a `clip-path: polygon()`
+that cuts the **top-right and bottom-right** corners of presenting surfaces via `--cut/--cut-sm`;
+list rows, tickets and anything that scrolls stay square),
 a dark ground that is not `#000000` or a light ground that is not `#ffffff`, a radius in a chamfered
 box, and anything frosted (`backdrop-filter`, `blur(`, `drop-shadow(`, `--glass-sheen`). Blue is
 carved out by role rather than by eye: `--grad-cta` fills stay on the surfaces that *are* the selection

@@ -45,6 +45,14 @@ parameters that produced it (`temperature`, `top_p`, `max_tokens`, `concurrency`
 report claim about a token cap, a truncation artifact, or a provider's quota regime can be traced to a
 row here and then to the capture file named in `capture_file`.
 
+**This file has no date column, and that is a fact about the data, not an omission.** None of the 144
+capture files named in `capture_file` carries a per-request timestamp, and the only timestamp the
+measurement store holds is when a row was *imported* into it — which the loader rewrites on every
+reload, so all 144 runs share one second, and that second moves each time the archive is rebuilt.
+Printing it would put a capture date in a citable dataset that is neither a capture date nor stable.
+The dated claims live where they are actually evidenced: the round windows named in the report
+(§1–§3 and Part II).
+
 ## Reproducing a claim
 
 1. Pick the model's band from `model-ranking.csv`.

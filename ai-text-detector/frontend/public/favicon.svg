@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="Litmus">
+  <title>Litmus</title>
+  <polygon points="0,0 52,0 64,12 64,52 52,64 0,64" fill="#ffd400"/>
+  <rect x="12" y="17" width="29" height="6" rx="3" fill="#000000"/>
+  <rect x="12" y="29" width="37" height="6" rx="3" fill="#000000"/>
+  <rect x="12" y="41" width="21" height="6" rx="3" fill="#000000"/>
+</svg>

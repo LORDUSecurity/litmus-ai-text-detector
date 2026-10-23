@@ -3,12 +3,11 @@
  * phrase-strength-range.js — measure the phrase-strength domain the lanes actually emit, then
  * print the shipped colour ramp against it.
  *
- * The UI paints each quoted phrase with `evidenceColor(direction, strength)` from
- * `frontend/src/app/ui/result-card/evidence-color.ts`. That ramp is scaled on the *observed*
+ * The UI paints each quoted phrase from `evidencePaint(direction, strength, theme)` in
+ * `frontend/src/app/ui/evidence/evidence-color.ts`. That ramp is scaled on the *observed*
  * strength domain, not on 0..1, so this script is the source of truth for the two constants
- * STRENGTH_FLOOR / STRENGTH_CEIL and for the quantiles the hue stops sit on. Run it after any
- * new capture to check the ramp still spans the data; if a lane ever emits 0.05 or a second
- * decimal place, the stops move.
+ * STRENGTH_FLOOR / STRENGTH_CEIL. Run it after any new capture to check the ramp still spans the
+ * data; if a lane ever emits 0.05 or a third decimal place, the endpoints move.
  *
  *   node benchmark/phrase-strength-range.js                        # default phrase-era corpus
  *   node benchmark/phrase-strength-range.js results-x.jsonl ...     # an explicit file set
@@ -16,6 +15,11 @@
  * Only rows that carry a non-empty `phrases` array count: a salvaged or truncated answer has
  * its evidence stripped by the parser, so it contributes quotes to nothing (the script asserts
  * that rather than assuming it).
+ *
+ * The colour half of the output is a SECOND, independent implementation of sRGB -> OKLab and of
+ * WCAG relative luminance. That is deliberate: if the shipped module's conversion were wrong, a
+ * tool that imported its own maths could never say so. What is shared with production is the ramp
+ * itself, loaded from the real file through esbuild.
  */
 'use strict';
 
@@ -34,17 +38,63 @@ const DEFAULT_FILES = [
   'results-capclean-omkiro-sonnet-4-5.jsonl',
 ];
 
-const rgba = (css) => {
+/* ---------------- colour maths, written out again on purpose ---------------- */
+
+const hexToBytes = (h) => {
+  const n = parseInt(h.slice(1), 16);
+  return [(n >> 16) & 255, (n >> 8) & 255, n & 255];
+};
+const toLinear = (v) => {
+  const c = v / 255;
+  return c <= 0.04045 ? c / 12.92 : Math.pow((c + 0.055) / 1.055, 2.4);
+};
+const relLum = ([r, g, b]) => 0.2126 * toLinear(r) + 0.7152 * toLinear(g) + 0.0722 * toLinear(b);
+const wcag = (x, y) => {
+  const a = relLum(x);
+  const b = relLum(y);
+  return (Math.max(a, b) + 0.05) / (Math.min(a, b) + 0.05);
+};
+const toOklab = (bytes) => {
+  const [r, g, b] = bytes.map(toLinear);
+  const l_ = Math.cbrt(0.4122214708 * r + 0.5363325363 * g + 0.0514459929 * b);
+  const m_ = Math.cbrt(0.2119034982 * r + 0.6806995451 * g + 0.1078259299 * b);
+  const s_ = Math.cbrt(0.0883024619 * r + 0.2817188376 * g + 0.6299787005 * b);
+  return [
+    0.2104542553 * l_ + 0.793617785 * m_ - 0.0040753852 * s_,
+    1.9779984951 * l_ - 2.4285922602 * m_ + 0.4505937099 * s_,
+    0.0259040371 * l_ + 0.7827717662 * m_ - 0.8086757553 * s_,
+  ];
+};
+/** OKLab distance x100, the unit this file reports every perceptual step in. */
+const dE = (hexA, hexB) => {
+  const a = toOklab(hexToBytes(hexA));
+  const b = toOklab(hexToBytes(hexB));
+  return 100 * Math.hypot(a[0] - b[0], a[1] - b[1], a[2] - b[2]);
+};
+const hueOf = (h) => {
+  const [, a, b] = toOklab(hexToBytes(h));
+  const deg = (Math.atan2(b, a) * 180) / Math.PI;
+  return deg < 0 ? deg + 360 : deg;
+};
+
+/** Composite an rgba() tint over the theme's ground, so the superseded alpha ramp can be measured
+    on the same ruler as the opaque one. The ground it is composited on is today's absolute black /
+    absolute white — the old translucent glass panel had no definite colour at all, which is the
+    point of the row this feeds. */
+const rgbaOver = (css, groundHex) => {
   const m = css.match(/rgba?\((\d+),\s*(\d+),\s*(\d+)(?:,\s*([\d.]+))?\)/);
   if (!m) throw new Error('not an rgba colour: ' + css);
-  return { r: +m[1], g: +m[2], b: +m[3], a: m[4] === undefined ? 1 : +m[4] };
+  const a = m[4] === undefined ? 1 : +m[4];
+  const g = hexToBytes(groundHex);
+  const out = [1, 2, 3].map((i) => Math.round(+m[i] * a + g[i - 1] * (1 - a)));
+  return '#' + out.map((v) => v.toString(16).padStart(2, '0')).join('');
 };
 
 /** Load the *shipped* ramp rather than reimplementing it: esbuild transpiles the TS module in
     memory, then it is evaluated as CommonJS. The module has no imports, so no bundling is needed
     and the numbers printed below are the ones the browser runs. */
 function loadShippedRamp() {
-  const src = path.join(ROOT, 'frontend', 'src', 'app', 'ui', 'result-card', 'evidence-color.ts');
+  const src = path.join(ROOT, 'frontend', 'src', 'app', 'ui', 'evidence', 'evidence-color.ts');
   if (!fs.existsSync(src)) throw new Error('missing ' + src);
   const { transformSync } = require(path.join(ROOT, 'frontend', 'node_modules', 'esbuild'));
   const js = transformSync(fs.readFileSync(src, 'utf8'), {
@@ -90,6 +140,36 @@ const q = (sorted, p) => {
 };
 
 const fmt = (n, d = 2) => (Number.isFinite(n) ? n.toFixed(d) : 'n/a');
+
+/** The strength grid the component can index: STRENGTH_FLOOR..STRENGTH_CEIL at two decimals, which
+    is exactly the resolution the lanes emit. 66 points, every 5th one a 0.05 step. */
+const GRID = Array.from({ length: 66 }, (_, i) => Number((0.3 + (i / 65) * 0.65).toFixed(2)));
+
+/** Summarise one (theme, direction) ramp on the four properties the panel is held to. */
+function rampMetrics(hexes, inkHex) {
+  const cum = [0];
+  for (let i = 1; i < hexes.length; i++) cum.push(cum[i - 1] + dE(hexes[i - 1], hexes[i]));
+  const total = cum[cum.length - 1];
+  const coarse = [];
+  for (let k = 1; k * 5 < hexes.length; k++) coarse.push(dE(hexes[(k - 1) * 5], hexes[k * 5]));
+  const meanStep = coarse.reduce((a, b) => a + b, 0) / coarse.length;
+  let cumDev = 0;
+  cum.forEach((c, i) => {
+    cumDev = Math.max(cumDev, Math.abs(c - (i / (hexes.length - 1)) * total));
+  });
+  return {
+    arc: total,
+    uniformity: Math.min(...coarse) / meanStep,
+    cumDev,
+    minContrast: Math.min(...hexes.map((h) => wcag(hexToBytes(inkHex), hexToBytes(h)))),
+    distinct: new Set(hexes).size,
+    hue0: hueOf(hexes[0]),
+    hue1: hueOf(hexes[hexes.length - 1]),
+    first: hexes[0],
+    mid: hexes[Math.floor(hexes.length / 2)],
+    last: hexes[hexes.length - 1],
+  };
+}
 
 function main() {
   const files = process.argv.slice(2).filter((a) => !a.startsWith('-'));
@@ -157,7 +237,7 @@ function main() {
     );
   }
 
-  // Where each observed strength value lands, so a stop placement can be argued from counts.
+  // Where each observed strength value lands, so an endpoint placement can be argued from counts.
   const hist = new Map();
   for (const s of ai) hist.set(s.toFixed(2), (hist.get(s.toFixed(2)) || 0) + 1);
   const hhist = new Map();
@@ -172,51 +252,102 @@ function main() {
 
   console.log('');
   console.log(`shipped ramp: floor ${shipped.STRENGTH_FLOOR}, ceil ${shipped.STRENGTH_CEIL}`);
+
+  /* ---------------- what each ramp actually paints, per theme ---------------- */
+
+  const GROUND = { dark: '#000000', light: '#ffffff' };
+  const metrics = {};
+  for (const theme of ['dark', 'light']) {
+    metrics[theme] = {};
+    for (const dir of ['AI', 'HUMAN']) {
+      const paints = GRID.map((s) => shipped.evidencePaint(dir, s, theme));
+      const inks = new Set(paints.map((p) => p.ink));
+      if (inks.size !== 1) throw new Error(`${theme}/${dir}: the ramp changes ink mid-panel`);
+      metrics[theme][dir] = { ...rampMetrics(paints.map((p) => p.background), [...inks][0]), inks };
+    }
+    const sep = [];
+    for (let k = 0; k < GRID.length; k += 5) {
+      const s = GRID[k];
+      sep.push(
+        dE(shipped.evidencePaint('HUMAN', s, theme).background, shipped.evidencePaint('AI', s, theme).background)
+      );
+    }
+    metrics[theme].sep = Math.min(...sep);
+  }
+
   console.log('');
-  console.log('| strength | t shipped | shipped AI rgba        | a     | legacy AI rgba       | a     |');
-  console.log('| -------- | --------- | ---------------------- | ----- | ------------------ | ----- |');
-  const probes = [0.3, 0.35, 0.4, 0.45, 0.5, 0.55, 0.6, 0.65, 0.7, 0.71, 0.75, 0.8, 0.85, 0.88, 0.9, 0.95];
-  for (const s of probes) {
-    const t = shipped.normStrength(s);
-    const a = rgba(shipped.evidenceColor('AI', s));
-    const l = rgba(LEGACY.color('AI', s));
+  console.log('| theme | dir   | min contrast vs its ink | arc dE | 0.05-step uniformity | max arc-length deviation | own p25->p90 dE | distinct/66 | hue start->end | weakest / middle / strongest |');
+  console.log('| ----- | ----- | ----------------------- | ------ | -------------------- | ------------------------ | --------------- | ----------- | -------------- | ---------------------------- |');
+  const ownQuartiles = { AI: [q(ai, 0.25), q(ai, 0.9)], HUMAN: [q(hum, 0.25), q(hum, 0.9)] };
+  const row = (cells) => '| ' + cells.map((c) => String(c).padEnd(2)).join(' | ') + ' |';
+  for (const theme of ['dark', 'light']) {
+    for (const dir of ['AI', 'HUMAN']) {
+      const m = metrics[theme][dir];
+      const [lo, hi] = ownQuartiles[dir];
+      const p25to90 = dE(
+        shipped.evidencePaint(dir, lo, theme).background,
+        shipped.evidencePaint(dir, hi, theme).background
+      );
+      console.log(
+        row([
+          theme,
+          dir,
+          fmt(m.minContrast, 2),
+          fmt(m.arc, 1),
+          fmt(m.uniformity, 3),
+          fmt(m.cumDev, 2),
+          `${fmt(lo)}->${fmt(hi)} ${fmt(p25to90, 1)}`,
+          m.distinct,
+          `${fmt(m.hue0, 0)}->${fmt(m.hue1, 0)}`,
+          `${m.first} / ${m.mid} / ${m.last}`,
+        ])
+      );
+    }
+  }
+  console.log('');
+  console.log(`human-vs-AI separation at matched strength, weakest over the grid: dark ${fmt(metrics.dark.sep, 1)} dE, light ${fmt(metrics.light.sep, 1)} dE`);
+
+  /* ---------------- the same measurement on the superseded ramp ---------------- */
+
+  const legacyRows = [];
+  for (const theme of ['dark', 'light']) {
+    for (const dir of ['AI', 'HUMAN']) {
+      const hexes = GRID.map((s) => rgbaOver(LEGACY.color(dir, s), GROUND[theme]));
+      // The old version had no ink of its own: it inherited whatever the panel's text colour was,
+      // so contrast is measured against that theme's current ink and the answer is the range it spans.
+      const ink = theme === 'dark' ? '#f2f2f2' : '#0a0a0a';
+      const m = rampMetrics(hexes, ink);
+      m.contrastRange = [
+        Math.min(...hexes.map((h) => wcag(hexToBytes(ink), hexToBytes(h)))),
+        Math.max(...hexes.map((h) => wcag(hexToBytes(ink), hexToBytes(h)))),
+      ];
+      legacyRows.push({ theme, dir, ...m });
+    }
+  }
+  console.log('');
+  console.log('Superseded alpha ramp, composited over today\'s ground (' + GROUND.dark + ' / ' + GROUND.light + ') for the same arithmetic:');
+  console.log('| theme | dir   | contrast range vs panel ink | arc dE | 0.05-step uniformity | distinct/66 | hue start->end |');
+  console.log('| ----- | ----- | --------------------------- | ------ | -------------------- | ----------- | -------------- |');
+  for (const r of legacyRows) {
     console.log(
-      `| ${fmt(s)} | ${fmt(t, 3)} | rgba(${a.r}, ${a.g}, ${a.b})       | ${fmt(a.a, 3)} | rgba(${l.r}, ${l.g}, ${l.b})       | ${fmt(l.a, 3)} |`
+      row([
+        r.theme,
+        r.dir,
+        `${fmt(r.contrastRange[0], 2)}-${fmt(r.contrastRange[1], 2)}`,
+        fmt(r.arc, 1),
+        fmt(r.uniformity, 3),
+        r.distinct,
+        `${fmt(r.hue0, 0)}->${fmt(r.hue1, 0)}`,
+      ])
     );
   }
 
-  // The claim the ramp exists to satisfy: neighbouring evidence must be distinguishable.
-  const greenOf = (fn) => observed.map((s) => rgba(fn(s)).g);
-  const shippedG = greenOf((s) => shipped.evidenceColor('AI', s));
-  const legacyG = greenOf((s) => LEGACY.color('AI', s));
-  const spreadOf = (g) => Math.max(...g) - Math.min(...g);
   console.log('');
-  console.log('| measure (over the observed AI strengths)          | shipped | legacy |');
-  console.log('| ------------------------------------------------- | ------- | ------ |');
-  console.log(`| number of observed values                          | ${observed.length} | ${observed.length} |`);
-  console.log(`| green-channel spread across the range (units)      | ${Math.round(spreadOf(shippedG))} | ${Math.round(spreadOf(legacyG))} |`);
-  const shippedAlphas = observed.map((s) => rgba(shipped.evidenceColor('AI', s)).a);
-  const legacyAlphas = observed.map((s) => rgba(LEGACY.color('AI', s)).a);
-  console.log(`| alpha spread across the range (0..1)               | ${(Math.max(...shippedAlphas) - Math.min(...shippedAlphas)).toFixed(3)} | ${(Math.max(...legacyAlphas) - Math.min(...legacyAlphas)).toFixed(3)} |`);
-  console.log(`| alpha ceiling                                      | ${Math.max(...shippedAlphas).toFixed(3)} | ${Math.max(...legacyAlphas).toFixed(3)} |`);
-  const distinctShipped = new Set(observed.map((s) => shipped.evidenceColor('AI', s))).size;
-  const distinctLegacy = new Set(observed.map((s) => LEGACY.color('AI', s))).size;
-  console.log(`| distinct colours produced for ${String(observed.length).padEnd(2)} observed values | ${distinctShipped} | ${distinctLegacy} |`);
-  const p25 = q(ai, 0.25);
-  const p90 = q(ai, 0.9);
-  const dgShipped = Math.round(rgba(shipped.evidenceColor('AI', p25)).g - rgba(shipped.evidenceColor('AI', p90)).g);
-  const dgLegacy = Math.round(rgba(LEGACY.color('AI', p25)).g - rgba(LEGACY.color('AI', p90)).g);
-  const daShipped = (rgba(shipped.evidenceColor('AI', p90)).a - rgba(shipped.evidenceColor('AI', p25)).a).toFixed(3);
-  const daLegacy = (rgba(LEGACY.color('AI', p90)).a - rgba(LEGACY.color('AI', p25)).a).toFixed(3);
-  console.log(`| green units lost from AI p25 (${fmt(p25)}) to p90 (${fmt(p90)})  | ${dgShipped} | ${dgLegacy} |`);
-  console.log(`| alpha gained over that same interval             | ${daShipped} | ${daLegacy} |`);
-  const haLo = rgba(shipped.evidenceColor('HUMAN', Math.min(...hum))).a;
-  const haHi = rgba(shipped.evidenceColor('HUMAN', Math.max(...hum))).a;
-  const hAlphaLegacy = (0.16 + 0.46 * Math.min(...hum)).toFixed(3);
-  console.log(`| HUMAN alpha, weakest quote (${fmt(Math.min(...hum))}) -> strongest (${fmt(Math.max(...hum))}) | ${haLo.toFixed(3)} -> ${haHi.toFixed(3)} (+${(haHi - haLo).toFixed(3)}) | ${hAlphaLegacy} -> 0.598 (+${(0.598 - Number(hAlphaLegacy)).toFixed(3)}) |`);
-  console.log('');
-  console.log('Note: no WCAG contrast ratio is reported. The tint is painted over a translucent glass');
-  console.log('panel, so there is no opaque backdrop to composite against and any ratio would be invented.');
+  console.log('Note: the shipped ramp returns an OPAQUE plate and the ink that is legible on it, so every');
+  console.log('contrast ratio above is a property of the ramp. The superseded version carried its strength');
+  console.log('signal in an alpha over a translucent glass panel: no definite colour under the text, so no');
+  console.log('definite ratio either — its range is the arithmetic of compositing it over a ground it never');
+  console.log('actually specified.');
 }
 
 main();

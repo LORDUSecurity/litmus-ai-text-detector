@@ -157,7 +157,13 @@ def main() -> int:
     env = dict(os.environ)
     env.update({"DETECTOR_DB": str(db_copy), "DETECTOR_SECRET": str(SECRET),
                 "BACKEND_HOST": "127.0.0.1", "BACKEND_PORT": str(PORT),
-                "AITD_NO_BROWSER": "1", "PYTHONIOENCODING": "utf-8"})
+                "AITD_NO_BROWSER": "1", "PYTHONIOENCODING": "utf-8",
+                # Stated, not inherited -- and here the omission would have been a false failure, not
+                # a false pass. `serve_local` now defaults LOCAL_SINGLE_USER to 1, and in that mode
+                # the backend refuses /auth/register with 409 SINGLE_USER_MODE because a packaged
+                # install has one owner and no sign-up. This check is the hosted behaviour: a stranger
+                # registering, getting a plain-user role, and spending their own key.
+                "LOCAL_SINGLE_USER": "0"})
     log = open(tmp / "server.log", "w", encoding="utf-8", errors="replace")
     proc = subprocess.Popen([sys.executable, "-m", "backend.serve_local"],
                             cwd=str(ROOT), env=env, stdout=log, stderr=subprocess.STDOUT)
@@ -174,14 +180,23 @@ def main() -> int:
         check(st == 200 and body.get("ok") is True, "server answers /healthz", f"http {st}")
 
         # ------------------------------------------------- a user, and no key yet
-        user = f"poolverify_{int(time.time())}"
+        # The throwaway account is created and then used the way the shipped page does it: an
+        # e-mail signs up, and the same e-mail signs in. The derived legacy handle is checked too,
+        # because that column is what the pre-e-mail accounts on a deployed instance still have.
+        user = f"poolverify{int(time.time())}"
+        mail = f"{user}@invalid.example"
         pw = "verify-" + os.urandom(8).hex()
-        st, body = api.call("POST", "/api/auth/register", {"username": user, "password": pw})
+        st, body = api.call("POST", "/api/auth/register",
+                            {"name": f"Pool verifier {user}", "email": mail,
+                             "password": pw, "confirm": pw})
         check(st == 201, "a visitor can register", f"http {st}")
-        st, body = api.call("POST", "/api/auth/login", {"username": user, "password": pw})
+        st, body = api.call("POST", "/api/auth/login", {"identifier": mail, "password": pw})
         check(st == 200 and (body.get("user") or {}).get("role") == "user",
               "the throwaway account is a plain user, not an admin",
               (body.get("user") or {}).get("role", "?"))
+        handle = (body.get("user") or {}).get("username") or ""
+        st, _ = api.call("POST", "/api/auth/login", {"identifier": handle, "password": pw})
+        check(st == 200, f"the legacy handle {handle!r} still signs in", f"http {st}")
 
         # /gateway-health is behind the session guard (only /healthz and / are public), so the
         # engine check has to come after login -- before it, a perfectly healthy engine reads as
@@ -392,29 +407,61 @@ def main() -> int:
             "SELECT model, corpus, tag, n_rows FROM benchmark_runs "
             "WHERE corpus = 'probe2' ORDER BY id DESC LIMIT 12")]
         models_after = c.execute("SELECT COUNT(*) FROM models").fetchone()[0]
+        # `pickable` is the whole point of the split below, and it is a join rather than a column:
+        # `catalog_models` keys on the provider's NAME while `models` keys on its id, so the row
+        # that makes a model pickable has to be found through `providers`.
         triage_rows = [dict(r) for r in c.execute(
-            """SELECT model_id, probe_note FROM catalog_models
-               WHERE provider = ? AND probe_note LIKE 'triage %' ORDER BY id DESC LIMIT 24""",
+            """SELECT cm.model_id, cm.probe_status, cm.probe_note,
+                      (SELECT COUNT(*) FROM models m
+                         JOIN providers p ON p.id = m.provider_id
+                        WHERE p.name = cm.provider AND m.model_id = cm.model_id) AS pickable
+               FROM catalog_models cm
+               WHERE cm.provider = ? AND cm.probe_note LIKE 'triage %'
+               ORDER BY cm.id DESC LIMIT 24""",
             (PROVIDER,))]
-        unscored_duds = [r["model_id"] for r in c.execute(
+        unscored = [r["model_id"] for r in c.execute(
             """SELECT cm.model_id FROM catalog_models cm
                WHERE cm.provider = ? AND cm.probe_note LIKE 'triage %'
                  AND NOT EXISTS (SELECT 1 FROM benchmark_runs br WHERE br.model = cm.model_id)""",
             (PROVIDER,))]
         c.close()
 
-        # Every candidate that refused its first text now carries a note saying so, so the number
-        # of such rows is a lower bound on this job's refusals -- a row that was already known
-        # keeps its id and only changes note. This is the half the old `cat_after > cat_before`
-        # check could not see: the catalogue was already complete, so it never grew.
+        timeouts = [r for r in triage_rows if r["probe_status"] in ("slow", "busy")]
+        deaths = [r for r in triage_rows if r["probe_status"] == "dead"]
+
+        # Every candidate that did not answer its first text now carries a note saying so, so the
+        # number of such rows is a lower bound on this job's non-answers -- a row that was already
+        # known keeps its id and only changes note. This is the half the old `cat_after >
+        # cat_before` check could not see: the catalogue was already complete, so it never grew.
         check(len(triage_rows) >= refusals,
-              "each candidate that refused the triage text was recorded as a refusal",
+              "each candidate that did not answer the triage text was recorded with its reason",
               f"'triage …' notes for {PROVIDER}: {triage_before} -> {len(triage_rows)}, "
-              f"refused={refusals} (tried {tried}, screened {screened})")
+              f"unanswered={refusals} (tried {tried}, screened {screened})")
         check(not triage_rows or all(re.search(r"triage 0/1 texts answered: \S+", r["probe_note"])
                                      for r in triage_rows),
-              "a refusal names why it refused, so a delisting is not mistaken for a bad afternoon",
+              "a non-answer names its own reason, so a delisting is not mistaken for a bad afternoon",
               "; ".join(f"{r['model_id']} -> {r['probe_note'][:56]}" for r in triage_rows[:2]))
+
+        # These two are the user's rule, asserted one way per side. A non-answer used to be one
+        # category, and the verifier's `models_after == models_before` check enforced it -- which
+        # silently froze ids the *pool* had failed, not the model. Now the blame is in the status,
+        # so each half gets its own invariant and a timeout can never satisfy the dead one.
+        check(not timeouts or all(r["pickable"] for r in timeouts),
+              "a model the pool only timed out on stays pickable, because it got a models row",
+              ", ".join(f"{r['model_id']}[{r['probe_status']}]" for r in timeouts[:3])
+              or "no timeout rows for this provider")
+        check(not deaths or all(not r["pickable"] for r in deaths),
+              "an id killed by a real refusal has no models row, so it cannot be pinned",
+              ", ".join(f"{r['model_id']}" for r in deaths[:3]) or "no dead rows for this provider")
+
+        # The job is allowed to say how many it kept pickable, but not to promise more than the
+        # candidates it could not reach -- a count that outruns the walk would be a claim about
+        # rows the run never touched.
+        kept = re.search(r"\((\d+) still pickable", job.get("stage") or "")
+        check(kept is None or int(kept.group(1)) <= refusals,
+              "the stage never claims more pickable models than the candidates it could not reach",
+              f"stage says {kept.group(1) if kept else 0} still pickable, "
+              f"{refusals} of {tried} went unanswered")
 
         if screened:
             check(runs_after > runs_before and all(r["corpus"] == "probe2" for r in probe_runs),
@@ -429,15 +476,18 @@ def main() -> int:
                   f"{models_before} -> {models_after}")
         else:
             # The other half of the same rule, and the one a live run only reaches when the
-            # provider is asleep. A walk that got nothing back must leave nothing rankable:
+            # provider is asleep. A walk that got nothing back must leave nothing SCORED:
             # backend/tests/test_discovery.py covers this offline against a stub, and the
             # 2026-10-17 run showed it is not obvious -- four refusals, four score rows written.
             check(runs_after == runs_before,
-                  "a model that refused never becomes a score",
+                  "a model that never answered never becomes a score",
                   f"benchmark_runs stayed at {runs_after} with n_screened=0, {refusals} refusals")
-            check(models_after == models_before,
-                  "a refused model gets no models row, so it cannot be pinned",
-                  f"models stayed at {models_after}")
+            # `models_after == models_before` is not the test any more, and that is deliberate: a
+            # timeout ADDS a pickable row. The direction that still has to hold is that screening
+            # nothing cannot write a model off -- the row count only ever goes up.
+            check(models_after >= models_before,
+                  "a run that screened nothing can add pickable rows but never remove one",
+                  f"models {models_before} -> {models_after}")
 
         st, body = api.call("GET", "/api/ranking")
         ranked = body.get("ranked") or []
@@ -454,12 +504,12 @@ def main() -> int:
                   + " vs screened " + ", ".join(f"#{r['rank']}" for r in in_ranking[:3]))
         else:
             # Nothing answered, so there is no new row to place -- and the honest live expectation
-            # becomes the negative one: the refusals must not have become ranking entries.
+            # becomes the negative one: none of the non-answers may have become ranking entries.
             print("   no model answered this run, so the probe-tier placement has nothing to "
-                  f"rank; {len(unscored_duds)} refusals recorded without a score instead")
-            check(not (set(unscored_duds) & {r["model"] for r in ranked}),
-                  "a recorded refusal stays off the ranking page",
-                  f"{len(unscored_duds)} unscored refusals, none among {len(ranked)} ranked models")
+                  f"rank; {len(unscored)} non-answers recorded without a score instead")
+            check(not (set(unscored) & {r["model"] for r in ranked}),
+                  "a recorded non-answer stays off the ranking page",
+                  f"{len(unscored)} unscored non-answers, none among {len(ranked)} ranked models")
 
         st, body = api.call("GET", "/api/my/pool")
         after = body.get("pool", [])
@@ -476,8 +526,8 @@ def main() -> int:
         ranks = {p["model"]: p["your_rank"] for p in after}
         check(ranks.get(DEAD_MODEL) == 1 and ranks.get(LIVE_MODEL) == 2,
               "discovery did not touch the ranking the user set", str(ranks))
-        check(not (set(unscored_duds) & {p["model"] for p in after}),
-              "a model that refused triage was not added to the using pool",
+        check(not (set(unscored) & {p["model"] for p in after}),
+              "no triage non-answer entered the pool unasked, whether it refused or only timed out",
               f"pool now {[(p['model'], p['source']) for p in after]}")
         return finish(tmp)
     finally:

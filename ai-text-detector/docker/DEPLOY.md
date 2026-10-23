@@ -1,4 +1,8 @@
-# Deploying the AI text detector (Docker Compose)
+# Deploying Litmus (Docker Compose)
+
+Litmus is the product name. The image, volume and service names below keep the older
+"ai-text-detector" spelling on purpose: renaming them would orphan the persisted
+`backend_data` / `n8n_data` volumes on every deploy already running this file.
 
 A single-host, three-container stack: **web** (nginx + the built Angular SPA),
 **backend** (Flask/gunicorn + SQLite), and **n8n** (the AI-only detection workflow).

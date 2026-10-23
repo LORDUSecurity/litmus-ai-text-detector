@@ -72,10 +72,18 @@ if FROZEN:
     # pointing it at a path that does not exist.
     os.environ.setdefault("N8N_DB", "")
 
+# A packaged install belongs to one person on one machine, so it has no sign-in page: the
+# backend answers every request as its owner (see auth.local_mode) and the one built SPA
+# opens straight into Detect. setdefault, not assignment -- the same module backs the hosted
+# container, and LOCAL_SINGLE_USER arriving in a container's environment would be the flag
+# that turns its login gate off. auth.local_mode() refuses the mode unless BACKEND_HOST is a
+# loopback address, so an operator who does set it cannot expose an admin session by accident.
+os.environ.setdefault("LOCAL_SINGLE_USER", "1")
+
 # Now it is safe to import the app (backend.db has captured DB_PATH/SECRET_PATH).
 from werkzeug.serving import run_simple  # noqa: E402
 
-from . import db, discovery, seed  # noqa: E402
+from . import db, discovery, security, seed  # noqa: E402
 from .app import create_app, purger  # noqa: E402
 
 HOST = os.environ.get("BACKEND_HOST", "127.0.0.1")
@@ -164,6 +172,13 @@ class SpaSplit:
             ("Content-Type", ctype),
             ("Content-Length", str(len(body))),
             ("Cache-Control", "no-cache"),
+            # The same hardened header set Flask puts on every API response and nginx puts on every
+            # file in the hosted deploy. It has to be repeated HERE because this responder is the
+            # only thing that ever answers a static path on the packaged app: index.html and the
+            # hashed bundles do not reach Flask, so an `after_request` hook cannot see them -- a CSP
+            # that covered only /api/* would be a policy around the JSON and no policy around the
+            # page, in the deploy where the page is the whole application.
+            *security.RESPONSE_HEADERS.items(),
         ]
         start_response(status, headers)
         return [body]
@@ -228,7 +243,7 @@ def main() -> None:
     url = f"http://{HOST}:{PORT}"
     spa = spa_dir()
 
-    print("AI Text Detector — local")
+    print("Litmus — local")
     print("  open        =", url)
     print("  db          =", db.DB_PATH)
     print("  spa         =", spa, "(exists)" if spa.is_dir() else "(MISSING — run `npm run build`)")

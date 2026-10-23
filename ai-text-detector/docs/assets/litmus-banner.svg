@@ -1,0 +1,47 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Litmus banner, drawn in the app's own visual language: absolute black ground, one gold plate
+     for the act, the three verdict hues taken from the bad/warn/good tokens in
+     frontend/src/styles.css, chamfered corners cut the same way the sheet cuts them, and no blue
+     anywhere because blue means interaction here. The three probabilities are real stored runs. -->
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1280 320" width="1280" height="320"
+     role="img" aria-label="Litmus — AI text detection on free-tier LLM lanes">
+  <rect width="1280" height="320" fill="#000000"/>
+
+  <!-- wordmark plate: gold fill, black ink, right-hand corners chamfered -->
+  <polygon points="48,52 316,52 334,70 334,126 316,144 48,144" fill="#ffd400"/>
+  <text x="76" y="115" font-family="Literata, Georgia, 'Times New Roman', serif"
+        font-size="56" font-weight="600" fill="#0a0a0a">Litmus</text>
+
+  <text x="48" y="192" font-family="'JetBrains Mono', ui-monospace, 'DejaVu Sans Mono', monospace"
+        font-size="21" fill="#f2f2f2">AI text detection on free-tier LLM lanes</text>
+  <text x="48" y="222" font-family="'JetBrains Mono', ui-monospace, 'DejaVu Sans Mono', monospace"
+        font-size="15" fill="#9e9e9e">one calibrated lane scores every text &#183; the gray zone defers</text>
+
+  <!-- the three verdicts, each with the probability a stored run actually came back with -->
+  <g font-family="'JetBrains Mono', ui-monospace, 'DejaVu Sans Mono', monospace" font-size="18">
+    <polygon points="700,44 1188,44 1200,56 1200,80 1188,92 700,92" fill="none" stroke="#ff5f6d" stroke-width="1.5"/>
+    <rect x="716" y="60" width="12" height="12" fill="#ff5f6d"/>
+    <text x="740" y="75" fill="#ff5f6d">AI_GENERATED</text>
+    <line x1="960" y1="68" x2="1120" y2="68" stroke="#2a2a2a" stroke-width="6"/>
+    <line x1="960" y1="68" x2="1115" y2="68" stroke="#ff5f6d" stroke-width="6"/>
+    <text x="1136" y="75" fill="#f2f2f2">0.97</text>
+
+    <polygon points="700,114 1188,114 1200,126 1200,150 1188,162 700,162" fill="none" stroke="#ff9e2c" stroke-width="1.5"/>
+    <rect x="716" y="130" width="12" height="12" fill="#ff9e2c"/>
+    <text x="740" y="145" fill="#ff9e2c">REVIEW_REQUIRED</text>
+    <line x1="960" y1="138" x2="1120" y2="138" stroke="#2a2a2a" stroke-width="6"/>
+    <line x1="960" y1="138" x2="1048" y2="138" stroke="#ff9e2c" stroke-width="6"/>
+    <text x="1136" y="145" fill="#f2f2f2">0.55</text>
+
+    <polygon points="700,184 1188,184 1200,196 1200,220 1188,232 700,232" fill="none" stroke="#47c98a" stroke-width="1.5"/>
+    <rect x="716" y="200" width="12" height="12" fill="#47c98a"/>
+    <text x="740" y="215" fill="#47c98a">HUMAN_LIKELY</text>
+    <line x1="960" y1="208" x2="1120" y2="208" stroke="#2a2a2a" stroke-width="6"/>
+    <line x1="960" y1="208" x2="961" y2="208" stroke="#47c98a" stroke-width="6"/>
+    <text x="1136" y="215" fill="#f2f2f2">0.01</text>
+  </g>
+
+  <line x1="48" y1="266" x2="1232" y2="266" stroke="#2a2a2a" stroke-width="1"/>
+  <text x="48" y="292" font-family="'JetBrains Mono', ui-monospace, 'DejaVu Sans Mono', monospace"
+        font-size="15" fill="#9e9e9e">3,937 per-text captures &#183; 144 logged runs &#183; 55 models dialled &#183; every number measured, none authored</text>
+</svg>

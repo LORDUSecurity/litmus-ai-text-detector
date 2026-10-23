@@ -16,7 +16,7 @@ import os
 import re
 from pathlib import Path
 
-from . import db
+from . import db, discovery
 
 ROOT = Path(__file__).resolve().parent.parent
 BENCH = ROOT / "benchmark"
@@ -34,15 +34,22 @@ LEGACY_TAGS = {
     "smoke": "nvidia/nemotron-3-ultra-550b-a55b",
 }
 
+# (name, label, base_url, free_tier, self_hosted, notes)
+#
+# `self_hosted` marks the endpoints that are a box the deployment does not serve, and whose owners
+# therefore get to name their own address on a key (see app.owner_endpoint). It is deliberately NOT
+# in the ON CONFLICT update below, unlike base_url and notes: every other column here is a seed
+# fact the boot re-asserts, but this one is also an admin's call on PATCH /providers, and a row
+# they flagged would silently revert at the next start. Fresh installs get it from the INSERT.
 PROVIDERS = [
-    ("nvidia", "NVIDIA NIM", "https://integrate.api.nvidia.com/v1", 1,
+    ("nvidia", "NVIDIA NIM", "https://integrate.api.nvidia.com/v1", 1, 0,
      "Free tier saturates a shared worker pool (16/16), not the key. 55 of 80 listed models 404."),
-    ("openrouter", "OpenRouter", "https://openrouter.ai/api/v1", 1,
+    ("openrouter", "OpenRouter", "https://openrouter.ai/api/v1", 1, 0,
      ":free models 429 from the upstream shared pool; transient, not an account cap."),
-    ("omniroute", "OmniRoute (self-hosted)", "http://127.0.0.1:20128/v1", 1,
+    ("omniroute", "OmniRoute (self-hosted)", "http://127.0.0.1:20128/v1", 1, 1,
      "Local router; adds models only if fed upstream keys. Must be 127.0.0.1, not localhost: n8n's "
      "fetch resolves localhost to ::1 and the gateway binds v4 only (ECONNREFUSED ::1:20128)."),
-    ("gemini", "Google Gemini", "https://generativelanguage.googleapis.com/v1beta/openai", 1,
+    ("gemini", "Google Gemini", "https://generativelanguage.googleapis.com/v1beta/openai", 1, 0,
      "OpenAI-compatible endpoint; key added 2026-10-11."),
 ]
 
@@ -147,15 +154,15 @@ def provider_for_base_url(base_url: str) -> str:
 
 def seed_providers(conn, env: dict[str, str]) -> dict[str, int]:
     ids: dict[str, int] = {}
-    for name, label, base_url, free, notes in PROVIDERS:
+    for name, label, base_url, free, self_hosted, notes in PROVIDERS:
         conn.execute(
-            """INSERT INTO providers (name, label, base_url, free_tier, notes)
-               VALUES (?,?,?,?,?)
+            """INSERT INTO providers (name, label, base_url, free_tier, self_hosted, notes)
+               VALUES (?,?,?,?,?,?)
                ON CONFLICT(name) DO UPDATE SET
                  label = excluded.label, base_url = excluded.base_url,
                  free_tier = excluded.free_tier, notes = excluded.notes,
                  updated_at = datetime('now')""",
-            (name, label, base_url, free, notes),
+            (name, label, base_url, free, self_hosted, notes),
         )
         ids[name] = conn.execute("SELECT id FROM providers WHERE name = ?", (name,)).fetchone()["id"]
     # Honour per-lane endpoint overrides from .env so the DB matches what is deployed.
@@ -668,6 +675,10 @@ def run_seed() -> dict:
         lane_defaults = apply_lane_defaults(conn, env)
         benchmarks = import_benchmarks(conn)
         catalog = import_catalog(conn)
+        # Catalogue rows written by an older build use a vocabulary in which a timeout was a
+        # verdict, so those models have no `models` row and cannot be picked at all. Re-read them
+        # under the current rule before anything else claims a lane's worth of candidates.
+        vocab = discovery.migrate_probe_vocabulary(conn)
         seed_settings(conn, env)
         summary = {
             "providers": len(provider_ids),
@@ -676,6 +687,8 @@ def run_seed() -> dict:
             "lane_defaults_applied": lane_defaults,
             "benchmark_runs": len(benchmarks),
             "catalog_files": len(catalog),
+            "probe_vocab_reclassified": vocab["reclassified"],
+            "probe_vocab_rows_added": vocab["rows_added"],
             "counts": db.counts(conn),
         }
     return summary

@@ -39,8 +39,8 @@ cp -r frontend/dist/frontend/browser/* .localbuild/frontend/dist/frontend/browse
 ```
 
 `-r` is not optional. The UI ships two subdirectories — `research/`, the technical report the Ranking
-page links (see `README.md`), and `fonts/`, the self-hosted Spectral/Cormorant Garamond faces the
-stylesheets name (`tools/fetch_fonts.py` writes them; a CDN `<link>` is not an option for an app that
+page links (see `README.md`), and `fonts/`, the one self-hosted serif the stylesheet names — Literata,
+written by `tools/fetch_fonts.py` (a CDN `<link>` is not an option for an app that
 must boot with no network) — and without it `cp` prints `omitting directory` and exits non-zero, so the
 stage simply has no report and no serif in it. Hit on 2026-10-17 while staging for the report. The loud
 part is worth noting: the chain stops at the `&&`, and the `diff` below would also fail, because it
@@ -48,7 +48,10 @@ lists `research` on one side and not the other. What no staging check can see is
 those folders — the bundle hash is the SPA's, not the asset's — which is why `verify_exe_bundle.py`
 compares the served report bytes against the repo copy rather than trusting the name. A missing font,
 unlike a missing report, shows up as a page that renders in the fallback serif and nothing else, so the
-browser pass over the packaged app has to look at the type, not only at the HTTP status.
+browser pass over the packaged app has to look at the type, not only at the HTTP status. The one face
+shipped since 2026-10-19 is `Literata-var.woff2` (`tools/fetch_fonts.py` writes it and
+`tools/check_font_metrics.py` measures it); the four static Spectral weights and the Cormorant display
+cut it replaced are gone, so `fonts/` has exactly one file in it.
 
 The staged `benchmark/` files carry only masked key *hints* (`api_key=nvapi-...(len 70)`),
 never real keys. A strict scan for `nvapi-…{6}`, `sk-…{20}`, `AIza…{20}` returns nothing.
@@ -75,6 +78,7 @@ compare `sha256sum` against `frontend/dist/frontend/browser/<hash>.js`.
 ```bash
 python -m PyInstaller --noconfirm --clean --onefile --name "AI-Text-Detector" --console \
   --paths "." \
+  --icon "installer/app-icon.ico" \
   --distpath .localbuild/out --workpath build_local --specpath . \
   --add-data ".localbuild/benchmark;benchmark" \
   --add-data ".localbuild/frontend/dist/frontend/browser;frontend/dist/frontend/browser" \
@@ -103,6 +107,19 @@ Three gotchas that each cost a build if you hit them:
   the `dest` is the folder name *inside* the frozen app that
   `serve_local.resource_dir()`/`spa_dir()` expect: `benchmark` and
   `frontend/dist/frontend/browser`.
+- `--icon installer/app-icon.ico` is not decorative and it is not optional if the installer
+  is to look like the product: that file is written by `python tools/make_icon.py` (which also
+  writes both favicons from the same `GEOMETRY`, and `--check` fails if the three disagree), and
+  PyInstaller resolves it **relative to the spec directory**, not to your shell — so build from
+  the repo root, or the build falls back to the default Python snake icon without saying so. The
+  same file is the `SetupIconFile` in the `.iss`, and there it resolves against `SourceDir=..`,
+  so it is spelled `installer\app-icon.ico` in both places.
+- **The product is Litmus; the filenames are not.** `MyAppName`, the Start-Menu entry, the
+  uninstall display name and the console banner all say "Litmus". `AI-Text-Detector.exe`,
+  `MySetupBase` and `%LOCALAPPDATA%\AITextDetector` deliberately keep the old spelling: changing
+  the binary or the data folder would leave existing installs pointing at a name that no longer
+  ships and a history directory nothing reads. The `AppId` GUID is likewise frozen — a new one
+  side-installs instead of upgrading.
 
 How to run it for a quick check (this also opens a browser tab):
 
@@ -136,7 +153,7 @@ or entered by the user at runtime:
 | providers, ranking, catalogue, key guides | `seed.py` constants + the staged `benchmark/` files |
 | primary + secondary lane models and their bands | `seed.DEFAULT_LANES` / `seed.DEFAULT_BAND` |
 | API keys | the user's own key, added in the app (BYOK) — or none, see below |
-| detection engine | `N8N_URL` in the launcher environment **on first boot only** — see the caveat below, else `http://localhost:5678` |
+| detection engine | this process: `backend/engine.py` scores the text in Python, no workflow server |
 
 `DEFAULT_LANES`/`DEFAULT_BAND` are copies of the workflow's own defaults in
 `n8n/generate-workflow.py`, and `backend/tests/test_seed.py::test_baked_defaults_match_the_workflows_own_defaults`
@@ -145,27 +162,43 @@ test tells you to change it here too. Before 2026-10-16 `seed_models` only inser
 named in env, so a fresh exe had providers and **zero** models and every detection answered
 `409 NO_PRIMARY_MODEL`.
 
+**Which engine, and why the exe stopped needing n8n (2026-10-19).** `serve_local` sets
+`LOCAL_SINGLE_USER=1` and binds `127.0.0.1`, so `engine.native_enabled()` is true and `/detect`
+is answered inside the Python process. Before this the packaged app POSTed to
+`http://localhost:5678/webhook/ai-detect-ai`, which meant the exe that "just runs the detector"
+also required the user to start a workflow server — and a machine without one recorded a 502 for
+every text. `n8n_url`/`webhook_path` are still stored settings (a hosted container needs them) but
+they are not read on the local path, and `/gateway-health` answers `detection_engine:
+"python-native"` with `n8n.on_request_path: false` so the panel cannot show a red n8n beside a
+detection that just worked. `DETECTION_ENGINE=n8n` puts a local install back on the workflow path
+if you want to compare the two. What guarantees the swap is not a behaviour change is
+`tools/engine_parity.py`: the shipped workflow's own Code nodes are executed against 61 recorded
+cases and diffed field by field against `backend/engine.py` (61/61 identical).
+
 **The "first boot only" caveat, measured on 2026-10-16.** Settings are seeded *when absent*, so a value
 already in `%LOCALAPPDATA%\AITextDetector\detector.sqlite3` outranks whatever the launcher environment
-says next time. `N8N_URL=http://127.0.0.1:5699` therefore works on a clean install and is silently
-ignored on the second launch of the same install — which is right for a user who edited the URL in
-Settings, but surprising if you are re-pointing the engine with an env var. To move an existing install,
-edit `n8n_url` in the admin Settings panel or delete the seeded settings row; do not expect the
-environment to win twice.
+says next time. That is why re-pointing an existing install means the admin Settings panel, not an env
+var — but note it only ever applied to `n8n_url`, which the local engine no longer reads.
 
-**No key inside the app does not mean no detection — measured on a clean first boot, 2026-10-16.** A
-freshly wiped install (`api_keys` 0 rows, `user_api_keys` 0 rows) answered two real detections in 1.8 s
-and 1.4 s against a live n8n, and the engine's own `config_used` reported `key_source: "env"`: the
-workflow's environment credential pays for the lane when the app holds none. What a keyless install
-*cannot* do is use the Ranking tab's "score with this model" pick — those cards need a key for their
-provider, so on first boot the page shows zero pinnable cards. That is the difference between "the exe
-can't detect" (false) and "the exe can't let a user choose the scorer" (true, and the reason the ranking
-page owes a "store an API key to unlock scoring" hint).
+**A keyless install used to detect, and now does not (changed 2026-10-19).** Through the workflow, a
+freshly wiped exe answered two real detections in 1.8 s and 1.4 s with `api_keys` and `user_api_keys`
+both empty, because the *n8n process* was started from a repo `.env` and its environment credential
+paid for the lane. The in-process engine has no such borrowed credential: with no key stored it answers
+400 `PROVIDER_KEY_MISSING`, whose hint names the Configuration page, and that 400 deliberately does not
+start the model-failover walk (another model would answer the same way). This is the honest version of
+the same fact — the exe never had a key, it was borrowing one from a server it no longer needs. A
+`PRIMARY_API_KEY` in the launcher environment still works, and keyless remains legal for a self-hosted
+loopback gateway, which needs no credential.
 
-The engine is the remaining external dependency: `/detect` forwards to n8n, which is not inside the
-exe. A user either runs n8n on their own machine or sets `N8N_URL` (admin-editable in Settings as
-`n8n_url`) to the hosted stack's. Without a reachable engine the app opens, browses, ranks and
-records history, but each detection ends as a recorded 502 naming the URL it tried.
+What a keyless install could *never* do is use the Ranking tab's "score with this model" pick — those
+cards need a key for their provider, so on first boot the page shows zero pinnable cards. That is the
+difference between "the exe can't detect" (it can, once it is paid for) and "the exe can't let a user
+choose the scorer" (true, and the reason the ranking page says "store an API key to unlock scoring").
+
+The remaining external dependency is the gateway itself: a local install needs an API key and network
+reach to `integrate.api.nvidia.com` (or whichever provider the row names), and nothing else. Without
+them the app opens, browses, ranks and records history; each detection ends as a recorded 400 naming
+the missing credential — never as a score.
 
 ## 3. Build the installer (Inno Setup)
 
@@ -225,18 +258,118 @@ PASS  the packaged exe serves the technical report the Ranking page links
 PASS  …and the printable copy as a PDF  [200 471173 bytes magic=b'%PDF-']
 ```
 
-Pass the report path as argument 1 to make it the string the *served bundle* is grepped for, which
-proves the exe ships the `/research/report.html` fallback rather than an older link:
+The 2026-10-19 build is the one where the local app stopped needing a workflow server at all:
+`backend/engine.py` scores the text inside the Flask process whenever the install is a local
+single-user one, so the `.exe` on a laptop detects with n8n absent. That is not a claim a timestamp
+can carry, so the runbook records what proved it. Step 1 was re-staged from `rm -rf` anyway
+(`STAGE_MATCHES_DIST`, 6 entries, one hashed JS/CSS pair), step 2 wrote a 43,759,494-byte onefile,
+and `verify_exe_bundle.py` — rewritten for this — passed **43/43**:
 
-```bash
-MSYS_NO_PATHCONV=1 python tools/verify_exe_bundle.py "/research/report.html"
+```
+PASS  packaged backend answers /detect from its own process, and says so
+      [200 detection_engine='python-native' n8n.on_request_path=False]
+PASS  …and a real detect through the packaged binary returns a verdict it built itself
+      [200 AI_GENERATED method=SINGLE_MODEL_PRIMARY_AI engine='python-native' p=0.93]
+PASS  …and nothing at all was ever sent to a workflow server
+      [connections the n8n_url listener accepted=0 bodies=0]
+PASS  …and DETECTION_ENGINE=n8n puts this same binary back on the workflow
+      [200 detection_engine='n8n' on_request_path=True]
 ```
 
-The `MSYS_NO_PATHCONV=1` is required from Git Bash, not cosmetic: the shell rewrites the leading-slash
-argument into `C:/Program Files/Git/research/report.html` before Python ever sees it, and the run then
-reports `FAIL … contains 'C:/Program Files/Git/research/report.html' [0 occurrence(s)]` — a broken
-check, not a broken build. Measured on this exact command on 2026-10-17; the other 23 checks, including
-both report byte-equality ones, passed in the same failing run.
+The last two are a pair, and reading only one of them mis-reads the other. "The listener saw nothing"
+is indistinguishable from "the listener was broken", so the same binary is booted a second time with
+`DETECTION_ENGINE=n8n` and that boot *does* record the call — which turns the silent listener into
+evidence instead of an outage. Nothing in this run reaches a provider, because the side that answers
+is a loopback stand-in gateway the verifier owns; a stalled pool therefore cannot make the check red,
+and no free-tier budget is spent to prove a dispatch rule.
+
+`method` is `SINGLE_MODEL_PRIMARY_AI`, **not** `PRIMARY_DECIDED_AI`, and a first pass that asserts the
+latter goes red on a correct build. `PRIMARY_DECIDED_*` is only reachable when both lanes return a
+usable answer (`backend/engine.py:1056`); the shipped install runs one lane, so the one-lane branch at
+`backend/engine.py:1079` decides and `backend/engine.py:1091` appends the verdict suffix. Same tree,
+backend suite: **224 passed**.
+
+Compiled at 16:53 the same day: **24.297 s, no warnings, 45,175,683 bytes** around the
+43,759,494-byte onefile.
+
+The 2026-10-20 run is the second report-asset rebuild, and the same trap in reverse: the report's §8 and
+header had two claims the minted DOI made false ("available on request", "version 2"), so the fix could
+not reach a user until steps 0→3 ran again. Step 0 took 10.5 s; step 1 started from `rm -rf` and reported
+`STAGE_MATCHES_DIST` over 7 top-level entries with `research/` (2 files) and `fonts/` (2 files) inside;
+step 2 wrote a **43,632,696-byte** onefile and `verify_exe_bundle.py` passed **41/41**, including
+
+```
+PASS  the packaged exe serves the technical report the Ranking page links  [200 54625 bytes identical_to_deposit=True]
+PASS  …and the printable copy as a PDF  [200 476570 bytes magic=b'%PDF-']
+PASS  …and ships no fake paper link  [paper_url=None (seed.py:621 leaves it to the author)]
+```
+
+The third line is the point of doing this after setting `paper_url`: the DOI belongs to the *running*
+install's settings table, never to the frozen seed, so a build that baked it would put a citation
+somebody else's account can retire into every fresh copy. Step 3 compiled in **23.813 s, no warnings,
+45,014,386 bytes**. On the hosted side the same bytes went out as `docker-compose build web` +
+`up -d --no-deps --force-recreate web` (backend and n8n left alone at 21 h and 26 h) and
+`verify_container_deploy.py` passed **20/20** — report byte-equal through nginx, plus two real texts
+scored on the shipped lane (128.1 s `HUMAN_LIKELY` p=0.2, 122.1 s `AI_GENERATED` p=0.8, 3 phrases each).
+
+The 2026-10-20 evening run is the first rebuild whose subject is a **data migration** (#206: a
+`probe_status` written by an older build as `timeout` left the model with no `models` row at all, so
+no picker could list it). A migration is not greppable in a bundle, which is why the runbook records
+what was measured instead of the timestamp:
+
+- Step 0: `ng build` rc=0 in 12.398 s → `main-6J66ALWS.js` (349,374 B); `ng test` **163 passed / 10 files**.
+  Step 1 from `rm -rf`: `STAGE_MATCHES_DIST`, 11 entries, secret scan clean.
+- Step 2: PyInstaller rc=0 in 119 s → **43,657,322-byte** onefile.
+- `verify_exe_bundle.py` was extended first and run against the **stale** exe: **39/47**, the eight reds
+  being exactly the new checks (no `/my/pool/options` JSON at all — the route did not exist in that build).
+  Rebuilt, the same run went **48/48**: `probe_vocab_version=2`, the planted legacy `timeout` row re-read
+  as `slow` with a `models` row at `timeout_ms=240000`, the planted 200-with-no-score row re-read as `dead`
+  with **no** row, and the picker answering 200 / 38 entries with the asleep id present, `measured=False`.
+- Step 3: **21.812 s, no warnings, 45,036,724 bytes** (`sha256 e17c44ded976414e…`). Proven as a payload
+  without installing anything: `/PORTABLE=1 /SILENT /NOICONS /SUPPRESSMSGBOXES /DIR=<temp>` extracted a
+  43,657,322-byte exe whose sha256 equals the verified onefile's (`ba46cbd229a87b51…`).
+- Hosted: one `docker-compose build` per invocation (backend, then web — chaining them has crashed the
+  WSL VM on this host), then `up -d --no-deps --force-recreate` for each service only, so n8n stayed at
+  34 h and the `backend_data` volume was never touched. `verify_container_deploy.py` **19/19**.
+
+The container's own boot log is the evidence the migration reached the operator's real database, because
+**`serve_local` does not print the seed summary — only `docker/backend-entrypoint.sh` does.** Hosted it
+said `probe_vocab_reclassified: 96, probe_vocab_rows_added: 26` with `models` at 28 and users/keys/
+detections/runs unchanged (5/11/47/144). For the local install, read it back over the API instead:
+`/api/gateway-health` showed `db_path` = `%LOCALAPPDATA%\AITextDetector\detector.sqlite3` and
+`db_counts.models` 4 → **28**, and `/api/my/pool/options` answered 27 entries of which **11** are
+unmeasured `slow`/`busy` rows at the 240 s ceiling — the models that used to be missing — with zero
+legacy words left. (`/api/` is the prefix on the packaged app too; a bare `/my/pool/options` answers the
+SPA `index.html` with 200.)
+
+**Read the tool's arguments before writing them down.** This section used to say "pass the report path
+as argument 1 … pass argument 2 to check a different string". `verify_exe_bundle.py:747` has exactly one
+argument — the string to grep the served bundle for, defaulting to `tie-break lane` — and the report
+path is a fixed part of the check set now. `MSYS_NO_PATHCONV=1` is still required when that one argument
+starts with `/`, because Git Bash rewrites it into `C:/Program Files/Git/…` before Python sees it.
+
+**Relaunch the exe with its inherited environment, not a hand-made one.** PyInstaller's onefile parent
+unpacks and then re-execs itself, and the app resolves its data folder from `LOCALAPPDATA` — a launch
+that passes only the variables you thought of (`AITD_NO_BROWSER`) can boot against a different, empty
+database than the one the user's history and settings live in, which reads as "the rebuild lost my
+paper link". The safe form on this host is a PowerShell wrapper that sets the one variable and calls
+`Start-Process`, so the child inherits everything else:
+`$env:AITD_NO_BROWSER='1'; Start-Process -FilePath '.localbuild/out/AI-Text-Detector.exe' -WindowStyle Hidden`.
+Confirm by reading `GET /api/config` back: the DOI still there means the right database was opened.
+
+Pass the string the change under test introduced as argument 1 to make it the needle the *served
+bundle* is grepped for, which proves the exe ships that change rather than an older staged copy:
+
+```bash
+MSYS_NO_PATHCONV=1 python tools/verify_exe_bundle.py "accept-offer"
+```
+
+The `MSYS_NO_PATHCONV=1` is required from Git Bash, not cosmetic: when the argument looks like a path
+the shell rewrites it (a leading `/` becomes `C:/Program Files/Git/…`) before Python ever sees it, and
+the run then reports `FAIL … contains '<rewritten string>' [0 occurrence(s)]` — a broken check, not a
+broken build. Measured on this exact command on 2026-10-17; the other 23 checks, including both report
+byte-equality ones, passed in the same failing run. A CSS-only change needs the needle checked in
+`styles-*.css` as well, because Angular folds component `styles:` out of `main-*.js` entirely.
 
 **Why the guide wording had to reach a build at all:** the cards are backend-seeded text, so the only
 copy a local-app user ever reads is the one frozen inside the exe. Editing `backend/seed.py` changes
@@ -256,7 +389,8 @@ python tools/verify_exe_bundle.py            # serves /, hashes the bundle, grep
 It boots the packaged exe on its own port against a throwaway copy of the dev database and asserts
 that the served `index.html` names the same `main-*.js` as `frontend/dist`, that the bytes hash to
 the same digest, and that a string from the change under test is actually in the downloaded file
-(pass argument 2 to check a different string).
+(argument 1 sets that string; it also compares the served `styles-*.css`, the report, the font and the
+favicons byte for byte, and proves the migration above re-read the legacy probe rows).
 
 **Read backend-seeded text from the database file, not from HTTP.** The clean-install phase asserts the
 shipped API-key guides and the absent `paper_url` by opening the virgin `detector.sqlite3`, because a

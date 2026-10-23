@@ -9,13 +9,18 @@ import type {
   BackendHealth,
   BenchmarkModelRow,
   CatalogByProvider,
+  CatalogDecision,
+  AutoRankResponse,
+  DetectionDetail,
   DetectionRow,
   DiscoveryEnqueue,
   DiscoveryStatus,
   ExtractResult,
   ModelView,
+  MyProbeResult,
   N8nExecutions,
   N8nStatus,
+  PoolOptionsResponse,
   PoolResponse,
   ProbeResult,
   ProviderView,
@@ -24,7 +29,6 @@ import type {
   SettingsWriteResult,
   UserKeyView,
 } from './backend.types';
-import type { DetectionResult } from './detection.types';
 
 /** The dev proxy maps /api → the Flask backend on 127.0.0.1:8787 and strips the
     prefix, so every path here is written without /api. */
@@ -139,11 +143,14 @@ export class BackendService {
     return this.http.get<DetectionRow[]>(`${API}/detections`, { params: { limit } }).pipe(timeout(8_000));
   }
 
-  /** One stored run: the row plus `payload`, the full DetectionResult as it came back
-      from the workflow. Scoped to the caller on the server, so someone else's id 404s. */
-  detection(id: number): Observable<DetectionRow & { payload: DetectionResult }> {
+  /** One stored run: the row plus `payload` — the body recorded with it, which is a full
+      DetectionResult only when the run reached a verdict (a failed run stores its error body) —
+      plus `text`, the writing that was scored, kept since the backend's schema v7 so a saved
+      verdict can be re-read with its evidence painted back on. Null on rows saved before that.
+      Scoped to the caller on the server, so someone else's id 404s. */
+  detection(id: number): Observable<DetectionDetail> {
     return this.http
-      .get<DetectionRow & { payload: DetectionResult }>(`${API}/detections/${id}`)
+      .get<DetectionDetail>(`${API}/detections/${id}`)
       .pipe(timeout(8_000));
   }
 
@@ -190,12 +197,14 @@ export class BackendService {
     return this.http.get<AuthResponse>(`${API}/auth/me`).pipe(timeout(8_000));
   }
 
-  login(username: string, password: string): Observable<AuthResponse> {
-    return this.http.post<AuthResponse>(`${API}/auth/login`, { username, password });
+  login(identifier: string, password: string): Observable<AuthResponse> {
+    // `identifier` is the address the form asks for; the backend also still accepts a legacy
+    // username in the same field, so an account created before e-mail sign-up can sign in.
+    return this.http.post<AuthResponse>(`${API}/auth/login`, { identifier, password });
   }
 
-  register(username: string, password: string): Observable<AuthResponse> {
-    return this.http.post<AuthResponse>(`${API}/auth/register`, { username, password });
+  register(signup: { name: string; email: string; password: string; confirm: string }): Observable<AuthResponse> {
+    return this.http.post<AuthResponse>(`${API}/auth/register`, signup);
   }
 
   logout(): Observable<{ ok: boolean }> {
@@ -281,6 +290,48 @@ export class BackendService {
         new_model: newModel,
       })
       .pipe(timeout(8_000));
+  }
+
+  /** What the caller may pick, measured or not, with the last probe's own verdict attached.
+      `/ranking` cannot be the picker's source: a model whose lane timed out has no score, and a
+      card that is missing from a ranking reads as "unavailable" -- which is exactly the inference
+      this endpoint exists to prevent. */
+  poolOptions(): Observable<PoolOptionsResponse> {
+    return this.http.get<PoolOptionsResponse>(`${API}/my/pool/options`).pipe(timeout(10_000));
+  }
+
+  /** Say yes or no to a model that answered the screen only after a timeout. Refusing keeps the
+      model pickable (`models` row untouched) and ends the offer; accepting appends it to the
+      pool as the user's own choice. */
+  catalogDecision(
+    provider: string,
+    model: string,
+    decision: 'accept' | 'refuse',
+  ): Observable<CatalogDecision> {
+    return this.http
+      .post<CatalogDecision>(`${API}/my/catalog/decision`, { provider, model, decision })
+      .pipe(timeout(8_000));
+  }
+
+  /** Order the pool by the measurement the Ranking page already shows: best first, then whatever
+      has no capture to judge it on, left at the back in the user's own order. It writes nothing
+      but positions, and it never removes a row -- an unmeasured model stays in the pool exactly
+      because a missing measurement is not a verdict. */
+  autoRankPool(): Observable<AutoRankResponse> {
+    // No body: the order is the backend's own ranking, so there is nothing for this client to
+    // send and no way for a stale page to write in an order it measured itself.
+    return this.http.post<AutoRankResponse>(`${API}/my/pool/auto-rank`, {}).pipe(timeout(15_000));
+  }
+
+  /** One sentence to one model, on the caller's own key. `/my/probe` is the user-reachable test:
+      the admin probe is admin-only, and a Test button that spent the deployment's key would be a
+      meter the user does not own. It answers ok/latency or a precise failure, and writes nothing. */
+  probeMyModel(providerId: number, modelId: string): Observable<MyProbeResult> {
+    // No `timeout_seconds`: the backend gives the call that model's own ceiling, and a client that
+    // cut the wait shorter would report a live-but-slow model as dead. Same mistake, one layer up.
+    return this.http
+      .post<MyProbeResult>(`${API}/my/probe`, { provider_id: providerId, model_id: modelId })
+      .pipe(timeout(MODEL_WAIT_MS));
   }
 
   /** Queue a discovery run. 202 = queued, not finished: poll `discoveryStatus()` for the

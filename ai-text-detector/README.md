@@ -1,9 +1,42 @@
-# AI Text Detection — free-tier LLM verifier
+![Litmus — AI text detection on free-tier LLM lanes](docs/assets/litmus-banner.svg)
+
+# Litmus — AI text detection on free-tier LLM lanes
+
+**Litmus** is the product name the app itself shows — the tab title, the header mark, the favicon
+and the Windows shortcut. The repository directory (`ai-text-detector/`), the packaged binary
+(`AI-Text-Detector.exe`) and the data folder (`%LOCALAPPDATA%\AITextDetector`) keep their original
+spellings, because renaming a shipped binary orphans existing installs' Start-Menu entries and
+moves a user's detection history out from under them. The research artefacts — the Zenodo preprint
+and the technical report it serves — are titled by their subject, not by the product, because a
+DOI points at a title.
 
 Judges whether a piece of text was written by an AI. One calibrated model lane scores
 every text; an **optional** second-opinion lane resolves only the gray zone. No Python
-detector service, no PostgreSQL, no Docker required: Angular → Flask + SQLite → one n8n
-workflow → any OpenAI-compatible gateway (NVIDIA NIM, OpenRouter, self-hosted OmniRoute).
+detector service, no PostgreSQL, no Docker required: Angular → Flask + SQLite → the
+scoring logic → any OpenAI-compatible gateway (NVIDIA NIM, OpenRouter, self-hosted
+OmniRoute). "The scoring logic" is whichever of two engines this deployment runs: the n8n
+workflow (`n8n/ai-only-workflow.json`, what the container and the dev stack use, because
+every band in the ranking was measured through it) or the same logic ported to Python
+inside the backend (`backend/engine.py`, what the packaged local app uses so it needs no
+workflow server). `tools/engine_parity.py` proves the two agree, case for case.
+
+![The Detect view after one press: the paragraph, the phrases that moved the number, and the ring on the scale that decided it](docs/assets/detect-light.png)
+
+That screenshot is the app's own sample paragraph, judged live by the model at the head of the
+using pool. Three things are on screen that a bare score hides: **which lane answered**
+(`PRIMARY openai/gpt-oss-20b · decided`), **the ruler the number was read against**
+(`primary scale — AI ≥ 69% · human ≤ 40%`, this model's own calibrated band, not a global 50%),
+and **which phrases pushed it** (the yellow plates; each one is a quote the lane itself returned).
+A verdict that cannot name all three is not offered — an un-scored run renders as "not scored",
+never as 0%.
+
+The other four surfaces, both themes:
+
+| the same run in dark mode | the measured ranking, with the failover order your next run will actually follow |
+| --- | --- |
+| ![Detect, dark theme](docs/assets/detect-dark.png) | ![Ranking](docs/assets/ranking-light.png) |
+| **bring your own key** — encrypted at rest, hinted, never returned to the page | **history** — every run keeps its lane, its latency and its scale; a run that never reached a model reads as *not scored*, never as 0% |
+| ![Models and keys](docs/assets/models-light.png) | ![History](docs/assets/history-dark.png) |
 
 ## Get your first verdict
 
@@ -36,6 +69,95 @@ Instead of pasting, you can **Load document** to pull text out of a `.txt`/`.md`
 `.docx`/`.pdf` and drop it straight into the box. The file is read locally by the Flask
 backend (`POST /extract`), never stored, and follows the same path as pasted text; `.docx`
 is unpacked with the stdlib, `.pdf` needs `pypdf` (or PyMuPDF as fallback).
+
+## The request-hardening layer
+
+Four defences, each with a check that runs. Nothing here needs a package the app does not already
+install — `requirements.txt` is flask, cryptography and pypdf, so the whole layer is stdlib + Flask
++ nginx.
+
+**Headers on every byte the app serves.** `backend/security.py` holds one dict,
+`RESPONSE_HEADERS`, and three different servers have to agree on it: Flask's `after_request` (every
+API response), `docker/nginx.conf` (every static file in the hosted deploy), and `SpaSplit._bytes`
+in `backend/serve_local.py` (every static file in the packaged exe). The third copy is not
+redundancy: on the local app the document that carries the application is a file that this WSGI
+middleware answers itself, and an `after_request` hook cannot put a header on a response that never
+reaches Flask. A CSP that only covers `/api/*` would be a policy around the JSON and no policy
+around the page. `tools/verify_security_layer.py` checks the API and the document carry the
+*byte-same* policy from a real GET.
+
+The policy is `default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; object-src
+'none'; frame-ancestors 'self'; base-uri 'self'; form-action 'self'`, plus
+`X-Content-Type-Options: nosniff`, `X-Frame-Options: SAMEORIGIN`, `Referrer-Policy`,
+`Cross-Origin-Opener-Policy: same-origin` and a `Permissions-Policy` that switches off camera,
+microphone, geolocation, payment and USB. The one allowance is deliberate: the evidence plates
+colour each quoted phrase on a scale, which is an inline `style` on a `<span>`, so `style-src` has
+to carry `'unsafe-inline'` — and `script-src` does not.
+
+**XSS.** The front end never binds HTML: there is no `[innerHTML]` and no
+`bypassSecurityTrustHtml` in `frontend/src/`, and the plate layer builds its spans with
+`document.createElement` + `textContent` (`plate()` in `ui/text-panel/text-panel.ts`), so scored
+text can only ever be a text node. Angular's binder escapes what it inserts, and the CSP is the
+backstop for the case where that assumption breaks.
+
+**CSRF — double-submit, because the session is a cookie.** The guard (`security.init` in
+`backend/security.py`) answers a state-changing request in this order: `Sec-Fetch-Site: cross-site`
+→ `CSRF_CROSS_SITE`; an `Origin`/`Referer` that is present but not this site →
+`CSRF_ORIGIN_MISMATCH`; a signed-in session whose `X-CSRF-Token` does not match the token stored in
+it → `CSRF_TOKEN_MISSING`. Anonymous writes and non-browser calls (no `Origin`, no session) are
+exempt, which is what keeps a script and the sign-in form working. The token is minted into the
+session and mirrored into a **readable** `SameSite=Lax` cookie, `detector_csrf` — readable on
+purpose, because the SPA is its only reader and an attacker's page on another origin cannot read it
+even though the browser would send it. `frontend/src/app/core/csrf.interceptor.ts` copies it into
+the header on every unsafe method and leaves reads alone. Signing out deletes the cookie, and a new
+session gets a new token, so a token from a previous session is not a token. Loopback counts as one
+site, so `ng serve` on 4321 proxying to the exe on 8787 stays an honest same-origin pair.
+
+**Brute force, twice, because the two halves fail differently.** `security.LOGIN_THROTTLE` is 8
+failures per 15 minutes keyed `address|identifier`, answered *before* the password hash is touched
+so a throttled guesser costs no PBKDF2, and it sends `Retry-After`. Its counters are per process,
+and a hosted backend runs several gunicorn workers, so `docker/nginx.conf` adds the half a
+per-worker counter cannot be: a `map` that keys only `/api/auth/login` and `/api/auth/register` to
+the client address (everything else maps to `""`, which nginx does not count) feeding a
+`limit_req_zone` at 6 r/m with `burst=12 nodelay`, `limit_req_status 429`, and an `error_page` that
+returns the JSON body the SPA already handles — a throttled browser should read a verdict, not an
+nginx HTML page. A detection is a minutes-long call and must never queue behind someone else's
+sign-in attempts, which is why the window covers two routes and not the API. `server_tokens off`
+stops nginx volunteering its version into those error pages.
+
+**One detection's size.** `POST /detect` reads the ceiling from the engine itself
+(`engine.max_text_length()`, which is the engine's own number including its env override) and
+refuses past it with `413 TEXT_TOO_LONG` *before* any lane is dialled — measured in UTF-16 units
+(`engine.js_len`), the way the engine measures it, because an emoji is two units there and one
+character here. The app and the engine cannot disagree about what one detection is allowed to be.
+
+**Keys and outbound calls.** Provider keys are Fernet-encrypted at rest, the master key lives in a
+gitignored file next to the database, and the page is shown a hint (`nvapi-…(70 chars)`) and never
+the plaintext. Every `base_url` a caller can name — a BYOK endpoint, a lane override — is checked
+against `ALLOWED_LLM_HOSTS` before anything dials it, which is the SSRF guard on an app whose whole
+job is making outbound calls to addresses users type in. `USE_SECURE_COOKIES` flips the session
+cookie to `Secure` for a deploy where nginx terminates TLS.
+
+### What the layer does not claim
+
+No HTTPS: the local app is plain http on loopback and the LAN deploy is plain http on `:8080`, so
+`Secure` is off by default and the cookie's protection is `SameSite` plus the token, not transport.
+A CSP cannot stop a same-origin JSON read by script that somehow got past the binder — it stops
+injection, not a bug. The app's throttle dies with its worker; on a hosted deploy the nginx window
+is the one that holds. And this is double-submit, not a synchronizer token, because the SPA is a
+separate build that has to read the value back.
+
+### How each of those is proved
+
+| check | what it runs | result |
+| --- | --- | --- |
+| `python -m pytest backend/tests -q` | the whole backend suite, 22 of them `test_security.py` (headers, CSP parsed as a dict, cookie flags, the four CSRF orders, reads-need-no-token, rotation, four throttle cases, the ceiling read from the engine) | **312 passed** |
+| `cd frontend && npx ng test --watch=false` | 22 files / 305 specs, 7 of them `csrf.interceptor.spec.ts`, configured through `appConfig.providers` + `provideHttpClientTesting()` so "the interceptor is installed" is proved and not assumed | **305 passed** |
+| `python tools/verify_security_layer.py` | a real `python -m backend.serve_local` on a throwaway DB and its own key file, driven by a cookie jar that mirrors the SPA — including the static `GET /` a test client cannot see | **22/22** |
+| `python tools/verify_deploy_recipe.py` | `docker/nginx.conf` parsed by a quote- and block-aware scanner, then compared to `security.RESPONSE_HEADERS` value by value, plus the timeout chain and the two-route throttle map | **59/59** |
+| `docker run --rm --add-host backend:127.0.0.1 -v $PWD/docker/nginx.conf:/etc/nginx/conf.d/default.conf:ro nginx:1.27-alpine nginx -t` | nginx's own parser, which is the only judge that matters for the hosted deploy | `test is successful` |
+
+The last one needs the Docker daemon; the recipe guard above is the half that runs without it.
 
 ## The model ranking (all numbers measured, 48-text HC3 corpus @ 0.69/0.40 band)
 
@@ -94,16 +216,29 @@ node tools/verify-stored-band.js --model moonshotai/kimi-k3
 ```
 Angular 22 (localhost:4200, IPv6 only)
     |  /api -> proxy
+    |  every unsafe method carries X-CSRF-Token, copied from the readable cookie
     v
 Flask backend (127.0.0.1:8787)            backend/app.py
+    |  security.init: the CSRF guard, the hardened header set on every response,
+    |  the login throttle, and the text ceiling read from the engine -- all four
+    |  before a route body runs. Keys leave this process only as ciphertext hints.
     |  SQLite: providers, endpoints, encrypted keys,
     |  models + tuned parameters, detections, benchmark runs, catalogue probes
     |  also runs the n8n execution-row purger in a background thread
     v
-n8n 2.35.7 webhook (localhost:5678)       n8n/ai-only-workflow.json
+which engine scores?  (see "Who changes what" below)
+    |-- packaged local app: backend/engine.py, in this process. No n8n, no container.
+    |                      `serve_local` sets LOCAL_SINGLE_USER=1 + loopback bind,
+    |                      and answers the static files itself -- so it repeats the
+    |                      same header set that Flask's after_request cannot reach.
+    v
+n8n 2.35.7 webhook (localhost:5678)       n8n/ai-only-workflow.json   [hosted deploy only]
     |  primary lane + optional tie-break lane
     v
 OpenAI-compatible gateway (NVIDIA NIM / OpenRouter / self-hosted OmniRoute)
+
+[hosted] nginx sits in front of all of it: docker/nginx.conf puts the same headers on
+         every file it serves, and holds the sign-in window the per-worker throttle cannot.
 ```
 
 The old multi-signal pipeline (PostgreSQL, Redis, the Python `detector/` service,
@@ -136,7 +271,7 @@ interchangeable account picked stalest-use-first, so accounts take turns — Ope
 host: explicit `lane_config` requests choose the credential by the host being called.
 The result panel's provenance fold says which source served each lane.
 
-### Who changes what — and how the packaged `.exe` finds an engine
+### Who changes what — and which engine answers
 
 Users never see an advanced parameter. A signed-in user picks a model from the Ranking
 tab (which costs one `lane_config.primary.model` and nothing else — the endpoint, band
@@ -148,28 +283,43 @@ the writable keys: `n8n_url`, `webhook_path`, `paper_url`, `paper_title`,
 skipped, and `put_settings()` validates every field in a first pass before writing any
 of them, so a rejected value leaves the stored one intact.
 
-That indirection is the whole answer to "how does a local app get a verdict":
+`backend/app.py::run_detection()` is the one place that decides who scores a text, and it
+is decided by the deployment, not by a per-request knob:
 
-1. It ships pointing at `http://localhost:5678/webhook/ai-detect-ai` — right for any
-   machine running `./quickstart.sh`.
-2. An admin types a reachable n8n into **Settings → Detection engine & site links** and
-   it takes effect on the next request (a blank field falls back to the default above).
-3. If nothing answers, `/detect` returns a *labelled* failure — 502 with
-   `classification: DETECTION_UNAVAILABLE`, the URL, and a hint naming the field to
-   fix. History renders it as "no verdict", never as a score. There are two labels,
-   because the two causes have opposite cures: `ENGINE_UNREACHABLE` (nothing accepted
-   the connection — Settings → engine URL is wrong or n8n is down) and
-   `ENGINE_TIMEOUT` (the engine accepted it and its lane did not answer within
-   `timeout_ms + 30 s` — the URL is fine, the lane or the pool is slow). `forward()`
-   tells them apart by opening one bare TCP handshake to the same host:port after the
-   failure, because "timed out" is what both a dead address and a thinking model
-   produce on this platform.
+1. **The packaged local app scores in Python.** `serve_local` sets `LOCAL_SINGLE_USER=1`
+   and binds `127.0.0.1`, so `engine.native_enabled()` is true and `/detect` never opens a
+   socket to `:5678`. A machine with no n8n installed detects normally — which is the
+   point: the exe already holds the model rows, the decrypted keys and the text, so
+   starting a second program on a local port to score a paragraph was a dependency, not a
+   design. `n8n_url`/`webhook_path` are not read on this path, and `/gateway-health` says
+   `detection_engine: "python-native"` with `n8n.on_request_path: false` instead of probing
+   a server that is not involved.
+2. **A hosted deploy forwards to the workflow** — the container, and any dev process that
+   does not set the local flag, because the ranking's bands were measured through that
+   webhook. An admin types a reachable n8n into **Settings → Detection engine & site
+   links** and it takes effect on the next request (blank falls back to
+   `http://localhost:5678/webhook/ai-detect-ai`). `DETECTION_ENGINE=n8n|python` overrides
+   the derived choice in either direction.
+3. **Failure prose names the engine that was asked.** On the workflow path, nothing
+   answering is a *labelled* 502 — `classification: DETECTION_UNAVAILABLE`, the URL, and a
+   hint naming the field to fix, rendered by History as "no verdict" and never as a score.
+   Two labels, because the causes have opposite cures: `ENGINE_UNREACHABLE` (nothing
+   accepted the connection — wrong URL or n8n down) and `ENGINE_TIMEOUT` (it accepted and
+   the lane did not answer within `timeout_ms + 30 s` — the URL is fine, the pool is slow).
+   `forward()` tells them apart by opening one bare TCP handshake to the same host:port
+   after the failure, because "timed out" is what both a dead address and a thinking model
+   produce on this platform. On the Python path the same install answers 400
+   `PROVIDER_KEY_MISSING` instead, because the one true thing about a fresh local app with
+   no credential is that it needs one, and that failure deliberately does not start the
+   model failover walk: another model in the pool would answer the same way.
 
-`python tools/verify_admin_settings.py` proves all of it against a real
+`python tools/verify_admin_settings.py` proves the hosted half against a real
 `backend.serve_local` process on a **throwaway copy** of the dev DB (16 checks: the 403
 gate both ways, the 400 refusals, the guide round-trip into a plain user's `/config`,
 `/n8n/status` following the stored target, the labelled 502, and one real detection
-through the just-saved target).
+through the just-saved target). It launches that server with `LOCAL_SINGLE_USER=0` stated
+in its own environment, so it is driving the workflow path on purpose and not the local
+engine, which would answer the same URL question a different way.
 
 ### Your using pool: the order you set, and what health does to it
 
@@ -350,7 +500,7 @@ the leak, and `_host_label()` masks both rows that have one; the provider *name*
 because it is `/ranking`'s own label for the row and suppressing it would make the page disagree with
 the app. And `report.pdf` is served as `application/octet-stream`, so the button re-types those bytes
 as a Blob — the verifier asserts the content-type it actually saw (`application/octet-stream`,
-471,173 B, `%PDF`).
+476,570 B as of 2026-10-20, `%PDF`).
 
 
 The same rule covers the **serif faces**, and the reason is worse: a missing report is a broken link,
@@ -475,15 +625,19 @@ fitted for a different distribution. See [docs/calibration.md](docs/calibration.
 node n8n/test-normalize.js            # 68 hostile-payload cases against the shipped Code node
 node n8n/test-parse.js                # 14: truncated answers salvage a whole number, never a cut one
 node n8n/test-ensemble.js             # tie-break decision table + the optional-lane contract
-python -m pytest backend/tests -q     # 164: routing, encryption, purger, tuning block, auth gate, off-lane
-                                      # sanitization, slow-engine-vs-missing-engine labelling, and the
+python -m pytest backend/tests -q     # 312: routing, encryption, purger, tuning block, auth gate, off-lane
+                                      # sanitization, slow-engine-vs-missing-engine labelling, the request
+                                      # hardening layer (headers on both response paths, the CSP parsed as a
+                                      # dict, cookie flags, the four CSRF orders, token rotation, the login
+                                      # throttle, the ceiling read from the engine), and the
                                       # using-pool: failover precedence, the request budget every later
                                       # attempt shares, which failures a second model cannot fix, and the
                                       # discovery walk -- a refusal costs one call, is recorded without a
                                       # score, and the next id still gets tried
-cd frontend && npx ng test --watch=false   # 122: lane_config composition, key headers, admin card, quote painting,
+cd frontend && npx ng test --watch=false   # 305: lane_config composition, key headers, admin card, quote painting,
                                       # lane-scale note, report-link fallback (blank paper_url -> /research/),
-                                      # the using-pool drag/reorder panel, the auto-discovery list, and the
+                                      # the using-pool drag/reorder panel, the auto-discovery list, the CSRF
+                                      # interceptor (wired through appConfig, so "installed" is proved), and the
                                       # two request ceilings -- a detect and a key probe are waited out to
                                       # the gateway's own patience, a control-plane read is not
                                       # On a host with no commit headroom the run dies without testing anything:
@@ -501,6 +655,14 @@ python tools/check_visual_language.py # parses the CSS instead of searching it: 
 python tools/verify_admin_settings.py # admin surface live: 403 gate, 400 refusals, guide round-trip,
                                       # /n8n/status, labelled ENGINE_UNREACHABLE, one real detect (16 checks)
                                       # runs on a copy of the dev DB; the real one is not written
+python tools/verify_security_layer.py # the hardening layer against a real server, not a test client
+                                      # (22 checks): the header set on the API *and* on the SPA document
+                                      # that serve_local's own static responder answers, the byte-same CSP
+                                      # on both, cookie flags over the wire, an armed write, the three
+                                      # refusal codes, the ng-serve loopback pair, rotation across a
+                                      # sign-out, the throttle with its Retry-After, a neighbour who still
+                                      # signs in, and a 250 KB text refused before any lane is dialled.
+                                      # Throwaway DB and its own key file; no provider key is read
 python tools/verify_tuning_live.py    # stored parameters reach the workflow (real providers)
 python tools/verify_default_lane_live.py  # the promoted default lane, live: boot re-seeds a copy of the
                                       # dev DB from .env, the old primary loses its lane, one real
@@ -525,8 +687,13 @@ python tools/verify_deploy_recipe.py  # container preflight, no daemon needed: C
                                       # gunicorn -> nginx -> the browser's own HTTP_PATIENCE_MS, so
                                       # no inner layer can give up before an outer one -- and DEPLOY.md
                                       # quotes the same numbers the files carry, the two shipped copies
-                                      # of the report are byte-identical and tracked, and dist carries
-                                      # them too (40 checks)
+                                      # of the report are byte-identical and tracked, dist carries
+                                      # them too, and the hardened deploy holds: nginx.conf parsed by a
+                                      # quote- and block-aware scanner, every value of
+                                      # security.RESPONSE_HEADERS present as an `add_header ... always`
+                                      # in `location /`, the CSP byte-equal to the Python constant, the
+                                      # auth window mapped to exactly the two sign-in routes and nothing
+                                      # else, server_tokens off (59 checks)
 python tools/verify_container_deploy.py # the RUNNING stack through nginx: liveness public, gateway
                                       # status behind login, served bundle == dist AND served
                                       # styles-*.css == dist (byte-for-byte) then parsed by the same

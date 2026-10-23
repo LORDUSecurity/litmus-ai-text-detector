@@ -2,7 +2,7 @@
 rank,model,provider,endpoint,free_tier,corpus,run_tag,tier,rows_captured,rows_scored,decided,correct,wrong,deferred,accuracy_on_decided,coverage,band_ai_min,band_human_max,confidence_gate,deployed_lane,health_at_export
 1,moonshotai/kimi-k3,nvidia,integrate.api.nvidia.com,yes,hc3-48,nvfull-kimi-k3,measured,48,48,47,47,0,1,1.0,0.9792,0.7,0.6,0.0,,unknown
 2,kiro/claude-haiku-4.5,omniroute,local gateway (measuring machine),yes,clean,clean-omfull-kiro-claude-haiku-4-5,measured,48,48,29,29,0,19,1.0,0.6042,0.75,0.35,0.0,,unknown
-3,z-ai/glm-5.3-flash,nvidia,integrate.api.nvidia.com,yes,hc3-48,nvfull-glm-5-3-flash,measured,48,48,9,9,0,39,1.0,0.1875,0.8,0.55,0.9,primary,unknown
+3,z-ai/glm-5.3-flash,nvidia,integrate.api.nvidia.com,yes,hc3-48,nvfull-glm-5-3-flash,measured,48,48,9,9,0,39,1.0,0.1875,0.8,0.55,0.9,primary,ok
 4,nvidia/nemotron-3-ultra-550b-a55b,nvidia,integrate.api.nvidia.com,yes,hc3-48,ultra550,measured,48,48,3,3,0,45,1.0,0.0625,0.69,0.4,0.9,,unknown
 5,z-ai/glm-5.3,nvidia,integrate.api.nvidia.com,yes,hc3-48,nvfull-glm-5-3,measured,48,48,46,45,1,2,0.9783,0.9583,0.65,0.3,0.0,,unknown
 6,kiro/claude-sonnet-4.5,omniroute,local gateway (measuring machine),yes,hc3-48,omfull-kiro-claude-sonnet-4-5,measured,48,48,45,44,1,3,0.9778,0.9375,0.8,0.3,0.0,,unknown

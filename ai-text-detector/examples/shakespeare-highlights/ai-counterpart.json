@@ -1,0 +1,12 @@
+{
+  "meta": {
+    "provider": "gemini (generativelanguage.googleapis.com OpenAI-compatible)",
+    "model": "gemini-2.5-flash",
+    "http": 200,
+    "generated_at": "2026-10-20T13:16:49.018Z",
+    "prompt": "Rewrite Shakespeare’s “All the world’s a stage” speech (As You Like It, Act 2 Scene 7) as a NEW poem in your own words: keep the seven ages of man structure and blank verse, but do not copy the original lines. Output only the poem.",
+    "chars": 1267,
+    "sha256": "b1254eef07c44bbd626be4a1b9d9ed6491babb9a9ca4a8fe089786d4d078bb8a"
+  },
+  "text": "This earthly sphere, a vast and public stage,\nWhere every soul performs a destined part.\nWe make our entrances, then take our leave,\nAnd each one plays through many characters.\n\nFirst, helplessness, a wailing, fragile thing,\nNursed at the breast, a tender, squalling start.\n\nThen comes the child, with satchel on his back,\nA morning face, unwillingly he treads\nThe path to lessons, slow and full of sighs.\n\nThe lover next, with deep, despairing sighs,\nPenning his verse to beauty's distant gaze,\nLost in the dream of an enchanting smile.\n\nThen strides the warrior, quick to take offense,\nHis mind on glory, oaths upon his tongue,\nReady to face the cannon's roaring breath\nFor fleeting fame, a hero's empty praise.\n\nThe mature man then, with his sturdy frame,\nA thoughtful brow, and words of reasoned weight,\nDispensing judgment, full of practiced truths,\nContent within his well-earned comfort now.\n\nThe sixth act brings a figure, thin and frail,\nWith spectacles astride his failing nose,\nHis once strong voice now reedy, high, and thin,\nHis youthful clothes hang loosely on his frame.\n\nThe final curtain falls, a second childhood,\nA deep forgetting, without sight or sound,\nWithout a thought, without the world's sweet taste,\nBare of all sense, dissolving into dust."
+}

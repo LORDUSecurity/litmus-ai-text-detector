@@ -14,7 +14,10 @@ npm start                             # ng serve on :4200, proxies /api -> :8787
 ```
 
 n8n must be running on :5678 with the workflow published, and its environment must have
-`ALLOW_BYOK=true` for the key fields to do anything.
+`ALLOW_BYOK=true` for the key fields to do anything — that Node gateway forwards `/detect` to the
+workflow, which is the hosted engine. `python -m backend.serve_local` is the other answer: it serves
+this same built page and scores the text inside the Python process (`backend/engine.py`), so with it
+no workflow server has to exist. The two engines are proved equivalent by `tools/engine_parity.py`.
 
 The gateway is not optional. n8n writes the inbound webhook request — headers included — into
 its execution database, so a key POSTed straight to n8n would sit on disk permanently. The

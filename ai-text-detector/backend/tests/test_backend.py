@@ -873,6 +873,55 @@ def test_a_recorded_failure_keeps_the_text_length_the_user_sent(client, monkeypa
     assert row["latency_ms"] == 120023
 
 
+# ---------------------------------------------------------------- stored text for the history sheet
+
+def test_a_stored_detection_keeps_the_text_it_scored(client, monkeypatch):
+    """History used to store a fingerprint and a length only, which made a saved verdict
+    un-repaintable: the sheet could show the score but never the text the score was about.
+    The list route still carries no text -- a row list is not a way to read every user's
+    submissions in one request."""
+    pid = _provider(client)
+    _model(client, pid, "nvidia/nemotron-3-ultra-550b-a55b", lane="primary")
+    captured = {}
+    _stub_forward(monkeypatch, captured)
+    r = client.post("/detect", json={"text": TEXT, "lane_config": {
+        "primary": {"model": "nvidia/nemotron-3-ultra-550b-a55b"}}})
+    assert r.status_code == 200, r.get_json()
+
+    det = client.get(f"/detections/{r.get_json()['backend_detection_id']}").get_json()
+    assert det["text"] == TEXT
+    row = client.get("/detections").get_json()[0]
+    assert "text" not in row, "the list route must not carry the submitted text"
+
+
+def test_a_row_saved_before_the_text_column_is_still_readable(client):
+    """The ALTER is the whole point: an existing install has history, and the sheet has to tell
+    "this run predates text storage" from "this run has no text" rather than render an empty
+    panel over a row that simply never had one."""
+    conn = sqlite3.connect(db.DB_PATH)
+    conn.execute("ALTER TABLE detections RENAME TO detections_old")
+    conn.execute("""CREATE TABLE detections (
+        id INTEGER PRIMARY KEY, user_id INTEGER, created_at TEXT NOT NULL DEFAULT (datetime('now')),
+        document_id TEXT, text_fingerprint TEXT, text_length INTEGER, classification TEXT,
+        ai_probability REAL, confidence REAL, method TEXT, review_required INTEGER,
+        deciding_lane TEXT, primary_model TEXT, secondary_model TEXT, latency_ms INTEGER,
+        http_status INTEGER, error_code TEXT, warnings TEXT, payload_json TEXT)""")
+    conn.execute("""INSERT INTO detections (id, classification, ai_probability, text_length,
+                    payload_json) VALUES (1, 'AI_GENERATED', 0.97, 42, '{}')""")
+    conn.commit()
+    conn.close()
+
+    db.init_db()
+
+    conn = sqlite3.connect(db.DB_PATH)
+    conn.row_factory = sqlite3.Row
+    cols = {r["name"] for r in conn.execute("PRAGMA table_info(detections)")}
+    assert "text" in cols
+    legacy = conn.execute("SELECT text FROM detections WHERE id = 1").fetchone()
+    assert legacy["text"] is None
+    conn.close()
+
+
 # ---------------------------------------------------------------- secrets at rest
 
 def test_keys_are_encrypted_at_rest_and_never_returned(client):

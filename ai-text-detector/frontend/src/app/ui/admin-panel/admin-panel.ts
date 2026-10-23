@@ -1,6 +1,7 @@
 import { Component, OnInit, computed, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { HttpErrorResponse } from '@angular/common/http';
+import { AuthService } from '../../core/auth.service';
 import { BackendService } from '../../core/backend.service';
 import type {
   AdminSettings,
@@ -12,12 +13,15 @@ import type {
 } from '../../core/backend.types';
 
 const MODEL_PATTERN = /^[A-Za-z0-9._:/@+-]+$/;
-const KEY_PATTERN = /^[A-Za-z0-9._:+/-]+$/;
 
-/** What the backend falls back to when the `n8n_url` / `webhook_path` settings are blank. The UI
+/** What the backend falls back to when the n8n_url / webhook_path settings are blank. The UI
  *  shows these as placeholders so an admin can see the effective target without a round trip. */
 const DEFAULT_ENGINE_URL = 'http://localhost:5678';
 const DEFAULT_WEBHOOK_PATH = '/webhook/ai-detect-ai';
+/** Same trick for allowed_llm_hosts: a blank setting is not "no host is allowed", it is the
+ *  engine's own list (backend/engine.py DEFAULT_ALLOWED_HOSTS), so the field has to show that. */
+const DEFAULT_ALLOWED_HOSTS =
+  'localhost,127.0.0.1,::1,integrate.api.nvidia.com,openrouter.ai';
 const ABSOLUTE_URL = /^https?:\/\/[^\s/?#]+/i;
 
 interface EngineDraft {
@@ -26,19 +30,6 @@ interface EngineDraft {
   paper_url: string;
   paper_title: string;
   allowed_llm_hosts: string;
-}
-
-interface NewProvider {
-  name: string;
-  base_url: string;
-  label: string;
-  notes: string;
-}
-
-interface NewKey {
-  providerId: number;
-  api_key: string;
-  label: string;
 }
 
 interface NewModel {
@@ -55,17 +46,17 @@ interface NewModel {
 })
 export class AdminPanel implements OnInit {
   private readonly backend = inject(BackendService);
+  private readonly auth = inject(AuthService);
+
+  /** One owner, one machine, no second set of defaults. Three of the settings fields are answers
+      for everybody, and a local install has no everybody — see the card that reads this. */
+  readonly local = computed(() => this.auth.local());
 
   readonly providers = signal<ProviderView[]>([]);
-  readonly models = signal<ModelView[]>([]);
   readonly busy = signal(false);
   readonly message = signal<{ tone: 'ok' | 'bad'; text: string } | null>(null);
   readonly probe = signal<ProbeResult | null>(null);
 
-  readonly showNewProvider = signal(false);
-  readonly newProvider = signal<NewProvider>({ name: '', base_url: '', label: '', notes: '' });
-  readonly newKey = signal<NewKey>({ providerId: 0, api_key: '', label: 'key' });
-  readonly showNewKey = signal(false);
   readonly newModel = signal<NewModel>({ provider_id: 0, model_id: '', lane: null, notes: '' });
   readonly showNewModel = signal(false);
 
@@ -79,16 +70,21 @@ export class AdminPanel implements OnInit {
 
   reload(): void {
     this.backend.providers().subscribe({
-      next: (rows) => {
-        this.providers.set(rows);
-        this.models.set(rows.flatMap((p) => p.models));
-      },
+      next: (rows) => this.providers.set(rows),
       error: (err) => this.fail('Could not load configuration from the backend.', err),
     });
     this.reloadSettings();
   }
 
   // ---- engine + site settings -------------------------------------------
+
+  /** Whether this install answers `/detect` inside its own process, which is the one fact that
+      decides two whole blocks of the settings card: the workflow target either is on the request
+      path or it is decoration. Read from `/n8n/status`'s own `on_request_path`, because the backend
+      is the only thing that knows which engine `DETECTION_ENGINE` and the single-owner mode picked;
+      an `undefined` (no status read yet) reads as "still on the path", which is the hosted case and
+      the one that cannot be edited away by accident. */
+  readonly nativeEngine = computed(() => this.engine()?.on_request_path === false);
 
   readonly settings = signal<AdminSettings | null>(null);
   /** Set only when GET /settings answers — a 403, not a slow load. Shows the card as
@@ -103,6 +99,7 @@ export class AdminPanel implements OnInit {
   /** Placeholders, so the effective default is visible in the field itself. */
   readonly defaultEngineUrl = DEFAULT_ENGINE_URL;
   readonly defaultWebhookPath = DEFAULT_WEBHOOK_PATH;
+  readonly defaultAllowedHosts = DEFAULT_ALLOWED_HOSTS;
 
   /** The target `/detect` will actually post to: the stored setting, or what the backend falls
       back to when it is blank. An admin has to see the effective value, not an empty box. */
@@ -220,11 +217,11 @@ export class AdminPanel implements OnInit {
           const guides = Array.isArray(r.written?.api_key_guides)
             ? r.written.api_key_guides.length
             : this.guides().length;
-          this.ok(`Ranking page links saved (paper ${d.paper_url.trim() || 'blank'}, ${guides} key guides).`);
+          this.ok(`Links and key guides saved (paper ${d.paper_url.trim() || 'blank'}, ${guides} guide(s)).`);
         },
         error: (err) => {
           this.busy.set(false);
-          this.fail('Links not saved.', err);
+          this.fail('Links and key guides not saved.', err);
         },
       });
   }
@@ -245,33 +242,6 @@ export class AdminPanel implements OnInit {
 
   // ---- providers --------------------------------------------------------
 
-  createProvider(): void {
-    const p = this.newProvider();
-    if (!/^[a-z0-9_-]{2,40}$/.test(p.name)) {
-      this.message.set({ tone: 'bad', text: 'Provider name must be 2-40 chars of [a-z0-9_-].' });
-      return;
-    }
-    if (!/^https?:\/\//i.test(p.base_url.trim())) {
-      this.message.set({ tone: 'bad', text: 'base_url must be an absolute http(s) URL.' });
-      return;
-    }
-    this.busy.set(true);
-    this.backend
-      .createProvider({ name: p.name.trim(), base_url: p.base_url.trim(), label: p.label, notes: p.notes })
-      .subscribe({
-        next: (row) => {
-          this.busy.set(false);
-          this.newProvider.set({ name: '', base_url: '', label: '', notes: '' });
-          this.showNewProvider.set(false);
-          this.ok(`Provider "${row.name}" saved to the database.`);
-        },
-        error: (err) => {
-          this.busy.set(false);
-          this.fail('Provider not created.', err);
-        },
-      });
-  }
-
   updateProvider(p: ProviderView, field: 'base_url' | 'enabled', value: string | boolean): void {
     this.backend.updateProvider(p.id, { [field]: value } as Partial<ProviderView>).subscribe({
       next: () => this.ok(`Provider "${p.name}" updated.`),
@@ -283,57 +253,6 @@ export class AdminPanel implements OnInit {
     this.backend.deleteProvider(p.id).subscribe({
       next: () => this.ok(`Provider "${p.name}" deleted, with its keys and models.`),
       error: (err) => this.fail('Delete failed.', err),
-    });
-  }
-
-  // ---- keys -------------------------------------------------------------
-
-  addKey(): void {
-    const k = this.newKey();
-    if (!k.providerId) {
-      this.message.set({ tone: 'bad', text: 'Pick a provider first.' });
-      return;
-    }
-    if (!KEY_PATTERN.test(k.api_key) || k.api_key.length > 512) {
-      this.message.set({
-        tone: 'bad',
-        text: 'That key has a character the backend rejects (letters, digits and . _ : + / - only). Nothing was sent.',
-      });
-      return;
-    }
-    this.busy.set(true);
-    this.backend.addKey(k.providerId, k.api_key, k.label || 'key').subscribe({
-      next: (row) => {
-        this.busy.set(false);
-        this.newKey.set({ providerId: k.providerId, api_key: '', label: 'key' });
-        this.showNewKey.set(false);
-        this.ok(`Key stored encrypted as "${row.key_hint}". The plaintext is not kept anywhere else.`);
-      },
-      error: (err) => {
-        this.busy.set(false);
-        this.fail('Key not stored.', err);
-      },
-    });
-  }
-
-  toggleKey(keyId: number, active: boolean): void {
-    this.backend.setKeyActive(keyId, active).subscribe({
-      next: () => this.ok(active ? 'Key activated.' : 'Key deactivated.'),
-      error: (err) => this.fail('Could not change that key.', err),
-    });
-  }
-
-  /** SQLite writes UTC with a space and no offset, so the Z is what makes it not local time. */
-  keyUsed(at: string | null): string {
-    if (!at) return 'never';
-    const d = new Date(`${at.replace(' ', 'T')}Z`);
-    return Number.isNaN(d.getTime()) ? at : d.toLocaleString();
-  }
-
-  deleteKey(keyId: number): void {
-    this.backend.deleteKey(keyId).subscribe({
-      next: () => this.ok('Key deleted from the database.'),
-      error: (err) => this.fail('Could not delete that key.', err),
     });
   }
 

@@ -171,7 +171,12 @@ def main() -> int:
     env = dict(os.environ)
     env.update({"DETECTOR_DB": str(db_copy), "DETECTOR_SECRET": str(SECRET),
                 "BACKEND_HOST": "127.0.0.1", "BACKEND_PORT": str(PORT),
-                "AITD_NO_BROWSER": "1", "PYTHONIOENCODING": "utf-8"})
+                "AITD_NO_BROWSER": "1", "PYTHONIOENCODING": "utf-8",
+                # Not left to `serve_local`, which now defaults this to 1. The admin login below
+                # would still answer 200 in single-owner mode -- the guard would have answered as
+                # the owner either way -- so a lapse here fails silently instead of loudly. Pinning
+                # it keeps this probe on the same code path a hosted deploy takes.
+                "LOCAL_SINGLE_USER": "0"})
     log = open(tmp / "server.log", "w", encoding="utf-8")
     proc = subprocess.Popen([sys.executable, "-m", "backend.serve_local"],
                             cwd=str(ROOT), env=env, stdout=log, stderr=subprocess.STDOUT)

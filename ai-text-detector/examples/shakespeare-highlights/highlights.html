@@ -1,0 +1,115 @@
+<!doctype html>
+<html lang="en" class="light" data-theme="light">
+<head>
+<meta charset="utf-8">
+<title>Litmus — live phrase-highlighting captures</title>
+<link rel="stylesheet" href="app.css">
+<style>
+  .shot { padding: 22px 26px 40px; max-width: 980px; }
+  .cap { font: 400 13px/1.5 var(--font-ui); color: var(--ink-dim); margin: 26px 0 8px; }
+  .cap b { color: var(--ink); font-weight: 600; }
+  h2 { font-family: var(--font-display); font-size: 17px; margin: 34px 0 2px; }
+</style>
+</head>
+<body>
+<div class="shot">
+
+  <div class="cap">Litmus (packaged local app, 127.0.0.1:8787) — evidence panels painted by the shipped
+  <code>result-card</code> component. Markup and inline colours below were read off the live DOM with
+  <code>getComputedStyle</code>, then re-rendered against the app’s own served stylesheet
+  (<code>styles-6FLROHE4.css</code>) and font. Not a screenshot of the app window: the in-app browser
+  surface is hidden, so <code>take_screenshot</code> fails with <code>visibilityState=hidden</code>.</div>
+
+  <h2>1. Human — Shakespeare, As You Like It II.vii (Project Gutenberg pg 1523, chars 53414–54657)</h2>
+  <div class="cap">row 6 · HUMAN_LIKELY · AI probability 0.0% · confidence 100.0% · lane: your using pool
+  (meta/llama-3.2-11b-vision-instruct, primary scale — AI ≥ 69% · human ≤ 40%) · two quotes, both strength 1.00</div>
+  <div class="ev-legend"><span class="ev-key"><i class="sw" style="background-color: rgb(154, 223, 185);"></i>human</span><span class="ev-key"><i class="sw" style="background-color: rgb(251, 244, 215);"></i>AI weak</span><span class="ev-key"><i class="sw" style="background-color: rgb(223, 190, 87);"></i>AI typical</span><span class="ev-key"><i class="sw" style="background-color: rgb(205, 160, 0);"></i>AI strong</span><span class="ev-note">hue tells you which side a phrase is evidence for; how far the plate sits from the page tells you the strength the model reported. A weak claim barely tints the background and a strong one is painted solid — scaled to the range lanes actually emit (0.30–0.95 measured over 575 quotes) and resampled so an equal step in strength is an equal step in colour</span></div>
+  <p class="ev-text"><mark class="ev-hit human" title="human evidence · strength 100.0%" style="background-color: rgb(72, 206, 155); color: rgb(10, 10, 10);">All the world’s a stage</mark><span class="ev-plain">,
+And all the men and women merely players;
+They have their exits and their entrances,
+And one man in his time plays many parts,
+His acts being seven ages. At first the infant,
+Mewling and puking in the nurse’s arms;
+Then the whining schoolboy, with his satchel
+And shining morning face, creeping like snail
+Unwillingly to school. And then the lover,
+Sighing like furnace, with a woeful ballad
+Made to his mistress’ eyebrow. Then a soldier,
+Full of strange oaths and bearded like the pard,
+Jealous in honour, sudden and quick in quarrel,
+Seeking the bubble reputation
+Even in the cannon’s mouth. And then the justice,
+In fair round belly with good capon lined,
+With eyes severe and beard of formal cut,
+Full of wise saws and modern instances;
+And so he plays his part. The sixth age shifts
+Into the lean and slippered pantaloon,
+With spectacles on nose and pouch on side,
+His youthful hose, well saved, a world too wide
+For his shrunk shank, and his big manly voice,
+Turning again toward childish treble, pipes
+And whistles in his sound. Last scene of all,
+That ends this strange eventful history,
+Is second childishness and </span><mark class="ev-hit human" title="human evidence · strength 100.0%" style="background-color: rgb(72, 206, 155); color: rgb(10, 10, 10);">mere oblivion,
+Sans teeth, sans eyes, sans taste, sans everything</mark><span class="ev-plain">.
+</span></p>
+
+  <h2>2. AI — the app’s built-in “AI-flavoured paragraph” sample (429 chars)</h2>
+  <div class="cap">row 7 · AI_GENERATED · AI probability 80.0% · confidence 90.0% · same lane as above ·
+  three AI quotes at strength 0.80 / 0.70 / 0.60 plus one human quote at 0.40</div>
+  <div class="ev-legend"><span class="ev-key"><i class="sw" style="background-color: rgb(154, 223, 185);"></i>human</span><span class="ev-key"><i class="sw" style="background-color: rgb(251, 244, 215);"></i>AI weak</span><span class="ev-key"><i class="sw" style="background-color: rgb(223, 190, 87);"></i>AI typical</span><span class="ev-key"><i class="sw" style="background-color: rgb(205, 160, 0);"></i>AI strong</span></div>
+  <p class="ev-text"><mark class="ev-hit ai" title="AI evidence · strength 80.0%" style="background-color: rgb(218, 176, 42); color: rgb(10, 10, 10);">In today’s rapidly evolving digital landscape</mark><span class="ev-plain">, organizations must embrace transformative technologies to remain competitive. Moreover, by leveraging cloud-native architectures, businesses can unlock unprecedented agility, </span><mark class="ev-hit ai" title="AI evidence · strength 70.0%" style="background-color: rgb(224, 191, 90); color: rgb(10, 10, 10);">drive measurable outcomes</mark><span class="ev-plain">, and foster </span><mark class="ev-hit ai" title="AI evidence · strength 60.0%" style="background-color: rgb(230, 205, 125); color: rgb(10, 10, 10);">a culture of continuous innovation</mark><span class="ev-plain">. </span><mark class="ev-hit human" title="human evidence · strength 40.0%" style="background-color: rgb(223, 243, 228); color: rgb(10, 10, 10);">It is not merely a matter of efficiency</mark><span class="ev-plain">; it is a strategic imperative that will shape the future of the enterprise for years to come.</span></p>
+
+  <h2>3. AI-generated counterpart of the same speech (gemini-2.5-flash, 1267 chars, own words)</h2>
+  <div class="cap">row 8 · HUMAN_LIKELY · AI probability 0.0% · confidence 100.0% · same lane — the shipped
+  detector calls freshly generated verse human, with full confidence, and paints it green</div>
+  <div class="ev-legend"><span class="ev-key"><i class="sw" style="background-color: rgb(154, 223, 185);"></i>human</span><span class="ev-key"><i class="sw" style="background-color: rgb(251, 244, 215);"></i>AI weak</span><span class="ev-key"><i class="sw" style="background-color: rgb(223, 190, 87);"></i>AI typical</span><span class="ev-key"><i class="sw" style="background-color: rgb(205, 160, 0);"></i>AI strong</span></div>
+  <p class="ev-text"><mark class="ev-hit human" title="human evidence · strength 100.0%" style="background-color: rgb(72, 206, 155); color: rgb(10, 10, 10);">This earthly sphere, a vast and public stage</mark><span class="ev-plain">,
+Where every soul performs a destined part.
+We make our entrances, then take our leave,
+And each one plays through many characters.
+
+First, helplessness, a wailing, fragile thing,
+Nursed at the breast, a tender, squalling start.
+
+Then comes the child, with satchel on his back,
+A morning face, unwillingly he treads
+The path to lessons, slow and full of sighs.
+
+The lover next, with deep, despairing sighs,
+Penning his verse to beauty's distant gaze,
+Lost in the dream of an enchanting smile.
+
+Then strides the warrior, quick to take offense,
+His mind on glory, oaths upon his tongue,
+Ready to face the cannon's roaring breath
+For fleeting fame, a hero's empty praise.
+
+The mature man then, with his sturdy frame,
+A thoughtful brow, and words of reasoned weight,
+Dispensing judgment, full of practiced truths,
+Content within his well-earned comfort now.
+
+The sixth act brings a figure, thin and frail,
+With spectacles astride his failing nose,
+His once strong voice now reedy, high, and thin,
+His youthful clothes hang loosely on his frame.
+
+The final curtain falls, a second childhood,
+</span><mark class="ev-hit human" title="human evidence · strength 100.0%" style="background-color: rgb(72, 206, 155); color: rgb(10, 10, 10);">A deep forgetting, without sight or sound</mark><span class="ev-plain">,
+Without a thought, without the world's sweet taste,
+Bare of all sense, dissolving into dust.</span></p>
+
+  <h2>4. Human vs AI-generated pastiche on the deployed default lane (z-ai/glm-5.3-flash)</h2>
+  <div class="cap">row 5 (UI) · the AI pastiche of the same speech · REVIEW_REQUIRED · AI probability 72.0% ·
+  confidence 60.0% · primary scale — AI ≥ 80% · human ≤ 55% · three AI quotes at 0.50 / 0.55 / 0.50 and one
+  human quote at 0.40. The same pastiche scored 0.85 AI_GENERATED minutes earlier on the same lane and text
+  (row 4, direct API) — the documented run-to-run jitter, with the AI band floor at 0.80 doing the deferring.
+  Only the four painted quotes and the swatches were read off the live DOM for this run, so the unpainted
+  text between them is elided as “ … ” here; panels 1–3 carry their full paragraph.</div>
+  <div class="ev-legend"><span class="ev-key"><i class="sw" style="background-color: rgb(154, 223, 185);"></i>human</span><span class="ev-key"><i class="sw" style="background-color: rgb(251, 244, 215);"></i>AI weak</span><span class="ev-key"><i class="sw" style="background-color: rgb(223, 190, 87);"></i>AI typical</span><span class="ev-key"><i class="sw" style="background-color: rgb(205, 160, 0);"></i>AI strong</span></div>
+  <p class="ev-text"><mark class="ev-hit ai" title="AI evidence · strength 50.0%" style="background-color: rgb(236, 218, 155); color: rgb(10, 10, 10);">Is not this fleeting world a boundless stage,</mark><span class="ev-plain"> … </span><mark class="ev-hit ai" title="AI evidence · strength 55.0%" style="background-color: rgb(233, 211, 141); color: rgb(10, 10, 10);">Ah, but time doth fly!</mark><span class="ev-plain"> … </span><mark class="ev-hit human" title="human evidence · strength 40.0%" style="background-color: rgb(223, 243, 228); color: rgb(10, 10, 10);">Sans teeth, sans eyes, sans taste, sans everything.</mark><span class="ev-plain"> … </span><mark class="ev-hit ai" title="AI evidence · strength 50.0%" style="background-color: rgb(236, 218, 155); color: rgb(10, 10, 10);">A final exit from life's weary stage.</mark></p>
+
+</div>
+</body>
+</html>

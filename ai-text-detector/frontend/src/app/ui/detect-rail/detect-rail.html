@@ -1,0 +1,73 @@
+<div class="rail">
+  <!-- Everything that changes what is in the field, kept in the field's column so the two can be
+       read together: a sample is chosen here and lands there. -->
+  <section class="panel rail-box">
+    <header class="panel-head">
+      <h2>
+        <svg class="ico" viewBox="0 0 24 24" aria-hidden="true">
+          <path d="M4 6h16M4 12h10M4 18h7" />
+        </svg>
+        Starting points
+      </h2>
+    </header>
+
+    <div class="rail-samples">
+      @for (s of samples; track s.id) {
+        <button type="button" class="ghost" (click)="load(s.text)">{{ s.label }}</button>
+      }
+    </div>
+
+    <div class="rail-file-row">
+      <label class="ghost" [attr.aria-busy]="extracting()">
+        <input class="file-input" type="file" accept=".txt,.md,.docx,.pdf"
+               (change)="pickFile($event)" />
+        <svg class="ico" viewBox="0 0 24 24" aria-hidden="true">
+          <path d="M12 3v11m0 0 4-4m-4 4-4-4M4 17v3h16v-3" />
+        </svg>
+        {{ extracting() ? 'Reading…' : 'Load document' }}
+      </label>
+      <button type="button" class="ghost" (click)="clear()">Clear</button>
+    </div>
+
+    @if (docStatus(); as s) {
+      <p class="doc-status" [class.bad]="s.bad" aria-live="polite">{{ s.text }}</p>
+    }
+  </section>
+
+  @if (pickedModel(); as p) {
+    <!-- Say out loud that this run is NOT the deployed lane, and say it on the button's own column,
+         because it is the button's premise. A ranked model answers outside its calibration only if
+         it has no stored band, and the verdict row records the model that decided, so a mislabel is
+         traceable. -->
+    <div class="pick-banner">
+      <span class="pick-dot" aria-hidden="true"></span>
+      Scoring with <b>{{ p }}</b> — chosen on the Ranking tab. Its endpoint, calibrated band
+      and key are applied by the backend.
+      @if (pickedIsTieBreak()) {
+        <span class="pick-note">It is also the deployed tie-break model, so the second opinion
+          is off for this run — a model cannot corroborate itself.</span>
+      }
+      <button class="linkbtn" type="button" (click)="clearPicked.emit()">use the deployed lane</button>
+    </div>
+  }
+
+  <div class="run-row">
+    <button class="primary" type="button" [disabled]="pending()" (click)="run.emit()">
+      <svg class="ico" viewBox="0 0 24 24" aria-hidden="true">
+        <circle cx="12" cy="12" r="8.5" /><path d="M12 7.5V12l3 2" />
+      </svg>
+      {{ pending() ? 'Detecting… ' + elapsed() + 's' : 'Detect' }}
+    </button>
+    @if (pending()) {
+      <span class="inflight">
+        <span class="pulse" aria-hidden="true"></span>elapsed {{ elapsed() }}s · {{ inflightHint() }}
+      </span>
+    }
+  </div>
+
+  @if (result(); as r) {
+    <!-- The number under the press that produced it. The card below answers a different question —
+         which sentences carried the verdict — and is full width for that reason. -->
+    <app-score-readout [result]="r" [elapsedSeconds]="elapsed()" />
+  }
+</div>

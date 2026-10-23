@@ -1,0 +1,80 @@
+<section class="readout" [class]="'tone-' + result().classification.toLowerCase()">
+  <header class="readout-head">
+    <span class="verdict-badge" aria-hidden="true">
+      @switch (icon()) {
+        @case ('alert') {
+          <svg viewBox="0 0 24 24"><path d="M12 4.5l8.5 15H3.5l8.5-15z" /><path d="M12 10.2v4.2M12 16.8v.2" /></svg>
+        }
+        @case ('check') {
+          <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.5" /><path d="M8.2 12.2l2.6 2.6 5-5.6" /></svg>
+        }
+        @case ('question') {
+          <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.5" /><path d="M9.6 9.2a2.5 2.5 0 114 2.4c-.9.6-1.6 1-1.6 2.1M12 16.8v.2" /></svg>
+        }
+        @default {
+          <svg viewBox="0 0 24 24"><path d="M8.5 3v5M15.5 3v5M6.5 8h11v3a5.5 5.5 0 01-11 0V8zM12 16.5v4.5" /></svg>
+        }
+      }
+    </span>
+    <div class="verdict-block">
+      <span class="verdict">{{ result().classification }}</span>
+      <span class="method">
+        {{ method() }}@if (secondaryDisabled()) { · single lane
+        }@if (laneSource()) { · {{ laneSource() }} }
+      </span>
+    </div>
+    @if (elapsedSeconds()) {
+      <span class="elapsed">{{ elapsedSeconds() }}s</span>
+    }
+  </header>
+
+  @if (switched(); as sw) {
+    <!-- The number below belongs to sw.to, not to the model this page would otherwise name. Above
+         the score rather than inside a fold: a verdict attributed to the wrong model is worse than
+         no verdict at all. -->
+    <p class="switch-note" role="status">
+      <strong>Auto-switched.</strong>
+      {{ sw.from || 'The first model' }} returned no usable verdict, so this result came from
+      <code>{{ sw.to }}</code>, the next model in your pool.
+      @for (a of sw.attempts; track a.to) {
+        <span class="switch-attempt">{{ attemptLabel(a) }}</span>
+      }
+    </p>
+  }
+
+  @if (scored()) {
+    <!-- Three magnitudes, three rings, one row. Everything the old ruler drew is said here in words
+         instead: which scale the number was measured on is the note under the row, and which side of
+         its cut it fell on is what the ring's own colour says. The headline keeps the full dial and
+         the two supporting measurements take the compact one, so the row says which of the three is
+         the answer and which are the qualifiers. -->
+    <div class="readout-rings">
+      <app-circular-metric class="ring-metric ring-lead" unit="%" [value]="probability()"
+                           [displayText]="figure()" [tone]="tone()" [label]="scaleLabel()" />
+      <app-circular-metric class="ring-metric" [compact]="true" unit="%" [value]="confidence()"
+                           tone="neutral" label="Confidence" />
+      @if (!secondaryDisabled() && laneGap() !== null) {
+        <app-circular-metric class="ring-metric" [compact]="true" unit="%" [value]="laneGap()"
+                             tone="amber" label="Gap between lanes" />
+      }
+    </div>
+
+    @if (scaleNote()) {
+      <p class="scale-note">{{ scaleNote() }}</p>
+    }
+  } @else {
+    <!-- No score is not zero: a ring filled to 0% is a confident HUMAN answer, and this run never
+         reached a model at all. The slot stays, so the rail does not jump, and the absence is what
+         is drawn. -->
+    <div class="ring-metric no-score">
+      <span class="ns-ring" aria-hidden="true"></span>
+      <span class="ns-text">not scored</span>
+    </div>
+  }
+
+  <app-lane-list [result]="result()" />
+
+  @if (reviewNote()) {
+    <p class="readout-note">{{ reviewNote() }}</p>
+  }
+</section>

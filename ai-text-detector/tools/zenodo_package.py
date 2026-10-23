@@ -42,6 +42,7 @@ ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT / "tools"))
 
 DB = ROOT / "backend" / "data" / "detector.sqlite3"
+BENCH = ROOT / "benchmark"
 DEPOSIT = ROOT / "research-zenodo" / "deposit"
 REPORT_DIR = ROOT / "research-zenodo"
 DEPOSIT_DOC = REPORT_DIR / "zenodo-deposit.md"
@@ -155,8 +156,16 @@ def build_per_text(conn: sqlite3.Connection) -> tuple[Path, int]:
 
 
 def build_runs_manifest(conn: sqlite3.Connection) -> tuple[Path, int]:
+    # No date column, on purpose. `benchmark_runs.imported_at` is the only timestamp the table holds,
+    # and seed.py's upsert rewrites it to datetime('now') on every boot that re-reads the captures —
+    # all 144 rows currently carry one shared second. Exporting it as a capture date would publish a
+    # number that is neither a capture time nor stable between two exports of the same data. The
+    # captures themselves record none — checked 2026-10-20 across every results-*.jsonl: the only
+    # capture-shaped file carrying a `ts` key is results-appbench.jsonl, the app-path latency bench,
+    # which is not one of the 144 corpus runs in this manifest. So the dated claims stay where they
+    # are actually evidenced — the round windows in the report.
     header = ["run_id", "run_tag", "model", "provider", "corpus", "n_rows", "temperature", "top_p",
-              "max_tokens", "concurrency", "endpoint", "capture_file", "captured_at"]
+              "max_tokens", "concurrency", "endpoint", "capture_file"]
     out = []
     for r in conn.execute("SELECT * FROM benchmark_runs ORDER BY id"):
         try:
@@ -166,7 +175,7 @@ def build_runs_manifest(conn: sqlite3.Connection) -> tuple[Path, int]:
         out.append([r["id"], r["tag"], r["model"], r["provider"], r["corpus"], r["n_rows"],
                     params.get("temperature"), params.get("top_p"), params.get("max_tokens"),
                     params.get("concurrency"), _clean_host(params.get("base_url")),
-                    r["source_file"] or "", r["imported_at"]])
+                    r["source_file"] or ""])
     p = DEPOSIT / "runs-manifest.csv"
     write_csv(p, header, out,
               "# Every capture with the parameters of the command that produced it (report §2, §8).")
@@ -269,6 +278,14 @@ parameters that produced it (`temperature`, `top_p`, `max_tokens`, `concurrency`
 report claim about a token cap, a truncation artifact, or a provider's quota regime can be traced to a
 row here and then to the capture file named in `capture_file`.
 
+**This file has no date column, and that is a fact about the data, not an omission.** None of the 144
+capture files named in `capture_file` carries a per-request timestamp, and the only timestamp the
+measurement store holds is when a row was *imported* into it — which the loader rewrites on every
+reload, so all 144 runs share one second, and that second moves each time the archive is rebuilt.
+Printing it would put a capture date in a citable dataset that is neither a capture date nor stable.
+The dated claims live where they are actually evidenced: the round windows named in the report
+(§1–§3 and Part II).
+
 ## Reproducing a claim
 
 1. Pick the model's band from `model-ranking.csv`.
@@ -294,6 +311,26 @@ def scan_written() -> list[str]:
 def read_csv(path: Path) -> list[dict]:
     with path.open(encoding="utf-8") as fh:
         return list(csv.DictReader([l for l in fh if not l.startswith("#")]))
+
+
+STAMP_RE = re.compile(r"^\d{4}-\d{2}-\d{2}[ T]\d{2}:\d{2}(:\d{2})?$|^\d{4}-\d{2}-\d{2}$")
+
+
+def constant_stamp_columns(rows: list[dict]) -> list[str]:
+    """Name columns that look like a timestamp and hold one value across every row.
+
+    This is the shape of the bug that made `imported_at` unexportable as `captured_at`: a loader
+    rewrites it for the whole table on each reload, so 144 runs that spanned twelve days arrive at a
+    reader as one shared second. A date column is only honest if its values actually differ.
+    """
+    if len(rows) < 2:
+        return []
+    bad = []
+    for col in rows[0]:
+        vals = {r[col] for r in rows}
+        if len(vals) == 1 and STAMP_RE.match(next(iter(vals)) or ""):
+            bad.append(f"{col} = {next(iter(vals))} on all {len(rows)} rows")
+    return bad
 
 
 def reproduce_the_ruler(ranking: list[dict], per_text: list[dict]) -> tuple[int, list[str]]:
@@ -372,6 +409,24 @@ def verify(payload: dict) -> list[tuple[bool, str]]:
                 f"per-text-scores.csv has {len(per_text)} data rows, benchmark_results has {n_results}"))
     out.append((len(runs_rows) == n_runs,
                 f"runs-manifest.csv has {len(runs_rows)} data rows, benchmark_runs has {n_runs}"))
+    stamps = constant_stamp_columns(runs_rows)
+    out.append((not stamps, "runs-manifest.csv has no timestamp column shared by all "
+                f"{len(runs_rows)} runs" + ("" if not stamps else f" — {stamps}")))
+    # The README tells a reader that every claim traces to "the capture file named in capture_file",
+    # so prove the pointer resolves: the file is on disk and holds exactly the rows it claims.
+    gone, short = [], []
+    for row in runs_rows:
+        f = BENCH / row["capture_file"]
+        if not f.exists():
+            gone.append(row["capture_file"])
+            continue
+        n = sum(1 for l in f.read_text(encoding="utf-8", errors="replace").splitlines() if l.strip())
+        if n != int(row["n_rows"]):
+            short.append(f"{row['capture_file']} says {row['n_rows']}, holds {n}")
+    out.append((not gone and not short,
+                f"every capture_file resolves on disk with its stated row count "
+                f"({len(runs_rows) - len(gone) - len(short)}/{len(runs_rows)})"
+                + ("" if not (gone or short) else f" — missing {gone[:2]}, mismatched {short[:2]}")))
 
     bad = scan_written()
     out.append((not bad, "no secret-, loopback- or local-path-shaped string in any written file"

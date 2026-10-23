@@ -243,6 +243,26 @@ def main() -> int:
             bad(f"/fonts/{name.decode()} matches what fetch_fonts.py wrote",
                 f"served {len(body):,} B {sha(body)}" + ("" if want_src.exists() else ", source missing"))
 
+    # 5b. And nothing MORE than that. Cormorant and Spectral were staged before the type pass moved to
+    #     Literata, and the build's font step only copies — it never removed what the source stopped
+    #     carrying — so a public bundle can serve faces no stylesheet mentions. Dead bytes in an
+    #     artifact that is cited are also a claim about which type ships, and that claim is wrong, so
+    #     the reference set read above is the whitelist: a staged .woff2 nobody references, or an OFL
+    #     whose family left with it, is a failure here.
+    ref = {n.decode() for n in names}
+    staged = sorted(p for p in (gen.OUT_DIR / "fonts").glob("*") if p.is_file())
+    if not staged:
+        bad("the staged fonts directory is not empty", f"{gen.OUT_DIR / 'fonts'} has no files — the page "
+            "would serve its serif from nowhere")
+    for p in staged:
+        if p.suffix == ".woff2":
+            if p.name not in ref:
+                bad(f"fonts/{p.name} is used", "no url(/fonts/…) references it — remove it from the build")
+        elif p.suffix == ".txt":
+            family = {p.name[len("OFL-"):-len(".txt")]}
+            if not family & {q.name.split("-")[0] for q in staged if q.name in ref}:
+                bad(f"fonts/{p.name} is used", f"no staged face belongs to {sorted(family)[0]}")
+
     # 6. Two copies of one report is one drift risk, measured here rather than assumed.
     pairs = [(gen.FRONT_PUBLIC / "research" / "report.pdf", ROOT / "research-zenodo" / "report.pdf"),
              (gen.FRONT_PUBLIC / "research" / "report.html", ROOT / "research-zenodo" / "report.html")]

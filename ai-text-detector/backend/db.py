@@ -7,6 +7,7 @@ next to the database, never in the repo and never in a response body.
 from __future__ import annotations
 
 import os
+import re
 import sqlite3
 import threading
 from contextlib import contextmanager
@@ -19,7 +20,7 @@ DATA_DIR = BACKEND_DIR / "data"
 DB_PATH = Path(os.environ.get("DETECTOR_DB", DATA_DIR / "detector.sqlite3"))
 SECRET_PATH = Path(os.environ.get("DETECTOR_SECRET", DATA_DIR / "backend-secret.key"))
 
-SCHEMA_VERSION = 4
+SCHEMA_VERSION = 7
 _lock = threading.Lock()
 
 SCHEMA = """
@@ -32,6 +33,17 @@ CREATE TABLE IF NOT EXISTS settings (
 CREATE TABLE IF NOT EXISTS users (
     id            INTEGER PRIMARY KEY,
     username      TEXT NOT NULL UNIQUE,
+    -- v5: an account is addressed by e-mail, like every other signup. Both columns are
+    -- nullable/defaults because _migrate() has to add them to a table that already has rows
+    -- in them, and SQLite refuses ADD COLUMN with a UNIQUE constraint. The uniqueness index
+    -- is NOT declared here for the same reason as idx_detections_user below: on a deployed
+    -- database `users` already exists without an `email` column, so a SCHEMA-time index on it
+    -- aborts executescript before _migrate can add the column -- the app would not boot.
+    -- Creating it in _migrate gives a fresh and an upgraded database the same rule, and NULLs
+    -- are distinct to a SQLite UNIQUE index, so several legacy rows with no e-mail are allowed;
+    -- every account created through /auth/register has one.
+    email         TEXT,
+    display_name  TEXT NOT NULL DEFAULT '',
     password_hash TEXT NOT NULL,
     role          TEXT NOT NULL DEFAULT 'user' CHECK (role IN ('admin','user')),
     theme         TEXT NOT NULL DEFAULT 'dark' CHECK (theme IN ('dark','light')),
@@ -43,6 +55,10 @@ CREATE TABLE IF NOT EXISTS user_api_keys (
     id          INTEGER PRIMARY KEY,
     user_id     INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
     provider_id INTEGER NOT NULL REFERENCES providers(id) ON DELETE CASCADE,
+    -- The gateway this owner's box actually lives at, for a self-hosted provider only. The
+    -- provider row holds the deployment's default endpoint; a shared row cannot be the answer
+    -- when two owners of the same router run it on different hosts. NULL = use the provider's.
+    base_url    TEXT,
     label       TEXT NOT NULL DEFAULT 'my key',
     key_cipher  BLOB NOT NULL,
     key_hint    TEXT NOT NULL DEFAULT '',
@@ -60,6 +76,7 @@ CREATE TABLE IF NOT EXISTS providers (
     auth_header TEXT NOT NULL DEFAULT 'Authorization',
     auth_prefix TEXT NOT NULL DEFAULT 'Bearer ',
     free_tier   INTEGER NOT NULL DEFAULT 1,
+    self_hosted INTEGER NOT NULL DEFAULT 0,
     enabled     INTEGER NOT NULL DEFAULT 1,
     notes       TEXT NOT NULL DEFAULT '',
     created_at  TEXT NOT NULL DEFAULT (datetime('now')),
@@ -110,6 +127,7 @@ CREATE TABLE IF NOT EXISTS detections (
     document_id       TEXT,
     text_fingerprint  TEXT,
     text_length       INTEGER,
+    text              TEXT,
     classification    TEXT,
     ai_probability    REAL,
     confidence        REAL,
@@ -300,10 +318,45 @@ def _migrate(conn: sqlite3.Connection) -> None:
     dcols = {r["name"] for r in conn.execute("PRAGMA table_info(detections)")}
     if "user_id" not in dcols:
         conn.execute("ALTER TABLE detections ADD COLUMN user_id INTEGER REFERENCES users(id) ON DELETE SET NULL")
+    # v7: the text a run scored. History used to keep a fingerprint and a length, which made a
+    # saved verdict impossible to re-read: the sheet could show the number but never the writing
+    # the number was about, so the model's own quotes had nowhere to be painted back onto. Rows
+    # saved before this stay NULL, and the sheet says "this run predates text storage" rather
+    # than inventing an empty one.
+    if "text" not in dcols:
+        conn.execute("ALTER TABLE detections ADD COLUMN text TEXT")
     # The index lives here, not in SCHEMA: on a pre-account database the detections table
     # exists without user_id, so a SCHEMA-time index on that column would abort executescript
     # before _migrate ever added it. Creating it after the ALTER covers both fresh and upgraded DBs.
     conn.execute("CREATE INDEX IF NOT EXISTS idx_detections_user ON detections(user_id)")
+    # v5: accounts are addressed by e-mail. ALTER can carry a default but not a UNIQUE, so the
+    # constraint is the index -- and it has to be created *after* the column for the same reason
+    # the detections index is: on an older database SCHEMA-time would abort before _migrate ran.
+    # Existing accounts keep their username as a working sign-in identifier (auth resolves either),
+    # so nobody is locked out by the upgrade; email stays NULL until they are edited or recreated.
+    ucols = {r["name"] for r in conn.execute("PRAGMA table_info(users)")}
+    if "email" not in ucols:
+        conn.execute("ALTER TABLE users ADD COLUMN email TEXT")
+    if "display_name" not in ucols:
+        conn.execute("ALTER TABLE users ADD COLUMN display_name TEXT NOT NULL DEFAULT ''")
+    conn.execute("CREATE UNIQUE INDEX IF NOT EXISTS idx_users_email ON users(email)")
+    # v6: a key for a self-hosted gateway carries the address of the owner's own box. Both halves
+    # are NULL-by-default additions, so an existing row keeps behaving exactly as before: no
+    # endpoint on a key means "the provider's", and a provider nobody flagged means "common",
+    # which is the guard a caller-supplied endpoint used to be refused under.
+    if "base_url" not in {r["name"] for r in conn.execute("PRAGMA table_info(user_api_keys)")}:
+        conn.execute("ALTER TABLE user_api_keys ADD COLUMN base_url TEXT")
+    pcols = {r["name"] for r in conn.execute("PRAGMA table_info(providers)")}
+    if "self_hosted" not in pcols:
+        conn.execute("ALTER TABLE providers ADD COLUMN self_hosted INTEGER NOT NULL DEFAULT 0")
+        # One-shot, while the column is brand new and every value is still the default: an existing
+        # database predates the flag, and its local gateway row is the case the feature exists for.
+        # Keyed on the loopback address rather than on the provider name, because "the endpoint is
+        # a box on this machine" is what self-hosted means -- an OmniRoute installed under another
+        # name gets it too, and a provider the admin flagged by hand is not overwritten, since
+        # seed.py leaves this column out of its boot-time rewrite.
+        conn.execute("""UPDATE providers SET self_hosted = 1
+                        WHERE base_url LIKE 'http://127.0.0.1%' OR base_url LIKE 'http://localhost%'""")
     conn.execute("UPDATE settings SET value = ? WHERE key = 'schema_version'", (str(SCHEMA_VERSION),))
 
 
@@ -342,10 +395,11 @@ def check_password(plain: str, hashed: str) -> bool:
         return False
 
 
-def create_user(conn: sqlite3.Connection, username: str, password: str, role: str = "user") -> int:
+def create_user(conn: sqlite3.Connection, username: str, password: str, role: str = "user",
+                email: str | None = None, display_name: str = "") -> int:
     cur = conn.execute(
-        "INSERT INTO users (username, password_hash, role) VALUES (?,?,?)",
-        (username, hash_password(password), role),
+        "INSERT INTO users (username, password_hash, role, email, display_name) VALUES (?,?,?,?,?)",
+        (username, hash_password(password), role, email, display_name),
     )
     return int(cur.lastrowid)
 
@@ -354,8 +408,50 @@ def get_user_by_name(conn: sqlite3.Connection, username: str) -> sqlite3.Row | N
     return conn.execute("SELECT * FROM users WHERE username = ?", (username,)).fetchone()
 
 
+def get_user_by_email(conn: sqlite3.Connection, email: str) -> sqlite3.Row | None:
+    return conn.execute("SELECT * FROM users WHERE email = ?", (email.lower().strip(),)).fetchone()
+
+
+def get_user_by_identifier(conn: sqlite3.Connection, identifier: str) -> sqlite3.Row | None:
+    """Resolve a sign-in identifier: e-mail first, then the legacy username.
+
+    The username column stays writable and stays a way in on purpose. Every account created
+    before this change has only one, and so does every deploy/verify tool that logs in as
+    `admin` -- dropping that path would lock the operator out of a deployed instance with a
+    database the UI can no longer read.
+    """
+    ident = (identifier or "").strip()
+    if not ident:
+        return None
+    row = get_user_by_email(conn, ident)
+    return row if row is not None else conn.execute(
+        "SELECT * FROM users WHERE username = ?", (ident,)).fetchone()
+
+
+def derive_username(conn: sqlite3.Connection, email: str) -> str:
+    """A username from an e-mail's local part, so the legacy column and any code that reads it
+    (the admin user list, the history owner, `admin` in the deploy tools) still has something
+    meaningful. The charset is the historical username rule -- [A-Za-z0-9_.-], 3-32 chars -- so a
+    derived handle is always a value that rule would have accepted; anything else is dropped, and
+    a taken stem gains a numeric suffix."""
+    stem = re.sub(r"[^A-Za-z0-9_.-]", "", (email or "").split("@")[0])[:24] or "user"
+    if len(stem) < 3:
+        stem = ("user" + stem)[:32]
+    candidate, n = stem, 1
+    while get_user_by_name(conn, candidate) is not None:
+        n += 1
+        candidate = f"{stem}{n}"
+    return candidate
+
+
 def get_user_by_id(conn: sqlite3.Connection, user_id: int) -> sqlite3.Row | None:
     return conn.execute("SELECT * FROM users WHERE id = ?", (user_id,)).fetchone()
+
+
+def owner_user(conn: sqlite3.Connection) -> sqlite3.Row | None:
+    """The account a single-user local install signs in as: the admin row, oldest first."""
+    return conn.execute(
+        "SELECT * FROM users WHERE role = 'admin' ORDER BY id LIMIT 1").fetchone()
 
 
 def seed_admin(conn: sqlite3.Connection) -> str | None:
@@ -367,8 +463,10 @@ def seed_admin(conn: sqlite3.Connection) -> str | None:
         return None
     username = os.environ.get("ADMIN_USERNAME", "admin")
     password = os.environ.get("ADMIN_PASSWORD", "admin")
+    email = (os.environ.get("ADMIN_EMAIL") or "").strip().lower() or None
     if get_user_by_name(conn, username) is None:
-        create_user(conn, username, password, "admin")
+        create_user(conn, username, password, "admin", email=email,
+                    display_name=os.environ.get("ADMIN_NAME", "") or username)
     else:
         conn.execute("UPDATE users SET role = 'admin' WHERE username = ?", (username,))
     return username
@@ -377,19 +475,26 @@ def seed_admin(conn: sqlite3.Connection) -> str | None:
 # ------------------------------------------------------------------- user-owned keys (BYOK)
 
 def add_user_key(conn: sqlite3.Connection, user_id: int, provider_id: int,
-                 plain: str, label: str = "my key") -> int:
+                 plain: str, label: str = "my key", base_url: str | None = None) -> int:
+    """Store one of the caller's own credentials. `base_url` is the endpoint the *owner* named,
+    and only reaches this function after the route has checked that the provider is self-hosted
+    and the URL is diallable -- a NULL keeps the provider row's endpoint, which is the common case
+    (NVIDIA, OpenRouter and Gemini each have exactly one)."""
     cipher, hint = encrypt_key(plain)
+    label = label.strip()[:80] or "my key"
+    endpoint = (base_url or "").strip() or None
     cur = conn.execute(
-        """INSERT INTO user_api_keys (user_id, provider_id, label, key_cipher, key_hint)
-           VALUES (?,?,?,?,?)
+        """INSERT INTO user_api_keys (user_id, provider_id, label, base_url, key_cipher, key_hint)
+           VALUES (?,?,?,?,?,?)
            ON CONFLICT(user_id, provider_id, label) DO UPDATE SET
              key_cipher = excluded.key_cipher, key_hint = excluded.key_hint,
+             base_url = excluded.base_url,
              verified = 0, last_verified_at = NULL, created_at = datetime('now')""",
-        (user_id, provider_id, label.strip()[:80] or "my key", cipher, hint),
+        (user_id, provider_id, label, endpoint, cipher, hint),
     )
     conn.commit()
     row = conn.execute("SELECT id FROM user_api_keys WHERE user_id = ? AND provider_id = ? AND label = ?",
-                       (user_id, provider_id, label.strip()[:80] or "my key")).fetchone()
+                       (user_id, provider_id, label)).fetchone()
     return int(row["id"]) if row else int(cur.lastrowid)
 
 
@@ -399,6 +504,7 @@ def user_key_public(row: sqlite3.Row) -> dict:
         "id": row["id"],
         "provider_id": row["provider_id"],
         "label": row["label"],
+        "base_url": row["base_url"],
         "key_hint": row["key_hint"],
         "verified": bool(row["verified"]),
         "last_verified_at": row["last_verified_at"],
@@ -436,6 +542,53 @@ def set_user_key_verified(conn: sqlite3.Connection, key_id: int, user_id: int, v
     conn.commit()
 
 
+def user_key_endpoints(conn: sqlite3.Connection, user_id: int) -> list[str]:
+    """Every endpoint this caller's own keys name. A detection may only be dialled at a host the
+    deployment lists or one its caller has saved a credential for, and the second half is answered
+    from here -- see `app.key_hosts`."""
+    return [r["base_url"] for r in conn.execute(
+        """SELECT DISTINCT base_url FROM user_api_keys
+           WHERE user_id = ? AND base_url IS NOT NULL AND base_url <> ''""",
+        (user_id,),
+    )]
+
+
+def user_key_row_for_provider(conn: sqlite3.Connection, user_id: int,
+                              provider_id: int) -> sqlite3.Row | None:
+    """The same pick user_key_for_provider makes, but the whole row: a key that names its own
+    endpoint has to be dialled there, so the caller needs more than the credential."""
+    return conn.execute(
+        """SELECT * FROM user_api_keys
+           WHERE user_id = ? AND provider_id = ?
+           ORDER BY verified DESC, id DESC LIMIT 1""",
+        (user_id, provider_id),
+    ).fetchone()
+
+
+def user_key_for_endpoint(conn: sqlite3.Connection, user_id: int, base_url: str) -> str | None:
+    """The caller's own key that was saved FOR this exact endpoint.
+
+    `user_key_for_provider` finds a key by provider, which is right while a provider and its
+    endpoint are the same thing. They are not, once a self-hosted gateway carries per-key
+    addresses: two owners of the omniroute row point at two boxes, and a lane aimed at
+    gateway.example.net must not travel with the key belonging to a neighbour's 127.0.0.1.
+    """
+    if user_id is None or not base_url:
+        return None
+    row = conn.execute(
+        """SELECT key_cipher FROM user_api_keys
+           WHERE user_id = ? AND base_url = ?
+           ORDER BY verified DESC, id DESC LIMIT 1""",
+        (user_id, base_url.strip().rstrip("/") or None),
+    ).fetchone()
+    if not row:
+        return None
+    try:
+        return decrypt_key(row["key_cipher"])
+    except ValueError:
+        return None
+
+
 def user_key_for_provider(conn: sqlite3.Connection, user_id: int, provider_id: int) -> str | None:
     """The caller's own decrypted key for a provider, preferring a verified one.
 
@@ -444,12 +597,7 @@ def user_key_for_provider(conn: sqlite3.Connection, user_id: int, provider_id: i
     one the user already checked. Returns None when the user has no key for that provider,
     and the caller falls back to the admin's stored credential.
     """
-    row = conn.execute(
-        """SELECT key_cipher FROM user_api_keys
-           WHERE user_id = ? AND provider_id = ?
-           ORDER BY verified DESC, id DESC LIMIT 1""",
-        (user_id, provider_id),
-    ).fetchone()
+    row = user_key_row_for_provider(conn, user_id, provider_id)
     if not row:
         return None
     try:

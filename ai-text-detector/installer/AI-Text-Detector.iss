@@ -1,5 +1,5 @@
 ; ---------------------------------------------------------------------------
-; AI Text Detector — Windows installer (Inno Setup)
+; Litmus — Windows installer (Inno Setup)
 ;
 ; NOTE ON BUILDING THIS FILE:
 ;   Inno Setup 6 is installed here, but NOT where a Program Files sweep would look:
@@ -35,9 +35,15 @@
 ;   key at runtime through the BYOK screen, exactly like the hosted page.
 ; ---------------------------------------------------------------------------
 
-#define MyAppName      "AI Text Detector"
+; The product is Litmus; the filenames are not. MyAppExeName, MySetupBase and the data directory
+; below keep the original "AI-Text-Detector" / "AITextDetector" spellings on purpose: renaming the
+; binary would orphan every existing install's Start-Menu entry and uninstall key, and renaming
+; %LOCALAPPDATA%\AITextDetector would leave a user's detection history and Fernet key behind in the
+; old folder with nothing pointing at it. AppId is the GUID that ties an upgrade to an install, so
+; it must never change either — a new GUID side-installs Litmus next to the old app.
+#define MyAppName      "Litmus"
 #define MyAppVersion   "1.0.0"
-#define MyAppPublisher "AITextDetector"
+#define MyAppPublisher "Litmus"
 #define MyAppExeName   "AI-Text-Detector.exe"
 ; Filename base — deliberately not {#MyAppName}, which contains a space and would emit
 ; "AI Text Detector-Setup-1.0.0.exe".
@@ -68,6 +74,11 @@ PrivilegesRequiredOverridesAllowed=dialog
 Compression=lzma2/max
 SolidCompression=yes
 WizardStyle=modern
+; The setup wizard and the compiled installer file take the same tile the favicon and the header
+; mark are drawn from (tools/make_icon.py writes it; --check fails if the three ever disagree).
+; Without this the installer is a generic window in Downloads, which is the first thing a user
+; sees of the product.
+SetupIconFile=installer\app-icon.ico
 ; "x64" is accepted but deprecated and ISCC warns on every compile, substituting x64os.
 ; x64compatible is what the 43 MB PyInstaller onefile actually needs (it runs on ARM64 too).
 ArchitecturesInstallIn64BitMode=x64compatible

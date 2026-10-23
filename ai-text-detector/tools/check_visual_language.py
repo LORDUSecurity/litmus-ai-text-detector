@@ -14,9 +14,11 @@ Two separate reasons this exists.
 2. The design brief is a set of measurable claims — sharp corners with the top-right and bottom-right
    cut, absolute black / absolute white, no glass, blue only for interaction. A claim that lives in a
    commit message rots the moment someone edits a rule. Here it is a check: radius tokens stay 0,
-   the only round thing allowed is a circle (50%), no blur/backdrop-filter/drop-shadow anywhere, the
-   chamfer must be both declared and actually applied, and both theme blocks must set their ground to
-   #000000 / #ffffff.
+   the only round thing allowed is a circle (50%), no blur/backdrop-filter/drop-shadow anywhere, no
+   `background:` shorthand (it would reset the background layers the cut corners are painted with),
+   the chamfer must be both declared and actually applied and its diagonal must be the same colour as
+   the frame it carries round the corner, and both theme blocks must set their ground to #000000 /
+   #ffffff.
 
     python tools/check_visual_language.py            # app stylesheet, component styles, page CSS
     python tools/check_visual_language.py --verbose  # show what each surface contributes
@@ -38,7 +40,24 @@ PAGE_TOOL = ROOT / "tools" / "public_ranking_page.py"
 # token check below is what makes that "while" a test rather than a hope.
 RADIUS_PART = re.compile(r"^(?:0(?:px|%)?|50%|var\(--[a-z0-9-]+\))$")
 RADIUS_DECL = re.compile(r"border-radius:\s*([^;}!]+)")
+# `background:` but never `background-color:` / `-image:` / `-size:` … — the negative lookbehind on a
+# leading hyphen or word character is what tells the shorthand from the longhands the language uses.
+BACKGROUND_SHORTHAND = re.compile(r"(?<![-\w])background\s*:")
 GLASS = ("backdrop-filter", "blur(", "drop-shadow(", "--glass-sheen:", "--glass-blur:")
+
+
+# A tone word names a *state* before it names a section: `warn`, `good`, `bad`, `free`, `lane`,
+# `neutral` are the classes the tickets wear (`chip warn`, `chip lane`, `tag good`), and they are also
+# the first word anyone reaches for when labelling a callout, a compartment or a row.
+STATE_WORDS = {"warn", "good", "bad", "free", "lane", "neutral"}
+BARE_CLASS = re.compile(r"^\.[a-z][a-z0-9-]*$")
+# The properties that decide how big a box is. Colour is deliberately absent: a bare tone word that
+# only tints is the state doing its job, and the ticket colours live on qualified selectors anyway.
+BOX_PROPS = ("padding", "padding-top", "padding-bottom", "padding-left", "padding-right",
+             "margin", "margin-top", "margin-bottom", "margin-left", "margin-right",
+             "border", "border-top", "border-bottom",
+             "width", "min-width", "max-width", "height", "min-height", "max-height",
+             "font-size", "line-height")
 
 
 def radius_is_sharp(value: str) -> bool:
@@ -84,6 +103,66 @@ def decls(body: str) -> dict[str, str]:
     return out
 
 
+def is_zero(value: str) -> bool:
+    return value.split("!")[0].strip() in {"0", "0px", "0%"}
+
+
+def matches_class(sel: str, name: str) -> bool:
+    """Whether a selector can hit an element carrying `name`.
+
+    `.chip` and `:where(.chip, .tag)` can; `.lane:not(.chip)` cannot. Reading a bare mention as an
+    application is how the compartment rule written specifically to *avoid* the ticket was blamed for
+    giving it padding — a guard that fires on the fix is worse than no guard, because the next person
+    deletes the guard.
+    """
+    s = re.sub(r":not\([^()]*\)", "", sel)
+    return bool(re.search(rf"\.{name}(?![\w-])", s))
+
+
+# A `border` shorthand is width + style + colour and the colour is the only part the chamfer has to
+# agree with, so the two grammar tokens are stripped before comparing. `color-mix(in srgb, …)` splits
+# across spaces and goes back together as one string, which is why this works on a plain split.
+BORDER_TOKEN = re.compile(r"^(?:\d+(?:\.\d+)?(?:px|rem|em|%)?|thin|medium|thick"
+                          r"|solid|dashed|dotted|double|groove|ridge|inset|outset|hidden|none)$")
+
+
+def frame_colour(d: dict[str, str]) -> str:
+    """The colour half of whatever frame this block draws, "" when it draws none of its own.
+
+    Walked in declaration order so the last of `border` / `border-color` wins, which is what the
+    browser does with two frames in one block.
+    """
+    out = ""
+    for name, value in d.items():
+        if name not in ("border", "border-color"):
+            continue
+        parts = [p for p in value.replace("!important", "").split() if not BORDER_TOKEN.match(p)]
+        out = " ".join(parts)
+    return out.strip().lower()
+
+
+def vertical_padding(d: dict[str, str]) -> list[str]:
+    """Every non-zero vertical padding a block asks for, shorthand and longhand alike.
+
+    The ticket primitive is allowed one horizontal padding and no vertical one, so that its height is
+    decided by `min-height` alone. Any vertical padding here puts the box past its own cap and makes
+    arithmetic — not the token — the thing that decides how tall a label is.
+    """
+    out: list[str] = []
+    short = d.get("padding")
+    if short:
+        parts = [p for p in short.split() if p]
+        if parts[-1].startswith("!"):
+            parts = parts[:-1]
+        # 1-2 values: the first is the vertical pair. 3-4: the first and third. Both cases are `parts[::2]`.
+        if any(not is_zero(v) for v in parts[::2]):
+            out.append(f"padding: {short}")
+    for name in ("padding-top", "padding-bottom"):
+        if d.get(name) and not is_zero(d[name]):
+            out.append(f"{name}: {d[name]}")
+    return out
+
+
 def style_guards(css: str, *, tokens: bool = False) -> list[str]:
     """Every reason this CSS might lie about what it paints. [] means it reads as it looks."""
     fails: list[str] = []
@@ -123,7 +202,83 @@ def style_guards(css: str, *, tokens: bool = False) -> list[str]:
         if not radius_is_sharp(value.strip()):
             fails.append(f"{name_tok}: {value.strip()} — every radius token must resolve to 0")
 
-    # 5. The chamfer must exist *and* be used. A declared-but-unused --chamfer means the cut shown in
+    # 5. No `background:` shorthand anywhere. The chamfer's corner rule is painted on the surface's
+    #    own background layers (--cut-edges as a background-image, positioned by background-size/-
+    #    position/-origin/-repeat), and the shorthand resets all four of those to their initial
+    #    values — so `background: var(--panel)` on a card that was just cut leaves the box with two
+    #    clipped corners and no line along them. It is a one-line edit that renders correctly in a
+    #    screenshot at a glance and cannot be found by looking for a missing declaration, which is
+    #    why the whole stylesheet is longhand and this is the rule that keeps it that way.
+    for m in BACKGROUND_SHORTHAND.finditer(s):
+        line = s[:m.start()].count("\n") + 1
+        fails.append(f"line {line}: `background:` shorthand — it resets background-image and takes "
+                     "the chamfer's painted corner back off; use background-color / background-image")
+
+    # 6. A cut surface has to paint its own corner. Two ways this goes wrong, both invisible in a
+    #    screenshot at normal zoom: the `background:` shorthand (checked above) takes the painted
+    #    diagonal off, and a diagonal token declared at :root carries :root's ink to every surface, so
+    #    a card whose frame turns gold keeps a grey corner — measured in Chrome 2026-10-21, which is
+    #    why --cut-edges was deleted. So: nothing may reference the dead token, and every selector that
+    #    applies a chamfer must read var(--cut-ink) in a background-image of its own.
+    if "--cut-edges)" in compact:
+        fails.append("var(--cut-edges) — that token was removed because a custom property resolves its "
+                     "var() calls where it is DECLARED: at :root it would paint every corner in :root's "
+                     "ink. Spell the two gradients out in the rule that cuts.")
+    cut: dict[str, bool] = {}
+    for sel, body in blocks(css):
+        d = decls(body)
+        paints = "var(--cut-ink)" in d.get("background-image", "")
+        if "clip-path:var(--chamfer" in body.replace(" ", ""):
+            cut[sel] = cut.get(sel, False) or paints
+        elif paints:
+            cut.setdefault(sel, True)
+    for sel, painted in cut.items():
+        if not painted:
+            fails.append(f"{sel[:60]!r} applies a chamfer but never paints its diagonal with "
+                         "var(--cut-ink) — the cut corner will read as a gap in the frame")
+
+    # 7. A chamfer's diagonal is the frame carried around the corner, so the two must be ONE colour.
+    #    Measured 2026-10-21: every surface that re-points --cut-ink also re-points its own border, and
+    #    each pair uses the identical expression — `border-color: color-mix(in srgb, var(--warn) 55%,
+    #    transparent)` beside `--cut-ink:` the same, `border: 1px solid var(--edge)` beside
+    #    `--cut-ink: var(--edge)`. A block that sets the diagonal to something else renders a corner in
+    #    a different hue from the two rules it joins: a seam at exactly the place the signature is
+    #    supposed to read as one continuous edge, and invisible unless you sample the pixels along the
+    #    45 degrees. Only compared when ONE block declares both, because a surface may inherit its ink
+    #    from :root and its frame from another rule — and a comparison across two rules would have to
+    #    guess which cascade order the browser applied.
+    for sel, body in blocks(css):
+        d = decls(body)
+        ink = d.get("--cut-ink")
+        if not ink:
+            continue
+        edge = frame_colour(d)
+        if edge and edge != ink.lower():
+            fails.append(f"{sel[:52]!r} paints the chamfer in {ink!r} but its frame is {edge!r} — "
+                         "the corner will read as two different lines meeting at a seam")
+
+    # 8. A bare tone word may not own a box. Two collisions, both measured on the served bundle on
+    #    2026-10-21, neither findable by looking at the element that went wrong: the Advanced panel that
+    #    holds a provider lane was written `.lane { padding: var(--s-3) var(--s-4) }` and put 14px of
+    #    compartment padding — and its chamfer — on the 22px `deployed · primary` ticket, and the callout
+    #    rule `.notice, .warn { padding …; font-size … }` made a `probe` ticket 36.9px tall, because
+    #    `warn` is also the state class the tickets wear. One page ended up with five ticket heights and
+    #    the two rules that caused it never mentioned a ticket. So: a selector whose only class is a state
+    #    word is a state, and states tint. Qualifying it — `.lane:not(.chip)`, `.notice.warn` — is the fix,
+    #    and passes: the qualification says which of the two objects the rule means.
+    for sel, body in blocks(css):
+        d = decls(body)
+        for part in (p.strip() for p in sel.split(",")):
+            if not (BARE_CLASS.match(part) and part[1:] in STATE_WORDS):
+                continue
+            for name, value in d.items():
+                if name in BOX_PROPS:
+                    fails.append(f"{part} is a ticket state word and a section word at once — this box "
+                                 f"declaration ({name}: {value[:40]}) lands on every `chip {part[1:]}`, "
+                                 f"`tag {part[1:]}`. Qualify the selector (`.{part[1:]}:not(.chip)`, "
+                                 f"or put it on the section class)")
+
+    # 9. The chamfer must exist *and* be used. A declared-but-unused --chamfer means the cut shown in
     #    the design is not the cut being painted, which is the failure a screenshot review catches
     #    late and a grep never catches at all.
     if tokens:
@@ -141,7 +296,7 @@ def style_guards(css: str, *, tokens: bool = False) -> list[str]:
         if declared and not applied:
             fails.append("--chamfer is declared but no rule applies clip-path:var(--chamfer…)")
 
-        # 6. Absolute dark, absolute white. These are the two grounds the brief names; a panel that
+        # 10. Absolute dark, absolute white. These are the two grounds the brief names; a panel that
         #    drifted to #0a0a0a reads black in a screenshot and is not the shipped claim.
         dark = next((decls(b) for sel, b in rules if sel == ":root"), {})
         light = next((decls(b) for sel, b in rules
@@ -156,6 +311,21 @@ def style_guards(css: str, *, tokens: bool = False) -> list[str]:
             scheme = table.get("color-scheme", "")
             if theme not in scheme:
                 fails.append(f"{theme} block sets color-scheme:{scheme or '(unset)'}")
+
+        # 11. One ticket, one height, owned by one declaration. The label primitive has no vertical
+        #     padding and a `min-height` cap, so a ticket is as tall as the cap and a bigger ticket says
+        #     so by raising the cap (`.verdict-pill` in a row header). With 4px of vertical padding the
+        #     text plus padding measured 21.88px against a 19.94px cap — the cap bound nothing, the
+        #     height was arithmetic, and `--fs-micro` at a fluid root size could not be relied on. This
+        #     is the check on the fix, so it must outlive the comment that explains it.
+        chips = [(sel, decls(body)) for sel, body in rules if matches_class(sel, "chip")]
+        for sel, d in chips:
+            for bad in vertical_padding(d):
+                fails.append(f"{sel[:52]!r} gives a ticket vertical padding ({bad}) — the height stops "
+                             "being the min-height cap and becomes padding arithmetic")
+        if chips and not any("min-height" in d for _, d in chips):
+            fails.append("no rule matching .chip declares min-height — a ticket's height has no owner, "
+                         "so it is set by line-height plus padding on whatever line it lands on")
     return fails
 
 
@@ -202,16 +372,27 @@ def surfaces(verbose: bool) -> list[tuple[str, str, bool, list[str]]]:
         for css, problems in component_styles(path.read_text(encoding="utf-8")):
             if css.strip() or problems:
                 out.append((f"{rel} (component styles)", css, False, problems))
-    # The published page carries its own copy of the tokens, because it has no bundler. Reading them
-    # out of the builder's constant keeps the check honest even when dist/ is stale.
-    page_src = PAGE_TOOL.read_text(encoding="utf-8")
-    m = re.search(r'PAGE_CSS\s*=\s*"""(.*?)"""', page_src, re.S)
-    name = "tools/public_ranking_page.py (PAGE_CSS)"
-    out.append((name, m.group(1) if m else "/* the PAGE_CSS string could not be found */", True, []))
+    # The published page has no bundler, so it carries the tokens itself — but it does not *type*
+    # them any more: `app_css_head()` lifts @font-face, :root and the light block out of the app
+    # stylesheet at import time. A regex over the builder's source can only ever see the literal
+    # tail, so it would report a page with no ':root' while the page it generates is fine. The
+    # value is read off the imported module instead, because a second copy of the lift rule here
+    # is the two-answers failure this repo already paid for once (#142).
+    out.append(("tools/public_ranking_page.py (PAGE_CSS)", page_css(), True, []))
     if verbose:
         print(f"{len(out)} surface(s): "
               + ", ".join(f"{n} [{len(c.splitlines())} lines]" for n, c, _, _ in out))
     return out
+
+
+def page_css() -> str:
+    """The CSS the generated page will actually ship, read from the generator itself."""
+    sys.path.insert(0, str(PAGE_TOOL.parent))
+    try:
+        import public_ranking_page  # noqa: PLC0415  (the sibling-import path must be set up first)
+    except SystemExit as exc:  # app_css_head() refuses to build a page whose tokens are missing
+        return f"/* the generator could not be imported: {exc} */"
+    return public_ranking_page.PAGE_CSS
 
 
 def main() -> int:

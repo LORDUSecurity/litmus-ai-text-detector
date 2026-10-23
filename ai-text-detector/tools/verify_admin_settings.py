@@ -163,7 +163,14 @@ def main() -> int:
     env = dict(os.environ)
     env.update({"DETECTOR_DB": str(db_copy), "DETECTOR_SECRET": str(SECRET),
                 "BACKEND_HOST": "127.0.0.1", "BACKEND_PORT": str(PORT),
-                "AITD_NO_BROWSER": "1", "PYTHONIOENCODING": "utf-8"})
+                "AITD_NO_BROWSER": "1", "PYTHONIOENCODING": "utf-8",
+                # Stated, not inherited. `serve_local` now defaults to single-owner local mode (no
+                # sign-in page), in which every request is answered as the owner: the registration
+                # below would be refused 409 and the two 403 gate checks would see 200 -- the same
+                # server quietly answering a different question, which is how a stand-in model once
+                # made ten "is nemotron reachable" rounds all mean glm. This verifier is about the
+                # admin/plain-user split, so it asks for the accounts mode by name.
+                "LOCAL_SINGLE_USER": "0"})
     log = open(tmp / "server.log", "w", encoding="utf-8")
     proc = subprocess.Popen([sys.executable, "-m", "backend.serve_local"],
                             cwd=str(ROOT), env=env, stdout=log, stderr=subprocess.STDOUT)
@@ -186,8 +193,12 @@ def main() -> int:
 
         # --- the gate itself -----------------------------------------------------------------
         stranger = Api()
+        # Sign-up is addressed by e-mail now, so the stranger the gate is tested against is
+        # created the way the page creates one.
+        who = f"verify{int(time.time()) % 100000}"
         st, _ = stranger.call("POST", "/api/auth/register",
-                              {"username": f"verify{int(time.time()) % 100000}", "password": "verifypass1"})
+                              {"name": f"Verifier {who}", "email": f"{who}@invalid.example",
+                               "password": "verifypass1", "confirm": "verifypass1"})
         st403, body403 = stranger.call("GET", "/api/settings")
         check(st403 == 403, "a plain user cannot read /settings",
               f"{st403} {str(body403)[:60]}")

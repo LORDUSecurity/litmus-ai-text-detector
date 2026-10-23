@@ -2,14 +2,23 @@
 <html lang="en">
 <head>
   <meta charset="utf-8">
-  <title>AI text detection</title>
+  <title>Litmus — AI text detection</title>
+  <meta name="description" content="Phrase-level AI-text evidence from calibrated free-model lanes: a verdict, and the exact quotes that carried it.">
   <base href="/">
   <meta name="viewport" content="width=device-width, initial-scale=1">
+  <!-- One mark, two formats: the SVG is the tile with its corners cut, the .ico is the same
+       geometry rasterised at 48/32/16 by tools/make_icon.py for anything that will not read an
+       SVG icon. Both are generated from the numbers in that script, so they cannot drift. -->
+  <link rel="icon" type="image/svg+xml" href="favicon.svg">
   <link rel="icon" type="image/x-icon" href="favicon.ico">
-  <!-- Self-hosted serif faces; preloading the two heaviest-used cuts avoids a late swap. -->
-  <link rel="preload" href="/fonts/Spectral-400.woff2" as="font" type="font/woff2" crossorigin>
-  <link rel="preload" href="/fonts/Spectral-600.woff2" as="font" type="font/woff2" crossorigin>
-  <link rel="preload" href="/fonts/CormorantGaramond-600.woff2" as="font" type="font/woff2" crossorigin>
+  <!-- Self-hosted, because the Docker image and the packaged exe both start with no network at
+       all and a CDN link would silently render whatever face the OS happens to have. Preloaded in
+       reading order: the interface grotesque and the instrument mono both paint above the fold,
+       and the serif is loaded for the writing under examination. tools/fetch_fonts.py downloads
+       each one and tools/check_font_metrics.py proves its x-height before it may be committed. -->
+  <link rel="preload" href="/fonts/SpaceGrotesk-var.woff2" as="font" type="font/woff2" crossorigin>
+  <link rel="preload" href="/fonts/JetBrainsMono-var.woff2" as="font" type="font/woff2" crossorigin>
+  <link rel="preload" href="/fonts/Literata-var.woff2" as="font" type="font/woff2" crossorigin>
 </head>
 <body>
   <app-root></app-root>

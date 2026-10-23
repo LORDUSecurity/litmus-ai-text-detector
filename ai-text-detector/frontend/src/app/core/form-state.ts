@@ -105,6 +105,16 @@ export class DetectionFormState {
   readonly primary = new LaneState('primary', defaultLaneFields());
   readonly secondary = new LaneState('secondary', defaultLaneFields());
   readonly text = signal('');
+
+  /** True when the text now in the field arrived from a document rather than being typed or
+      pasted. The Detect field paints the winning lane's quotes under its own words, and it lifts
+      that paint out of the way while the reader has the box selected — because a highlight under
+      the caret is in the way of editing. Loaded text is not being edited: opening a document and
+      reading where its evidence fell is the reason it was loaded, so selecting inside it is how you
+      scroll and search, and the paint stays. Any change to the characters ends the paint on its
+      own, since the field no longer holds what was scored. */
+  readonly textFromDocument = signal(false);
+
   readonly primaryApiKey = signal('');
   readonly secondaryApiKey = signal('');
 

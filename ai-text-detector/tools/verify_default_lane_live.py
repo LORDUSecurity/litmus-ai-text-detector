@@ -125,7 +125,13 @@ def main() -> int:
     env = dict(os.environ)
     env.update({"DETECTOR_DB": str(db_copy), "BACKEND_HOST": "127.0.0.1",
                 "BACKEND_PORT": str(PORT), "AITD_NO_BROWSER": "1",
-                "PYTHONIOENCODING": "utf-8"})
+                "PYTHONIOENCODING": "utf-8",
+                # Asked for by name, not left to `serve_local`'s new default of 1. In single-owner
+                # mode every request is answered as the owner whether or not the login below worked,
+                # so the "admin session on the copy" check would stop proving anything about the
+                # session -- and the admin-only /models + /detect path this tool traces is the hosted
+                # one. The packaged mode has its own proof: tools/verify_exe_bundle.py.
+                "LOCAL_SINGLE_USER": "0"})
     log = open(tmp / "backend.log", "w", encoding="utf-8")
     proc = subprocess.Popen([sys.executable, "-m", "backend.serve_local"],
                             cwd=str(ROOT), env=env, stdout=log, stderr=subprocess.STDOUT)

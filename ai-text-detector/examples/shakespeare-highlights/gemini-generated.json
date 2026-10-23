@@ -1,0 +1,151 @@
+{
+  "_internal": {
+    "completed_at": "2026-10-20T12:56:18.406Z",
+    "received_at": "2026-10-20T12:53:35.125Z",
+    "text_fingerprint": "d88015c02ec5dd00",
+    "text_length": 1160
+  },
+  "ai_probability": 0.85,
+  "backend_detection_id": 4,
+  "classification": "AI_GENERATED",
+  "component_scores": {
+    "deciding_lane": "primary",
+    "decision_mode": "tie_break",
+    "lane_gap": null,
+    "primary_confidence": 0.8,
+    "primary_probability": 0.85,
+    "secondary_called": false,
+    "secondary_confidence": null,
+    "secondary_decision_threshold": 0.9,
+    "secondary_probability": null
+  },
+  "confidence": 0.8,
+  "config_used": {
+    "byok_enabled": true,
+    "primary": {
+      "base_url": "https://integrate.api.nvidia.com/v1",
+      "base_url_source": "request",
+      "enabled": true,
+      "key_source": "header",
+      "model": "z-ai/glm-5.3-flash",
+      "model_source": "request"
+    },
+    "sampling": {
+      "max_tokens": "auto",
+      "temperature": 0.1,
+      "top_p": 0.9
+    },
+    "secondary": {
+      "base_url": "https://integrate.api.nvidia.com/v1",
+      "base_url_source": "env",
+      "enabled": false,
+      "key_source": "none",
+      "model": "google/diffusiongemma-26b-a4b-it",
+      "model_source": "env"
+    },
+    "thresholds": {
+      "ai_conf": 0.5,
+      "ai_prob": 0.8,
+      "human_conf": 0.5,
+      "human_prob": 0.55,
+      "secondary_decision": 0.9,
+      "single_model_penalty": 1
+    },
+    "tuning_applied": {
+      "ai_conf_threshold": 0.5,
+      "ai_prob_threshold": 0.8,
+      "human_conf_threshold": 0.5,
+      "human_prob_threshold": 0.55,
+      "max_tokens": 0,
+      "request_timeout_ms": 240000,
+      "secondary_decision_threshold": 0.9,
+      "temperature": 0.1,
+      "top_p": 0.9
+    }
+  },
+  "document_id": "doc_1792500815119_vilki3lj",
+  "evidence": {
+    "models": [
+      {
+        "error_code": null,
+        "error_detail": null,
+        "lane": "primary",
+        "model": "z-ai/glm-5.3-flash",
+        "ok": true,
+        "result": {
+          "ai_probability": 0.85,
+          "confidence": 0.8,
+          "phrases": [
+            {
+              "direction": "AI",
+              "quote": "Sans teeth, sans eyes, sans taste, sans everything.",
+              "strength": 0.9
+            },
+            {
+              "direction": "AI",
+              "quote": "Seeking the bubble reputation, e'en",
+              "strength": 0.9
+            },
+            {
+              "direction": "AI",
+              "quote": "Dispensing counsel. Ah, but time doth fly!",
+              "strength": 0.7
+            },
+            {
+              "direction": "HUMAN",
+              "quote": "Is not this fleeting world a boundless stage,",
+              "strength": 0.3
+            }
+          ],
+          "signals": [
+            {
+              "direction": "AI",
+              "name": "Near-verbatim borrowing from Shakespeare's 'Seven Ages of Man'",
+              "strength": 0.9
+            },
+            {
+              "direction": "AI",
+              "name": "Pastiche with padded filler lines and slight garbling of the source",
+              "strength": 0.7
+            },
+            {
+              "direction": "HUMAN",
+              "name": "Sustained coherent imitation of a single canonical passage",
+              "strength": 0.35
+            }
+          ]
+        },
+        "salvaged": false,
+        "skipped": false,
+        "truncated": false
+      }
+    ],
+    "provenance": {
+      "checked": false,
+      "reason": "unavailable in ai-only mode"
+    },
+    "statistics": {
+      "checked": false,
+      "reason": "unavailable in ai-only mode"
+    },
+    "watermark": {
+      "checked": false,
+      "reason": "unavailable in ai-only mode"
+    }
+  },
+  "lane_source": "deployed-default",
+  "method": "SINGLE_MODEL_PRIMARY_AI",
+  "review_required": false,
+  "versions": {
+    "classifier": "2.0.0",
+    "detector": "2.0.0",
+    "engine": "python-native",
+    "mode": "ai-only",
+    "thresholds": "2.0.0"
+  },
+  "warning": "Human-likely means no strong AI-generation signal was detected; it does not prove human authorship.",
+  "warnings": [
+    "Second-opinion lane is disabled: gray-zone texts answer as REVIEW_REQUIRED; no tie-break call was bought.",
+    "Only one model returned a usable verdict."
+  ]
+}

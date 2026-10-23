@@ -1,168 +1,350 @@
-/* Self-hosted serif faces: the app ships offline (Docker image, PyInstaller exe), so
-   url() must be the absolute /fonts/ path — never a CDN. */
+/* Three self-hosted faces: the app ships offline (Docker image, PyInstaller exe), so url() must be
+   the absolute /fonts/ path — never a CDN. tools/fetch_fonts.py downloads each latin cut, proves it
+   is one variable file rather than a static instance, and reads the wght axis it actually carries
+   before the @font-face range below is allowed to claim it.
+
+   Each face has exactly one job, and the split is the point:
+
+     Space Grotesk   the app speaking — headings, controls, labels, its own sentences.
+     JetBrains Mono  the app measuring — every number, identifier and table cell.
+     Literata        the thing under examination — the writing, and nothing else.
+
+   Literata used to cover the first two as well, and it read as a book set in a control panel: a
+   text serif at 13.5px in a button has no chance against a grotesque, and the fixed-width register
+   was left to whatever the platform happened to own. Reserving the serif for the subject's prose
+   means the app never speaks in the same voice as the text it is judging. */
 @font-face {
-  font-family: "Spectral";
-  src: url("/fonts/Spectral-400.woff2") format("woff2");
-  font-weight: 400;
+  font-family: "Literata";
+  src: url("/fonts/Literata-var.woff2") format("woff2");
+  font-weight: 400 900;
   font-style: normal;
   font-display: swap;
 }
 
 @font-face {
-  font-family: "Spectral";
-  src: url("/fonts/Spectral-500.woff2") format("woff2");
-  font-weight: 500;
+  font-family: "Space Grotesk";
+  src: url("/fonts/SpaceGrotesk-var.woff2") format("woff2");
+  font-weight: 400 700;
   font-style: normal;
   font-display: swap;
 }
 
 @font-face {
-  font-family: "Spectral";
-  src: url("/fonts/Spectral-600.woff2") format("woff2");
-  font-weight: 600;
+  font-family: "JetBrains Mono";
+  src: url("/fonts/JetBrainsMono-var.woff2") format("woff2");
+  font-weight: 400 800;
   font-style: normal;
   font-display: swap;
 }
 
-@font-face {
-  font-family: "Spectral";
-  src: url("/fonts/Spectral-700.woff2") format("woff2");
-  font-weight: 700;
-  font-style: normal;
-  font-display: swap;
-}
+/* ===================== the register (2026-10-21, full remake) =====================
+   The app answers one question about a piece of writing — was this machine-made? — and its answer
+   is a measurement: a probability, the calibrated cut that probability fell against, and the
+   verbatim sentences that carried the judgement. So this is drawn as an instrument that reports,
+   not a dashboard that markets: an ink ground, hairline rules instead of filled boxes, a fixed-width
+   register for every label and number, and the serif kept for the only prose on the screen — the
+   writing under examination and the sentence the app says about it.
 
-@font-face {
-  font-family: "Cormorant Garamond";
-  src: url("/fonts/CormorantGaramond-600.woff2") format("woff2");
-  font-weight: 600;
-  font-style: normal;
-  font-display: swap;
-}
+   Colour is rationed by meaning. There is one hue for interaction and it is gold: the remake opened
+   with blue as the transient response, and the app was read back as two identities — a hovered card
+   and a pressed control had nothing in common, and the blue said nothing about this product. One hue
+   now, and the three claims it makes are separated by VALUE, not by hue:
 
-/* ===================== absolute palette (2026-10-18) =====================
-   The dark theme is absolute black and the light theme absolute white: no tinted
-   ground, no royal bloom behind the panels, no frosted alpha. Surfaces are neutral
-   and opaque so they separate by a hairline edge and a small step in grey, and blue
-   is spent only where something is happening — hover, focus, selection, the CTA.
-   Every ratio quoted in this file is produced by tools/check_palette_contrast.py,
-   which reads these two blocks; a palette edit that loses a stop fails there. */
+     --accent        the standing mark: a link, a rule under the tab you are sitting on, a meter, the
+                     in-pool frame. Theme-adaptive, because on white it has to clear the text floor.
+     --touch         the response: the focus ring, the hover edge, a run in flight, the choice a
+                     control is currently obeying. It leaves when you stop.
+     --accent-fill   the PLATE: the two filled boxes (the act, the study link) and the brand mark.
+                     Bright yellow carrying black ink in BOTH themes — 14.67:1 either way — which is
+                     what stops the logo rendering brown on a white page.
+
+   Green and the evidence yellows belong to the quoted writing alone — app/ui/evidence/evidence-color.ts
+   derives that ramp against these grounds, so `--bg` stays absolute #000000 / #ffffff and `--ink`
+   stays #f2f2f2 / #0a0a0a. Move either one and that ramp's measured contrast, arc-length and
+   distance-from-the-ground claims all stop being true at once. Evidence sits in translucent washes at
+   a fourth value, and that is the price of a single-hue interaction language: the app and the writing
+   now draw from the same gold, and are told apart by shape and by how long they last. The app's gold is
+   an edge, a plate, or a wash that only exists while a pointer is on it. The writing's wash stays under
+   the letters as long as the verdict does.
+
+   Neither register can be one hex in both themes: #ffd400 measures 14.67:1 on absolute black and
+   1.43:1 on absolute white, so the light theme drives the standing mark down until every pair clears
+   its floor — and keeps the plate bright, because a plate carries its own ink. Every ratio quoted in
+   this file is produced by tools/check_palette_contrast.py, which reads these two blocks; a palette
+   edit that loses a stop fails there rather than in a screenshot review. */
 :root {
+  /* Grounds and surfaces. A panel is the ground itself: what separates one surface from the next is
+     a rule, not a tint. Only two steps off absolute exist, and each has a job — --panel-2 is a well
+     the reader acts inside (a field, a selected row, a table stripe), --panel-solid is an overlay,
+     which has to actually cover what is under it and so may not be the same black as the page. */
   --bg: #000000;
-  --bg-2: #000000;
-  --panel: #0b0b0b;
-  --panel-2: #141414;
-  --panel-solid: #0e0e0e;
-  --field-bg: #101010;
-  /* Grouping edge (a card's own border): deliberately subtle, checked as informational.
-     --edge is the control boundary, and it carries the >=3:1 that WCAG 1.4.11 requires
-     of something a person has to find in order to use it. */
-  --line: rgba(255, 255, 255, 0.14);
+  --panel: #000000;
+  --panel-2: #0d0d0d;
+  --field-bg: #0d0d0d;
+  --panel-solid: #121212;
+  /* Three rule weights, and the weight now carries meaning: --line groups a thing's own parts,
+     --rule ends one section of the page and begins the next, --edge bounds a control, which is the
+     one a person has to find to use it and therefore the only one WCAG 1.4.11 speaks about (>=3:1).
+     0.37 is not a taste: --edge below that measures under 3:1 on this ground. */
+  --line: rgba(255, 255, 255, 0.13);
+  --rule: rgba(255, 255, 255, 0.2);
   --line-strong: rgba(255, 255, 255, 0.37);
   --edge: rgba(255, 255, 255, 0.37);
   --ink: #f2f2f2;
   --ink-dim: #9e9e9e;
-  /* Referenced with an inline fallback in ranking-view.ts; defined so the fallback stops winning. */
-  --muted: #9e9e9e;
-  /* Royal is now purely the interaction colour: hover edges, focus rings, selected fills.
-     It is never a decoration. Measured on this ground by tools/check_palette_contrast.py:
-     4.33:1 (edge or text on black), 4.85:1 with a white label on top, so a filled royal
-     control is legal in this theme; text uses --accent, which is lighter (6.64:1). */
-  --royal: #4169E1;
-  --accent: #5b8cff;
-  --accent-2: #8fb0ff;
-  --accent-deep: #2b4fc7;
-  /* Text on an accent-filled control: black on --accent is 6.64:1 (white is only 3.16:1),
-     which is the one place the absolute-dark ground earns its keep. */
-  --on-accent: #000000;
-  --grad-cta: linear-gradient(135deg, var(--accent-deep), var(--royal));
-  --on-grad: #ffffff;
+  /* Axis marks, tick labels, the legend under a scale — never a sentence, never the only way to read
+     a number. 4.48:1 on the ground: below the text floor on purpose, because it labels the ruler and
+     is not the measurement. */
+  --ink-hair: #6a6a6a;
+  /* The act. Measured on this ground by tools/check_palette_contrast.py: 14.67:1 as text and as a
+     filled control under a black label. A filled accent control therefore takes BLACK ink — white on
+     this yellow is 1.43:1. */
+  --accent: #ffd400;
+  --accent-2: #ffe58a;
+  /* The plate. Anything FILLED — the primary control, the study link, the brand mark — is this
+     colour with black ink on it, in BOTH themes, and it is why this token exists separately:
+     a filled surface carries its own ink, so it never needs to be driven down for contrast. The
+     light theme used to fill with its deep gold and print white on it, which turned the logo brown
+     on a white page. It stays #ffd400 there and the ink stays black: 14.67:1 either way. */
+  --accent-fill: #ffd400;
+  --on-accent-fill: #000000;
+  /* The response. One hue now, as asked: the hover edge, the focus ring, a run in flight and the
+     choice a control is obeying are all gold. --touch survives as the NAME of that role — every
+     consumer below reads it, so one line here recolours the whole transient register — and it takes
+     the LIGHTER gold rather than --accent itself, because a response has to be tellable from the act
+     it is answering. Evidence plates sit at a third value (alpha washes on the ground), so the three
+     yellows on one screen are separated by distance from the ground, not by hue. */
+  --touch: var(--accent-2);
+  --touch-a12: rgba(255, 212, 0, 0.12);
+  --touch-a30: rgba(255, 212, 0, 0.3);
+  --grad-cta: var(--accent-fill);
+  --on-grad: #000000;
+  --accent-deep: #e0a800;
   --good: #47c98a;
   --bad: #ff5f6d;
-  --warn: #e8b34b;
-  --neutral: #8d96a6;
-  --violet: #a98bff;
+  /* Warning moves off the accent hue on purpose: a gold accent and an amber warning would be the same
+     signal wearing two jobs. Warn is burnt orange, so "careful" never reads as "click me". */
+  --warn: #ff9e2c;
+  /* Neutral is the off-state ink — an unavailable key, a lane that did not run. It used to be a
+     slate (#8d96a6 / #4a5361), and slate is blue: on a page with no other blue left, the one
+     grey that carried a hue read as the interaction colour gone quiet. Pure value now, so an
+     off state is off in both themes and borrows nothing from the gold. */
+  --neutral: #9a9a9a;
   /* Per-theme alpha washes so status pills and tints recolour on theme switch. */
-  --accent-a08: rgba(91, 140, 255, 0.08);
-  --accent-a16: rgba(91, 140, 255, 0.16);
-  --accent-a30: rgba(91, 140, 255, 0.3);
+  --accent-a08: rgba(255, 212, 0, 0.08);
+  --accent-a16: rgba(255, 212, 0, 0.16);
+  --accent-a30: rgba(255, 212, 0, 0.3);
   --good-a16: rgba(71, 201, 138, 0.16);
   --bad-a16: rgba(255, 95, 109, 0.16);
-  --warn-a16: rgba(232, 179, 75, 0.16);
-  /* Top-edge hairline: the only remaining "material" cue, and it is neutral. */
-  --sheen: rgba(255, 255, 255, 0.07);
-  /* --glass-blur and --glass-sheen are gone, and so is the idea: a 5% white wash down the top of
-     every panel means the panel is not black, which is the one thing this theme promises. Depth is
-     the edge and the chamfer — nothing else is standing in for them. */
-  /* A shadow cannot be seen on black; depth comes from the edge, so the token stays valid
-     (a shadow list may not mix `none` with layers) and draws nothing. */
-  --shadow: 0 0 0 rgba(0, 0, 0, 0);
+  --warn-a16: rgba(255, 158, 44, 0.16);
+  /* Depth. The language has none: a surface carries its corner cut, and a clip-path removes every
+     shadow painted outside the edge, so a cast would be a shadow with two corners missing. Exactly one
+     surface floats — the sheet — and it lifts itself by COVERING: --panel-solid against the scrim it
+     sits on, plus its own --line-strong edge. Same in both themes, which is why there is no depth token.
+     --halo is gone for the same reason (it was an outer glow), and the two surfaces that are pointed at
+     now say so with an INSET ring — see .rank-card.in-pool and .pick-card.neon. */
   --ring-track: rgba(255, 255, 255, 0.14);
-  --font-ui: "Spectral", Georgia, "Iowan Old Style", "Times New Roman", serif;
-  --font-display: "Cormorant Garamond", "Spectral", Georgia, serif;
-  --mono: ui-monospace, "Cascadia Mono", "JetBrains Mono", Consolas, monospace;
-  /* Sharp: every radius is zero. The five `border-radius: 50%` circles (dots, the switch
-     thumb, the splash orbit, the metric rings) are round objects, not rounded corners, and
-     stay. The corner language is one chamfer — top-right and bottom-right cut, square left. */
-  --r-sm: 0px;
-  --r-md: 0px;
-  --r-lg: 0px;
-  --r-pill: 0px;
+  /* Two voices on the page and a third held in reserve: the instrument speaks in a fixed register
+     (every control, label, chip, table cell and number is mono, which is also how its columns stay
+     aligned without arguing about figures), the app's own sentences are set in a grotesque, and the
+     serif is spent on the only prose that is not the app's — the writing under examination, the
+     verdict sentence and an empty state. See the @font-face block at the top of this file: all three
+     are self-hosted at /fonts/ with a real fallback chain, because the app ships offline in a Docker
+     image and a PyInstaller exe. */
+  --font-ui: "Space Grotesk", "Segoe UI", system-ui, sans-serif;
+  --font-display: "Space Grotesk", "Segoe UI", system-ui, sans-serif;
+  --font-prose: "Literata", Georgia, "Iowan Old Style", "Times New Roman", serif;
+  --font-instrument: "JetBrains Mono", ui-monospace, "Cascadia Mono", Consolas, monospace;
+  /* The app has one name for that voice. --mono survives only because tools/public_ranking_page.py
+     lifts this :root verbatim and its own PAGE_CSS spells the old name — dropping the alias would
+     silently set a published page's numbers in the serif on the next regeneration. */
+  --mono: var(--font-instrument);
+  /* Two units for size, and the line between them is what the number is measuring. A cap on a body of
+     text — a page column, a card, a grid's minimum track, a control's minimum width — is asked in rem,
+     so a reader who sets a larger base text size gets a wider column instead of the same 1080px and
+     text that wraps harder. A size that is a physical object stays in px: a rule's thickness, a status
+     dot, an icon box, a dial arc, a switch thumb, a 40px tap target. A finger is 40px at every text
+     size. The spacing ladder below is px on purpose — it is the instrument's graduations, not prose. */
+  /* The spaces scale. One ladder, 4px base, widening by about a third per step past 16px — a page
+     that breathes by measured increments rather than by whoever typed the last padding. In this
+     language spacing also replaces fills: --s-5 is the gutter inside a surface, and the air between
+     two sections is --s-7 plus a --rule, so a section break is read as a line, not as a card.
+     Past the ladder's top, surfaces no longer pad below --s-3: the bracket mark on an instrument
+     panel occupies its corner, and padding under it reads as a mistake in the alignment. */
+  --s-1: 4px;
+  --s-2: 8px;
+  --s-3: 12px;
+  --s-4: 16px;
+  --s-5: 22px;
+  --s-6: 30px;
+  --s-7: 42px;
+  --s-8: 56px;
+  --s-9: 76px;
+  /* The page's own gutters, as two names rather than four literals. `.appbar` is flush to the window
+     edge by pulling itself out of `.shell`'s padding with negative margins, so both have to drop a
+     step together on a phone. The Detect tab zeroes both: there the areas are the window. */
+  --page-pad-y: var(--s-6);
+  --page-pad-x: var(--s-5);
+  /* The type scale. Steps stay narrow at the bottom (a full point is visible at 11px) and widen at
+     the top, where a heading has to clear a card title by more than a few pixels to read as a heading
+     at all. The remake moves the top of the ladder: --fs-h1 is a page title, and 27px was a card
+     title wearing a heading's name. --fs-figure stays 30 because it is drawn *inside* a metric ring's
+     circle (circular-metric.ts sizes that arc). */
+  --fs-micro: 11px;
+  --fs-meta: 12.5px;
+  --fs-ui: 13.5px;
+  --fs-body: 14.5px;
+  --fs-lead: 18px;
+  --fs-h2: 24px;
+  --fs-h1: 34px;
+  --fs-figure: 30px;
+  /* Leading runs the other way from size: small serif text on a 0.507 em x-height needs air or the
+     lines collide, display text needs to sit tight or it reads as separate words stacked up. Mono
+     needs less than the serif at the same size — its ink box is narrower — and the headline figure
+     needs none at all, or the line box lifts it off the scale it is riding. */
+  --lh-none: 0.86;
+  --lh-tight: 1.08;
+  --lh-head: 1.12;
+  --lh-snug: 1.4;
+  --lh-body: 1.6;
+  --lh-mono: 1.45;
+  --lh-marked: 1.75;
+  /* Tracking. A serif set at 34px wants pulling in; a mono label of caps wants pushing apart, because
+     mono has no kerning and a fixed advance fights letterforms that want to touch. */
+  --tr-display: -0.025em;
+  --tr-head: -0.015em;
+  --tr-label: 0.05em;
+  --tr-chip: 0.07em;
+  /* One duration per kind of change: --t-instant is a state the pointer is already in, --t-fast is a
+     response to it, --t-mid is a surface arriving or leaving. --t-travel is the exception that is not
+     a response: when a verdict lands, the figure moves to its place on the scale, and a measurement
+     that teleports has not been seen happening. The infinite loops keep literal periods — a loop is a
+     frequency, not a duration. */
+  --t-instant: 90ms;
+  --t-fast: 160ms;
+  --t-mid: 260ms;
+  --t-travel: 620ms;
+  /* A metric ring draws a measurement and has to be slow enough to follow, which is a different
+     thing from a surface arriving -- so it keeps its own period rather than borrowing --t-mid. */
+  --t-draw: 700ms;
+  --ease-draw: cubic-bezier(0.22, 1, 0.36, 1);
+  --ease-out: cubic-bezier(0.2, 0.8, 0.2, 1);
+  --ease-travel: cubic-bezier(0.16, 0.9, 0.2, 1);
+  --ease-spring: cubic-bezier(0.2, 0.9, 0.3, 1.2);
+  /* There is no radius token. Nothing in this language has a rounded corner; the only
+     `border-radius` allowed anywhere is 50% on a round OBJECT (a status dot, the switch thumb, the
+     splash orbit, a metric ring), which is round because it is a circle and not because it is soft. */
+  /* The corner language — the signature is the DOUBLE RIGHT-EDGE CUT: every framed surface loses its
+     top-right and bottom-right corner at 45 degrees, and keeps the two left corners square, so the
+     side the reading starts on is flat and the side it ends on is cut. A bracket (--tick) is added on
+     the surfaces the machine reports through. Stated in full where it is painted, at .panel below. */
+  --tick: 14px;
+  --tick-w: 2px;
+  --tick-ink: var(--line-strong);
   --cut: 14px;
   --cut-sm: 8px;
-  --cut-xs: 5px;
+  /* The colour of the diagonal that CLOSES a cut corner. A framed surface on an absolute ground is
+     nothing but its rule, so a clip-path alone leaves the corner as a gap in the line; the same rule
+     has to be drawn along the 45 degrees. A surface whose frame changes colour — held in the pool,
+     lit under a pointer — re-points this, because the diagonal belongs to the frame, not to the ink. */
+  --cut-ink: var(--line);
   --chamfer: polygon(0 0, calc(100% - var(--cut)) 0, 100% var(--cut), 100% calc(100% - var(--cut)), calc(100% - var(--cut)) 100%, 0 100%);
   --chamfer-sm: polygon(0 0, calc(100% - var(--cut-sm)) 0, 100% var(--cut-sm), 100% calc(100% - var(--cut-sm)), calc(100% - var(--cut-sm)) 100%, 0 100%);
-  --chamfer-xs: polygon(0 0, calc(100% - var(--cut-xs)) 0, 100% var(--cut-xs), 100% calc(100% - var(--cut-xs)), calc(100% - var(--cut-xs)) 100%, 0 100%);
-  /* A clip-path cuts an outside outline away, so focus rings are drawn inside. */
-  --focus-offset: -3px;
+  /* The bracket at the reporting corner: two short rules lying along the top and the left edge.
+     Painted by the surface's own background, so it adds no DOM, moves no metric and — unlike a
+     clip-path — cannot cut off a focus ring or a scrollbar corner. */
+  --tick-edges: linear-gradient(var(--tick-ink), var(--tick-ink)), linear-gradient(var(--tick-ink), var(--tick-ink));
+  /* The diagonals are NOT a token, and that is a measured fact rather than a style choice.
+     A custom property's own var() calls are resolved on the element that DECLARES the property, so a
+     `--cut-edges: linear-gradient(… var(--cut-ink) …)` written here would carry :root's --cut-ink to
+     every surface in the app, and a card whose frame changes colour — held in the pool, warned,
+     rejected, the gold button — would keep a grey diagonal running through its own gold corner.
+     Measured in Chrome on 2026-10-21 against the served bundle: a box with `--cut-ink:#ff0000` and
+     `background-image: var(--cut-edges)` painted rgba(255,255,255,.13) — :root's ink; the same
+     gradient spelled out in that box's own rule painted rgb(255,0,0). So the two gradients are
+     written at the point of use, in every rule that applies a chamfer, and
+     tools/check_visual_language.py requires each of those rules to read var(--cut-ink) locally.
+     --tick-edges can stay here precisely because nothing re-points --tick-ink: the bracket's ink is
+     the strong rule in both themes, and the theme block restyles this same element, where the
+     substitution happens.
+     Geometry, spelled out at each use: each diagonal is a square the size of the cut parked in that
+     corner; the axis runs ACROSS the cut, so a hard band at 50% lies exactly on it. The band is
+     drawn on the inside half (50% - 1px up to 50%) because the clip has already thrown the outside
+     half away — centring it would lose half its weight to the antialias. `to top right` for the
+     top-right corner, whose cut falls from that square's top-left to its bottom-right; `to bottom
+     right` for the bottom-right corner, whose cut runs the other way. */
+  --cut-edges-size: var(--cut) var(--cut), var(--cut) var(--cut);
+  --cut-edges-size-sm: var(--cut-sm) var(--cut-sm), var(--cut-sm) var(--cut-sm);
+  --cut-edges-at: 100% 0, 100% 100%;
+  --focus-offset: 2px;
+  --focus-offset-cut: -3px;
   color-scheme: dark;
+  /* The scrollbar is the page's own rule, not a control: the same --line-strong the panels are framed
+     with, in both themes, because `var()` is resolved on the element this lands on and the theme block
+     restyles that same element. Declared once here rather than repeated in a second bare `:root`,
+     which the design guard reads as the theme tokens moving. */
+  scrollbar-color: var(--line-strong) transparent;
 }
 
-/* Light mode: absolute white, black ink, grey edges — blue still only on interaction.
-   The AuthService flips `data-theme` + `.light` on <html>, so this is one attribute, not a rebuild. */
+
+/* Light mode: the same discipline on absolute white. Surfaces do not get fills here either — the
+   grounds are white and the structure is rules, so what changes between themes is only value: black
+   ink, grey rules, and both accents driven down until they have an edge against white. The AuthService
+   flips `data-theme` + `.light` on <html>, so a switch is one attribute, not a rebuild. */
 html.light,
 :root[data-theme="light"] {
   --bg: #ffffff;
-  --bg-2: #ffffff;
   --panel: #ffffff;
-  --panel-2: #f2f2f2;
+  --panel-2: #f4f4f4;
+  --field-bg: #f7f7f7;
   --panel-solid: #ffffff;
-  --field-bg: #ffffff;
   --line: rgba(0, 0, 0, 0.14);
+  --rule: rgba(0, 0, 0, 0.22);
   --line-strong: rgba(0, 0, 0, 0.45);
   --edge: rgba(0, 0, 0, 0.45);
   --ink: #0a0a0a;
   --ink-dim: #4f545e;
-  --muted: #4f545e;
-  /* Royal does the same two jobs here: 4.85:1 as an edge against the white ground, 4.85:1
-     under a white label (its luminance sits near the mid-point, so both directions land on
-     the same number). Text still uses --accent, which is darker and measures 7.94:1. */
-  --royal: #4169E1;
-  --accent: #2b45b8;
-  --accent-2: #3355cf;
-  --accent-deep: #1f3fa8;
-  /* 7.94:1 on --accent. */
-  --on-accent: #ffffff;
-  --grad-cta: linear-gradient(135deg, var(--accent), var(--accent-deep));
-  --on-grad: #ffffff;
-  /* Washes are kept thin (10%) so the text on top of a tinted status pill still clears 4.5:1. */
+  --ink-hair: #7a7f88;
+  /* Gold, three ways, and the third is the one that was wrong. A hue at #ffd400 measures 1.43:1 on
+     white, so anything read as TEXT has to be driven down — but the floor that decides HOW far is
+     not the one against bare white. The free-tier ticket is the only place --accent is both the ink
+     and the tint under it, and a 18% bright-yellow wash costs a third of a ratio point, so the value
+     is set by that tighter pair: #8c6a00 measures 5.03:1 on white and 4.67:1 on its own wash. Driving
+     it to 4.59 to sit "just inside" the bare-white floor made the chip illegal, and lightening the
+     wash until the text cleared (4%) would have removed the tint altogether.
+     --accent-deep is the one that was wrong: 11.3:1, where a plate's edge is a graphic checked at
+     3.0. That is what made the logo look burnt on a white page — the fill was always bright, its
+     border was near black. */
+  --accent: #8c6a00;        /* 5.03:1 on white, 4.67:1 on --accent-a16 */
+  --accent-2: #7d5f00;      /* 5.98:1 — the response, one step deeper than the standing mark */
+  --accent-deep: #b8860b;   /* 3.25:1 — a graphic edge, not text */
+  --accent-fill: #ffd400;
+  --on-accent-fill: #000000;
+  /* The response, in the same hue. On white a bright ring measures 1.43:1 and paints nothing, so the
+     transient register takes the DEEP gold here — the lighter value is the one with an edge. */
+  --touch: var(--accent-2);
+  --touch-a12: rgba(255, 212, 0, 0.22);
+  --touch-a30: rgba(255, 212, 0, 0.4);
+  --grad-cta: var(--accent-fill);
+  --on-grad: #000000;
   --good: #17795a;
   --bad: #b3263a;
-  --warn: #8a6414;
-  --neutral: #4a5361;
-  --violet: #5b3fb8;
-  --accent-a08: rgba(43, 69, 184, 0.06);
-  --accent-a16: rgba(43, 69, 184, 0.1);
-  --accent-a30: rgba(43, 69, 184, 0.18);
+  --warn: #a04c00;
+  --neutral: #6e6e6e;
+  /* Washes are mixed from the BRIGHT yellow, not from --accent: a 6% ochre wash on white tints grey,
+     and a 22% yellow wash tints yellow. The lift is not free — it costs the text above it about a
+     third of a ratio point, which is why the ink value is answered for here and not in the wash
+     declaration below. See tools/check_palette_contrast.py, pair "accent as chip text on its wash". */
+  --accent-a08: rgba(255, 212, 0, 0.1);
+  --accent-a16: rgba(255, 212, 0, 0.18);
+  --accent-a30: rgba(255, 212, 0, 0.34);
   --good-a16: rgba(23, 121, 90, 0.1);
   --bad-a16: rgba(179, 38, 58, 0.09);
-  --warn-a16: rgba(138, 100, 20, 0.1);
-  --sheen: rgba(0, 0, 0, 0.05);
-  --shadow: 0 16px 40px -28px rgba(0, 0, 0, 0.45);
+  --warn-a16: rgba(160, 76, 0, 0.1);
   --ring-track: rgba(0, 0, 0, 0.12);
   color-scheme: light;
 }
+
 
 
 * {
@@ -174,95 +356,305 @@ body {
   margin: 0;
   padding: 0;
   color: var(--ink);
-  /* Serif reads smaller than the old system-ui at equal px, hence 15.5px. On an absolute
-     black ground the stem edges are the crispest they can be, so the line-height came down
-     from 1.6 to 1.55 and the page stops looking like a printed book set too loose. */
-  font: 400 15.5px/1.55 var(--font-ui);
+  /* 14.5px, and the number is measured rather than chosen: Space Grotesk's latin cut has an x-height
+     of 0.486 em against the serif's 0.507 (tools/check_font_metrics.py prints both out of the
+     outlines), so the interface face reads a shade smaller at the same pixel size — and 14.5 is
+     where the grotesque matches what the serif used to give at that number. The leading stays at
+     1.6 for the same reason it went up in the first place: a tall x-height eats the space between
+     lines, and tightening it after a face swap is how a paragraph turns into a bar. */
+  font: 400 var(--fs-body)/var(--lh-body) var(--font-ui);
   -webkit-font-smoothing: antialiased;
   text-rendering: optimizeLegibility;
   font-variant-ligatures: common-ligatures;
+  /* Tabular figures across the whole app, because almost every number here is data: a probability,
+     a count, a latency. tools/check_font_metrics.py shapes the shipped subset — it carries `tnum`,
+     and its default digits run 407 to 579 units per em, so the proportional "1" used to make a
+     column of percentages jitter on both edges. Prose is opted back out below. */
+  font-variant-numeric: tabular-nums;
+}
+
+/* The text under analysis is not data, it is somebody's writing, and the instrument has no right
+   to re-space the digits inside it. The typed-field half of that opt-out lives with the field rule
+   itself, further down, because `font: inherit` resets this property and beats an earlier
+   element-level declaration here — splitting the list is the only way both halves hold. */
+.ev-text,
+.ev-text mark,
+.raw pre {
+  font-variant-numeric: normal;
 }
 
 /* Absolute ground: no bloom, no gradient, no frosted alpha. Depth is the hairline edge. */
 body {
   min-height: 100vh;
-  background: var(--bg);
+  background-color: var(--bg);
 }
 
-/* --- the corner language: square on the left, chamfered top-right and bottom-right -------
-   One polygon per size step, driven by --cut / --cut-sm / --cut-xs. A clip-path also cuts
-   away the outside of a box, so two rules follow from this: focus rings are drawn inside
-   (--focus-offset), and a panel has no outer shadow in either theme. Scrollable surfaces
-   (.ev-text, .raw pre, textarea) stay plain rectangles — the notch would eat the scrollbar
-   corner and the resize grip, which are controls. */
-.panel,
-.card,
-.auth-card,
-.rank-card,
-.key-row,
-.guide,
-.history-row,
-.inline-form,
-.pick-banner,
-.lane,
-.lock-note,
-.lane-authority {
+/* --- the corner language (2026-10-21): the double right-edge cut, plus a bracket on what reports
+   -------------------------------------------------------------------------------------------
+   The signature is the cut. A surface of this app is a rectangle with the top-right and bottom-right
+   corner taken off at 45 degrees — flat on the side the reading starts at, cut on the side it ends
+   at — and that silhouette is the same one the favicon and the brand mark are drawn with, which is
+   how a page can be recognised before its words are read.
+
+     --tick  a bracket at the top-left of a surface the machine reports through. It marks which
+             boxes are measurements, and it is painted by the panel's own background as two short
+             rules: no DOM, no moved metric, and — unlike a clip-path — nothing to cut off a focus
+             ring or a scrollbar corner.
+     --cut   the 45-degree cut on every surface that PRESENTS something — a panel, a card, a notice, an
+             excerpt, the dialog — and on the two boxes that were always cut: button.primary, because a
+             control that commits something has a corner taken off it and no other control does, and
+             .brand-mark, because the mark IS the favicon.
+             What is NOT cut, and why: tickets (.chip, .tag, .pill, .verdict-pill), because they are a
+             fact about a surface rather than a surface themselves and a 14px chamfer on a 22px box is a
+             missing corner — the ticket is the one primitive in this language that is deliberately square;
+             anything that SCROLLS (.ev-text, .raw pre, a textarea), because the scrollbar sits on the very
+             edge the notch removes and the diagonal cannot be painted where the bar does; and the writing
+             area, whose panel is stripped to nothing by .detect-cols .col-input > .panel because a blank
+             page to type into is not a surface that presents something.
+             The rows of a list ARE cut (.pool-row, .key-row, .history-row, .inline-form), and that was
+             reversed on 2026-10-21: a row presents a model exactly the way the ranking card on the next
+             view presents one, so leaving the rows square meant the same object appeared twice with two
+             silhouettes. What the comb objection got right is still true — it is why a row carries no
+             bracket and no state cast, only the notch and its two diagonals.
+
+   A cut on a surface that is nothing but a rule has to carry that rule along the diagonal, or the
+   corner reads as a gap rather than a chamfer — hence the two gradients painted at every chamfer, and
+   hence --cut-ink: a frame that changes colour for a state changes its diagonals with it. That is why
+   a cut surface can only be ringed from INSIDE: the clip takes whatever was cast outside the corner, so
+   a held or pointed box states itself with an inset ring.
+   Two consequences of how that ink reaches the gradient, both enforced by
+   tools/check_visual_language.py. The gradients are spelled out in each rule that cuts, never stored
+   in a token: a custom property's var() calls resolve where the property is DECLARED, so a root-level
+   --cut-edges would hand every surface :root's grey ink and a gold state would keep a grey corner.
+   And because the diagonals ride on the surface's own background layers, a framed surface may never
+   set the `background:` shorthand — it resets background-image to none and takes the chamfer's rule
+   back off. The whole stylesheet uses background-color / background-image for that reason.
+
+   Two things a clip-path eats, and both are paid for rather than worked around. A focus ring on a cut
+   surface is pulled inside the notch (--focus-offset-cut), which is why the two cut surfaces that are
+   also controls carry it. And a glow, or any shadow, drawn outside a cut corner is a glow with two
+   corners missing — so a cut surface states a held or pointed frame with an INSET ring, and the one
+   surface that still has to float (the sheet, over a list it covers) lifts itself with an opaque fill
+   against its own scrim instead of a cast. */
+.panel {
   clip-path: var(--chamfer);
+  background-image: var(--tick-edges), linear-gradient(to top right, transparent calc(50% - 1px), var(--cut-ink) calc(50% - 1px), var(--cut-ink) 50%, transparent 50%), linear-gradient(to bottom right, transparent calc(50% - 1px), var(--cut-ink) calc(50% - 1px), var(--cut-ink) 50%, transparent 50%);
+  background-size: var(--tick) var(--tick-w), var(--tick-w) var(--tick), var(--cut) var(--cut), var(--cut) var(--cut);
+  background-position: 0 0, 0 0, 100% 0, 100% 100%;
+  /* The bracket lies INSIDE the frame, so it is positioned by the padding box; the diagonals lie ON
+     the clip edge, so they are positioned by the border box. Two origins, two pairs of layers. */
+  background-origin: padding-box, padding-box, border-box, border-box;
+  background-repeat: no-repeat;
 }
 
-/* Mid-height controls and callouts: the same cut, one step smaller. The switch track is the
-   one thing deliberately left square — the thumb travels to the right edge, and a notch there
-   would slice the knob in half at the ON position. */
-button,
-label.ghost,
-input,
-select,
-.tabs button,
-.nav button,
-.icon-btn,
-.paper-link,
-.pdf-link,
-.pick-btn,
-.pool-row,
-.job-row,
-.attempt,
-.verdict-badge,
-.banner,
-.notice,
-.warn,
-.switch-note,
-.auth-modes,
-.auth-error {
-  clip-path: var(--chamfer-sm);
+/* Every other presenting surface: the cut and its two diagonals, and no bracket. Grouped in one rule
+   with :where() so the geometry has exactly one owner — a surface that later wants the bracket (or a
+   different ink) declares it locally and still wins on specificity. The two gradients are spelled out
+   here, not tokened, so that var(--cut-ink) is resolved on the surface that carries it.
+   `.lane` is qualified because it names two different objects: the Advanced panel that holds a lane and
+   the `.chip.lane` ticket that says which lane a row serves. Measured on the served bundle, the bare
+   class cut the ticket too — a 14px notch on a 22px box is a missing corner, and the ticket is the one
+   primitive in this language that is deliberately square.
+   The row family (`.pick-card`, `.pool-row`, `.key-row`, `.history-row`, `.inline-form`) belongs here for
+   the same reason the cards do: a row that presents a model is a surface, and the ranking card on the
+   next view is that same object already wearing the cut. Two consequences are paid for in this group,
+   not discovered in a screenshot. A clip cuts whatever was drawn OUTSIDE the corner, so a pointed or
+   held row says so with an inset ring and never with a cast halo — see .pick-card.neon. And the notch
+   takes 14px out of the padding box, so a row keeps --s-4 (16px) of right padding or its trailing
+   control lands in the wedge. */
+:where(.card, .rank-card, .pick-card, .auth-card, .sheet, .banner, .pick-banner, .guide,
+       .lane:not(.chip), .attempt, .sheet-empty, .lock-note, .lane-authority,
+       .pool-row, .key-row, .history-row, .inline-form) {
+  clip-path: var(--chamfer);
+  background-image: linear-gradient(to top right, transparent calc(50% - 1px), var(--cut-ink) calc(50% - 1px), var(--cut-ink) 50%, transparent 50%), linear-gradient(to bottom right, transparent calc(50% - 1px), var(--cut-ink) calc(50% - 1px), var(--cut-ink) 50%, transparent 50%);
+  background-size: var(--cut-edges-size);
+  background-position: var(--cut-edges-at);
+  background-origin: border-box;
+  background-repeat: no-repeat;
 }
 
-/* The 24px-and-under marks take a 5px cut: any larger and the notch is the shape. */
-.tag,
-.pill,
-.chip,
-.verdict-pill,
-.user-chip .role,
-.pool-pos,
-.rank-badge,
-.ev-legend .sw {
-  clip-path: var(--chamfer-xs);
+/* The ink each frame is drawn in. These four carry --line-strong, a step heavier than the default, and
+   their diagonals have to be the same weight or the corner is visibly lighter than the edge. */
+:where(.auth-card, .sheet, .lock-note, .lane-authority) {
+  --cut-ink: var(--line-strong);
+}
+
+/* The two filled controls that carry the cut. Their frame is what separates a gold plate from a white
+   page — the fill alone measures 1.2:1 there — so the notch has to be edged in the same ink the box
+   draws elsewhere, and .brand-mark is cut with the small polygon, so its diagonals are the small pair. */
+button.primary {
+  --cut-ink: var(--accent-deep);
+  background-image: linear-gradient(to top right, transparent calc(50% - 1px), var(--cut-ink) calc(50% - 1px), var(--cut-ink) 50%, transparent 50%), linear-gradient(to bottom right, transparent calc(50% - 1px), var(--cut-ink) calc(50% - 1px), var(--cut-ink) 50%, transparent 50%);
+  background-size: var(--cut-edges-size);
+  background-position: var(--cut-edges-at);
+  background-origin: border-box;
+  background-repeat: no-repeat;
+}
+
+.brand-mark {
+  --cut-ink: var(--accent-deep);
+  background-image: linear-gradient(to top right, transparent calc(50% - 1px), var(--cut-ink) calc(50% - 1px), var(--cut-ink) 50%, transparent 50%), linear-gradient(to bottom right, transparent calc(50% - 1px), var(--cut-ink) calc(50% - 1px), var(--cut-ink) 50%, transparent 50%);
+  background-size: var(--cut-edges-size-sm);
+  background-position: var(--cut-edges-at);
+  background-origin: border-box;
+  background-repeat: no-repeat;
+}
+
+/* The bracket means "this surface reports a measurement", so a panel inside a panel does not repeat
+   it — the outer one is what reports — and the writing area never gets one, because that frame is
+   deliberately absent: the text is the thing, not a surface the app is presenting. */
+.panel .panel {
+  background-image: linear-gradient(to top right, transparent calc(50% - 1px), var(--cut-ink) calc(50% - 1px), var(--cut-ink) 50%, transparent 50%), linear-gradient(to bottom right, transparent calc(50% - 1px), var(--cut-ink) calc(50% - 1px), var(--cut-ink) 50%, transparent 50%);
+  background-size: var(--cut-edges-size);
+  background-position: var(--cut-edges-at);
+  background-origin: border-box;
+}
+
+.col-input > .panel {
+  background-image: none;
+}
+
+/* --- the voice: the instrument speaks mono, the prose stays serif -------------------
+   Every control, label, chip, table cell and measurement is set in the fixed register — it is what a
+   dial and a log look like, and it aligns a column of percentages by construction instead of by
+   asking for tabular figures. Sentences are the exception and stay in the serif, because the app's
+   own prose sits next to somebody's writing and must not be mistaken for it. :where() keeps this at
+   zero specificity so a component that already names a font still wins.
+   `label` belongs in this list by right, not by convenience: a caption is the control's nameplate, and
+   it was the one object the rule promised and did not cover — which left `.inline-form` captions in the
+   serif next to the mono captions of `.field`s in the same card. The exception lives on `.lane-switch`,
+   the only label in the app whose text is a sentence rather than a name. */
+:where(button, input, select, summary, label, .btn, .tag, .pill, .chip, .verdict-pill, .user-chip .role,
+  .pool-pos, .rank-badge, .label, .method, .elapsed, .scale-note, .meta,
+  table.grid th, table.grid td, .mono) {
+  font-family: var(--font-instrument);
+}
+
+/* --- one label primitive ----------------------------------------------------------
+   `.chip`, `.tag`, `.pill` and `.verdict-pill` are the same object on five surfaces: a fact about the
+   row it sits on, stated in two or three words — `free tier`, `probe`, `shared key`, `AI generated`.
+   They were four near-duplicates with four paddings, two fills and two different caps rules, and the
+   verdict mark had no box at all (only a border, so it sat next to a chip one word shorter and two
+   rules taller). One shape now, at one height, and coloured only where the colour IS the data (the
+   `--good`/`--bad`/`--warn` variants stay where each surface declares them, and the free-tier ticket
+   takes the identity gold). They are NOT cut: a chamfer is a surface's signature, and a 14px notch on
+   a box this short is a missing corner rather than a shape.
+   Zero specificity, because a state class has to beat the base: `.pill-off` wins on order and
+   `.chip.lane` wins on specificity, both without an `!important` anywhere. */
+:where(.chip, .tag, .pill, .verdict-pill) {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--s-1);
+  /* The height is owned by ONE declaration, not by arithmetic. It used to be min-height plus 4px of
+     vertical padding, and the two never met: the app's root font-size is fluid (14.5px on a 1400px
+     window), so the cap computed to 19.94px while the text plus padding measured 21.88px — the cap
+     bound nothing, every ticket was as tall as whatever padding the rule that happened to reach it
+     declared, and one ranking page showed five heights. So there is no vertical padding: the box is
+     the cap, the text is centered in it, and a ticket that needs to be a different size says so by
+     changing the cap (`.verdict-pill`, below). */
+  min-height: 1.375rem;
+  padding: 0 var(--s-2);
+  font-size: var(--fs-micro);
+  font-weight: 600;
+  line-height: var(--lh-tight);
+  letter-spacing: var(--tr-chip);
+  border: 1px solid var(--line);
+  background-color: var(--panel-2);
+  color: var(--ink-dim);
 }
 
 /* --- the interaction vocabulary -------------------------------------------------
-   Everything that can be reached by keyboard gets the same blue ring, drawn inside
-   the box, and everything that can be clicked gets a blue response. Nothing else on
-   the page is blue. :where() keeps this at zero specificity so the component rules
-   that already draw a ring still win. */
+   One ring, one colour, everywhere the keyboard stands: --touch, the response register. It is gold
+   now — the same hue as the identity at a different value — so a ring is read as "this is the live
+   one", and the resting page still carries none of it. */
 :where(button, a, input, select, textarea, summary, [tabindex], .switch):focus-visible {
-  outline: 2px solid var(--royal);
+  outline: 2px solid var(--touch);
   outline-offset: var(--focus-offset);
+}
+
+/* Two exceptions, and both are the same fact seen from the box's side. A filled control is drawn on
+   the bright plate, and --touch against that plate measures 1.13:1 on the dark ground — a lighter
+   gold ring on a yellow button is nothing at all, exactly where the keyboard is. A filled control
+   therefore rings in its own label colour: black on the plate, 14.67:1 in both themes.
+   Exactly two controls are filled: the act (`button.primary`) and the study link. Everything else
+   that is selected — nav, tabs — is marked with a rule or an edge, so it keeps the response ring.
+   `button.primary` is also cut by the corner language, so its ring has to come inside the notch
+   rather than around it. */
+:where(button.primary, .paper-link):focus-visible {
+  outline-color: currentColor;
+}
+
+/* --- the three places the browser paints its own hue --------------------------------------
+   Every rule above is ours, and none of them reached these: they are not colours a stylesheet
+   picked, they are the UA's, so they survived the blue-to-gold remake and showed up on hover and
+   on selection — the two moments the user pointed at.
+
+   `::selection` had no rule at all, so dragging across the writing highlighted it in the
+   browser's blue, over a plate the app had already painted gold. It takes the plate now, with the
+   plate's own black ink, which is the pairing that holds in both themes (14.67:1 on bright yellow
+   either way).
+
+   `accent-color` was declared on `input[type=checkbox]` and `[type=radio]` only. A `<select>`
+   menu, a file picker and a range still took the UA accent — and this app has a real `<select>`
+   on Models & keys. Setting it on the three form elements covers every native part they own,
+   including the dropdown's highlighted option.
+
+   The scrollbar is the third: on the absolute ground the UA overlay bar is a light grey that
+   reads as a gap, and on Windows it is drawn with the system accent. `scrollbar-color` is the
+   standard property (Chrome 121, Firefox, Edge); the WebKit block below stays because the
+   packaged exe can run on an older embedded Chromium, which knows only that syntax. */
+::selection {
+  background-color: var(--accent-fill);
+  color: var(--on-accent-fill);
+}
+
+input,
+select,
+textarea {
+  accent-color: var(--accent);
+}
+
+::-webkit-scrollbar {
+  width: 12px;
+  height: 12px;
+}
+
+::-webkit-scrollbar-track {
+  background-color: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background-color: var(--line-strong);
+  border: 3px solid transparent;
+  background-clip: content-box;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background-color: var(--rule);
+}
+
+/* A remembered password is painted in the UA's pale blue, which no other surface on this page
+   is. The fill is the field's own well and the ink its own, held for as long as the browser
+   insists on the class. */
+input:-webkit-autofill,
+input:-webkit-autofill:hover,
+input:-webkit-autofill:focus {
+  -webkit-box-shadow: 0 0 0 1000px var(--field-bg) inset;
+  -webkit-text-fill-color: var(--ink);
+  caret-color: var(--ink);
+  transition: background-color 99999s linear;
+}
+
+button.primary {
+  clip-path: var(--chamfer);
+  outline-offset: var(--focus-offset-cut);
 }
 
 a {
   color: var(--accent);
   text-decoration: none;
   text-underline-offset: 3px;
-  transition: color 0.15s ease;
+  transition: color var(--t-fast) var(--ease-out);
 }
 
 a:hover {
@@ -271,103 +663,206 @@ a:hover {
 }
 
 .shell {
-  max-width: 1080px;
+  /* Full measure on every tab. The shell used to cap itself at 67.5rem outside the Detect tab,
+     which put the app bar inside a column narrower than the window and left two different page
+     edges on one screen — the bar ended where the text did on Ranking, and at the window on
+     Detect. The bar is the same object on both, so the frame is now the same on both: the page is
+     the window, and any block that needs a reading measure states it itself. */
+  max-width: none;
   margin: 0 auto;
-  padding: 28px 20px 80px;
+  padding: var(--page-pad-y) var(--page-pad-x) var(--s-9);
   display: flex;
   flex-direction: column;
-  gap: 18px;
+  gap: var(--s-5);
+  /* The app is one screen tall before anything else is decided: the Detect pair asks for whatever
+     height is left below the bar, and only a shell that reaches the bottom of the viewport can
+     hand any of it over. `dvh` where the browser knows it, so a mobile URL bar does not push the
+     columns past the fold. */
+  min-height: 100vh;
+  min-height: 100dvh;
 }
 
-.page-head h1 {
-  margin: 0 0 4px;
+/* The Detect tab is a workspace, not a document, so on that tab only the shell gives up its gutters
+   too: the two areas are the window, edge to edge, from the bar down to the bottom edge. The gutters
+   are redeclared as zero tokens rather than removed by re-padding the columns, because the app bar
+   above pulls itself out of those same numbers -- at zero it simply stops pulling, which is what
+   leaves the bar's 1px bottom rule as the one line between the bar and the writing.
+   Nothing is expressed in pixels here, so the same shape is the whole window at 390 and at 2560. */
+.shell.bleed {
+  max-width: none;
+  --page-pad-x: 0;
+  --page-pad-y: 0;
+  padding: 0;
+  gap: 0;
+  /* A cap, not just a floor. `.shell` only ever promised `min-height`, so the moment a verdict
+     landed the rail's own height pushed the row past the bottom edge and the workspace scrolled as
+     a document — the writing field and the press went off the top of the screen to read a number.
+     The result belongs in the right column and nowhere else, so on this tab the shell stops at the
+     viewport and the column that overflowed takes the scroll instead. */
+  height: 100vh;
+  height: 100dvh;
+  overflow: hidden;
+}
+
+/* The bar's bottom rule is the seam the two areas start at, so no gap may open between it and the
+   first row. The shell gap is already zero; the margin below the bar is the other half of that. */
+.shell.bleed > .appbar {
+  margin-bottom: 0;
+}
+
+/* A banner is the one thing allowed between the bar and the areas, and only when a press actually
+   failed: it is the instruction that has to be read before the field is usable, so it gets the air
+   the shell gap no longer provides. */
+.shell.bleed > .banner {
+  margin: var(--s-4) var(--s-4) 0;
+}
+
+/* Headings are sized here because nothing else was: there is no other h2/h3/h4 rule in the sheet,
+   so every heading that a template added without a class rendered at the user-agent default —
+   1.5em bold on one screen, 1.17em on the next, both in a different weight from the titles that
+   *were* styled. One baseline, from the ladder, and `balance` so a two-line heading splits evenly
+   instead of leaving one word alone. */
+h1,
+h2,
+h3,
+h4 {
+  margin: 0 0 var(--s-2);
   font-family: var(--font-display);
   font-weight: 600;
-  font-size: 27px;
-  line-height: 1.15;
-  letter-spacing: 0.2px;
+  line-height: var(--lh-head);
+  letter-spacing: var(--tr-head);
+  text-wrap: balance;
 }
 
-.page-head .sub {
-  margin: 0;
-  color: var(--ink-dim);
-  font-size: 13.5px;
+h1 {
+  font-size: var(--fs-h1);
+  letter-spacing: var(--tr-display);
+  line-height: var(--lh-tight);
 }
 
+/* A section title is set below the rule that opens the section, so the two read as one act: the line
+   says a new register begins, the title says what is in it. */
+h2 {
+  font-size: var(--fs-h2);
+}
+
+h3 {
+  font-size: var(--fs-lead);
+}
+
+h4 {
+  font-size: var(--fs-body);
+  font-weight: 600;
+}
+
+/* A surface the machine reports through: the ground itself, bounded by a rule, bracketed at the corner
+   (see the corner language above). No fill and no shadow, because on an absolute ground a grey box is
+   the one thing that cannot be true, and a shadow cannot be seen. */
 .panel {
   position: relative;
-  background: var(--panel);
+  background-color: var(--panel);
   border: 1px solid var(--line);
-  border-radius: var(--r-lg);
-  padding: 16px 18px;
-  box-shadow: var(--shadow);
-  transition: border-color 0.18s ease, box-shadow 0.18s ease, transform 0.18s ease;
+  padding: var(--s-5);
+  transition: border-color var(--t-fast) var(--ease-out);
 }
 
-/* Blue appears when you touch something: the resting edge is neutral grey, the hover edge
-   is royal. That single swap is the whole interaction vocabulary of this design. */
-.panel:hover {
-  border-color: var(--royal);
+/* A panel that only introduces the ones under it — the admin view's lead-in. It gets one rung less
+   padding than a working panel, on the scale rather than in a style="" attribute, so the small-screen
+   layer can still take it down with every other .panel. */
+.panel-intro {
+  padding: var(--s-4) var(--s-5);
 }
+
+.panel-intro p:last-child {
+  margin-bottom: 0;
+}
+
+/* A panel does not answer the pointer. Ringing every panel on the page in the response colour under
+   a cursor that is on its *text* said that the card was a button; colour is spent on the things a
+   person can actually reach. The test is the object the click lands on, not the shape it is drawn
+   in: a row that IS the control — `.history-row` (role=button), a draggable `.pool-row`, a nav item,
+   a tab, a button — answers the hover, and a surface that merely holds content, or holds the buttons
+   inside it, stays quiet. So there is no hover rule for a container at all, here or in a component
+   sheet. */
 
 
 .panel-head {
   display: flex;
   align-items: baseline;
   justify-content: space-between;
-  gap: 12px;
+  gap: var(--s-3);
   flex-wrap: wrap;
-  margin-bottom: 10px;
+  margin-bottom: var(--s-3);
 }
 
+/* A panel title used to be 14px caps at 0.14em — the same shape as a label, which meant every card
+   on a screen wore an eyebrow and nothing wore a heading. It is a heading now: sentence case, full
+   ink, one rung above the body. Caps survive only as badge vocabulary (the 11px status pill, the
+   role chip), where the difference is a convention and not a way of shouting. */
 .panel-head h2,
 .panel h3 {
   margin: 0;
-  font-size: 14px;
-  text-transform: uppercase;
-  letter-spacing: 0.14em;
-  color: var(--ink-dim);
+  font-size: var(--fs-lead);
+  font-weight: 600;
+  line-height: var(--lh-snug);
+  letter-spacing: var(--tr-head);
+  color: var(--ink);
 }
 
 .panel h3 {
-  margin: 18px 0 8px;
+  margin: var(--s-4) 0 var(--s-2);
 }
 
 .panel-actions {
   display: flex;
-  gap: 6px;
+  gap: var(--s-2);
   flex-wrap: wrap;
 }
 
+/* Every control the reader can press is mono and bounded, and no control is filled until it is the
+   act. `font` is left off deliberately: the shorthand would reset the family to body's serif, which
+   is how a row of buttons ended up speaking prose. */
 button {
-  font: inherit;
-  letter-spacing: 0.02em;
-  border-radius: var(--r-md);
+  font-family: var(--font-instrument);
+  font-size: var(--fs-ui);
+  letter-spacing: var(--tr-label);
   border: 1px solid var(--edge);
-  background: var(--panel-2);
+  background-color: transparent;
   color: var(--ink);
-  padding: 6px 12px;
+  padding: var(--s-2) var(--s-3);
   cursor: pointer;
+  transition: border-color var(--t-fast) var(--ease-out), background var(--t-fast) var(--ease-out), color var(--t-fast) var(--ease-out), transform var(--t-instant) var(--ease-out);
 }
 
-/* The hover wash is blue; the label keeps its own colour, so a danger button never turns
-   into a primary one under the cursor. Filled controls (.primary, the selected tab) own
-   their own hover, because a wash would erase the state the fill is reporting. */
+/* The wash is the response register, and the label keeps its own colour, so a danger button never
+   turns into a primary one under the cursor. Filled controls (.primary) own their own hover, because
+   a wash would erase the state the fill is reporting. */
 button:hover:not(:disabled):not(.primary):not([aria-selected='true']) {
-  border-color: var(--royal);
-  background: color-mix(in srgb, var(--royal) 10%, var(--panel-2));
+  border-color: var(--touch);
+  background-color: var(--touch-a12);
+}
+
+button:active:not(:disabled) {
+  transform: translateY(1px);
 }
 
 button:disabled {
-  opacity: 0.55;
+  opacity: 0.45;
+  border-color: var(--line);
   cursor: progress;
 }
 
 button.ghost {
-  background: transparent;
-  font-size: 12.5px;
-  padding: 4px 9px;
+  background-color: transparent;
+  border-color: transparent;
+  font-size: var(--fs-meta);
+  padding: var(--s-1) var(--s-2);
   color: var(--ink-dim);
+}
+
+button.ghost:hover:not(:disabled) {
+  border-color: var(--touch);
+  color: var(--ink);
 }
 
 /* "Load document": the real <input type=file> is hidden, the label is the button. */
@@ -376,18 +871,20 @@ label.ghost {
   align-items: center;
   gap: 2px;
   border: 1px solid var(--edge);
-  border-radius: var(--r-md);
-  background: transparent;
+  background-color: transparent;
   color: var(--ink-dim);
-  font-size: 12.5px;
-  letter-spacing: 0.02em;
-  padding: 4px 9px;
+  font-family: var(--font-instrument);
+  font-size: var(--fs-meta);
+  letter-spacing: var(--tr-label);
+  padding: var(--s-1) var(--s-2);
   cursor: pointer;
+  transition: border-color var(--t-fast) var(--ease-out), color var(--t-fast) var(--ease-out);
 }
 
 label.ghost:hover {
-  border-color: var(--royal);
-  color: var(--accent);
+  border-color: var(--touch);
+  color: var(--ink);
+  background-color: var(--touch-a12);
 }
 
 label.ghost[aria-busy="true"] {
@@ -404,9 +901,9 @@ label.ghost[aria-busy="true"] {
 }
 
 .doc-status {
-  margin: 6px 0 0;
-  font-size: 12.5px;
-  font-family: var(--mono);
+  margin: var(--s-2) 0 0;
+  font-size: var(--fs-meta);
+  font-family: var(--font-instrument);
   color: var(--good);
 }
 
@@ -414,59 +911,101 @@ label.ghost[aria-busy="true"] {
   color: var(--bad);
 }
 
+/* The one filled control in the app, and one of the boxes carrying the corner cut. Blue is gone from
+   the language: the hover, the focus ring, the selection and this CTA are all gold now. What keeps
+   them legible as three different claims is value, not hue — the plate is the brightest yellow and
+   carries black ink, a response takes the lighter/darker step of the same hue, and quoted evidence
+   sits in a translucent wash. Hovering darkens the plate itself rather than swapping tokens, so one
+   rule works on both grounds instead of the label flipping ink mid-flow. */
 button.primary {
-  background: var(--accent);
-  border-color: var(--accent);
-  color: var(--on-accent);
+  background-color: var(--accent-fill);
+  /* The plate is bright and the ground may be white, so a yellow fill on a white page has no edge a
+     pointer can find. --accent-deep draws one: dark brown on the light ground, a darker gold on
+     black where the fill already separates itself by 14.67:1. */
+  border-color: var(--accent-deep);
+  color: var(--on-accent-fill);
   font-weight: 650;
-  padding: 9px 26px;
+  padding: var(--s-2) var(--s-6);
+  letter-spacing: var(--tr-label);
+}
+
+button.primary:hover:not(:disabled) {
+  background-color: color-mix(in srgb, var(--accent-fill) 84%, #000000);
+  border-color: var(--accent-deep);
+  color: var(--on-accent-fill);
+}
+
+button.primary:active:not(:disabled) {
+  background-color: color-mix(in srgb, var(--accent-fill) 72%, #000000);
+  border-color: var(--accent-deep);
+  color: var(--on-accent-fill);
+}
+
+button.primary:disabled {
+  background-color: var(--panel-2);
+  border-color: var(--line);
+  color: var(--ink-dim);
+  opacity: 1;
 }
 
 .lanes {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(330px, 1fr));
-  gap: 14px;
+  grid-template-columns: repeat(auto-fit, minmax(20.625rem, 1fr));
+  gap: var(--s-4);
 }
 
-.lane {
-  background: var(--panel-2);
+/* A lane is a compartment in the register, not a card: bounded by a rule, no fill. The two lanes are
+   distinguished by their own headings, not by a tint — a tint on both would be decoration.
+   Qualified against the ticket for the same reason the chamfer group is: `.lane` names both this
+   compartment and the chip that says which lane a row serves, and 12px of compartment padding on a
+   22px ticket is how a label primitive ends up five pixels taller than its neighbour. */
+.lane:not(.chip) {
+  background-color: transparent;
   border: 1px solid var(--line);
-  border-radius: var(--r-md);
-  padding: 12px 14px;
+  padding: var(--s-3) var(--s-4);
 }
 
 .lane h3 {
-  margin: 0 0 10px;
+  margin: 0 0 var(--s-2);
   color: var(--ink);
-  text-transform: none;
-  letter-spacing: 0;
-  font-size: 14px;
-  font-weight: 650;
+  font-size: var(--fs-lead);
+  font-weight: 600;
+  font-family: var(--font-display);
+  letter-spacing: var(--tr-head);
 }
 
 .field {
   display: block;
-  margin-bottom: 10px;
+  margin-bottom: var(--s-3);
 }
 
+/* A form label names a reading of the instrument, so it is mono and tracked — the one place the
+   tracking is doing work rather than decorating, because fixed-width caps have no kerning of their
+   own and a 12.5px label sets solid without it. */
 .field > span {
   display: block;
-  font-size: 11.5px;
-  text-transform: uppercase;
-  letter-spacing: 0.14em;
+  font-family: var(--font-instrument);
+  font-size: var(--fs-meta);
+  font-weight: 600;
+  letter-spacing: var(--tr-label);
   color: var(--ink-dim);
-  margin-bottom: 4px;
+  margin-bottom: var(--s-1);
+  /* The templates already write these in sentence case ("Scheme", "Host", "Port"), so the only
+     thing the uppercase was doing was making a form read like a control panel. */
+  text-transform: none;
 }
 
 .field-row {
   display: flex;
-  gap: 8px;
+  gap: var(--s-2);
   align-items: flex-end;
   flex-wrap: wrap;
 }
 
+/* `ch` rather than 84px: a port field is as wide as the number it holds, and in the mono register a
+   character is the unit that actually scales when the type does. */
 .field.narrow {
-  width: 84px;
+  width: 8ch;
   flex: 0 0 auto;
 }
 
@@ -479,13 +1018,18 @@ select,
 textarea {
   width: 100%;
   font: inherit;
+  font-family: var(--font-instrument);
+  /* The `font` shorthand above resets font-variant-numeric back to body's tabular value, so this is
+     where the opt-out has to live for a field: what someone types, and the model name a select
+     shows, are words, not readings. Declared after the shorthand or it does nothing. */
+  font-variant-numeric: normal;
   color: var(--ink);
-  background: var(--field-bg);
+  background-color: var(--field-bg);
   /* A control's boundary has to be findable: --edge clears 3:1 against the ground, --line
-     (used for card grouping) deliberately does not. */
+     (used for grouping) deliberately does not. */
   border: 1px solid var(--edge);
-  border-radius: var(--r-md);
-  padding: 7px 9px;
+  padding: var(--s-2) var(--s-3);
+  transition: border-color var(--t-fast) var(--ease-out);
 }
 
 input::placeholder,
@@ -494,26 +1038,42 @@ textarea::placeholder {
   opacity: 1;
 }
 
+/* `input { width: 100% }` above is written for text fields and it is not type-aware: a checkbox
+   inherits it too and stretches into a panel-wide box. The admin's second-lane toggle is a real
+   native checkbox, so it was being painted that wide. Placed BEFORE `.switch input` (which sizes
+   the hidden input inside the track to 100% and has the same specificity) because that later rule
+   is the one that must win for the track switch. */
+input[type="checkbox"],
+input[type="radio"] {
+  width: 15px;
+  height: 15px;
+  flex: 0 0 auto;
+  padding: 0;
+  margin: 0;
+  cursor: pointer;
+  accent-color: var(--accent);
+}
+
 input[type="password"] {
-  font-family: var(--mono);
+  font-family: var(--font-instrument);
   letter-spacing: 0.08em;
 }
 
 textarea {
   resize: vertical;
-  font-family: var(--mono);
-  font-size: 13.5px;
-  line-height: 1.55;
+  font-family: var(--font-instrument);
+  font-size: var(--fs-ui);
+  line-height: var(--lh-mono);
 }
 
-/* Inside, not outside: the chamfer clips the box, and an outline drawn past the edge would
-   be cut away with it, which is how a focus ring silently disappears. */
+/* Outside the box, where an outline belongs now that fields are no longer clipped. The one cut
+   control in the app is `button.primary`, and its ring is pulled inside there. */
 input:focus,
 select:focus,
 textarea:focus {
-  outline: 2px solid var(--royal);
+  outline: 2px solid var(--touch);
   outline-offset: var(--focus-offset);
-  border-color: var(--royal);
+  border-color: var(--touch);
 }
 
 input.bad,
@@ -521,21 +1081,23 @@ textarea.bad {
   border-color: var(--bad);
 }
 
+/* Sits inside a `label`, so it would otherwise inherit the caption's fixed register — and this is not
+   a caption. It is a sentence telling someone what to do about a field, which is prose. */
 .field-error {
-  display: block;
-  margin-top: 4px;
-  font-size: 12px;
-  font-style: normal;
   color: var(--bad);
+  display: block;
+  font-family: var(--font-ui);
+  font-size: var(--fs-meta);
+  font-style: normal;
+  margin-top: var(--s-1);
 }
 
 code {
-  font-family: var(--mono);
-  font-size: 12.5px;
-  background: var(--field-bg);
+  font-family: var(--font-instrument);
+  font-size: var(--fs-meta);
+  background-color: var(--field-bg);
   border: 1px solid var(--line);
-  border-radius: var(--r-sm);
-  padding: 1px 5px;
+  padding: 1px var(--s-1);
 }
 
 .computed,
@@ -545,9 +1107,9 @@ code {
 }
 
 .counter {
-  margin: 6px 0 0;
-  font-size: 12.5px;
-  font-family: var(--mono);
+  margin: var(--s-2) 0 0;
+  font-size: var(--fs-meta);
+  font-family: var(--font-instrument);
   font-variant-numeric: tabular-nums;
 }
 
@@ -556,64 +1118,69 @@ code {
 }
 
 .small {
-  font-size: 12px;
+  font-size: var(--fs-meta);
 }
 
-.muted {
-  color: var(--ink-dim);
+/* A callout is a rule with a sentence beside it. The stroke carries the tone and the wash stays at
+   8% so the text on top of it keeps its own contrast against the ground — a tinted card would move
+   the ink's background depending on what the notice is about, and this sheet has one black.
+   `.warn` is only ever a TONE, never the box, and that is a measured correction: this rule used to
+   read `.notice, .warn`, and because `warn` is also the state class the tickets wear
+   (`chip warn`, `tag warn`), the callout's padding and reading size were landing on a 22px label and
+   making it 36.9px — the third height in a row that was supposed to hold one shape of ticket. A
+   warning sentence asks for the box out loud, with `class="notice warn"`. */
+.notice {
+  border-left: 2px solid var(--warn);
+  background-color: color-mix(in srgb, var(--warn) 8%, transparent);
+  margin: var(--s-3) 0;
+  padding: var(--s-2) var(--s-3);
+  font-size: var(--fs-ui);
+  line-height: var(--lh-snug);
 }
 
-.notice,
-.warn {
-  border-left: 3px solid var(--warn);
-  background: color-mix(in srgb, var(--warn) 10%, transparent);
-  margin: 10px 0;
-  padding: 8px 11px;
-  border-radius: 0 var(--r-md) var(--r-md) 0;
-  font-size: 13px;
-}
-
-.warn {
+.notice.warn {
   border-left-color: var(--bad);
-  background: color-mix(in srgb, var(--bad) 10%, transparent);
+  background-color: color-mix(in srgb, var(--bad) 8%, transparent);
 }
 
 .run-row {
   display: flex;
   align-items: center;
-  gap: 14px;
+  gap: var(--s-4);
 }
 
+/* A run in flight is the machine answering, which is the response register. It used to be gold, and
+   gold now means the act — so the only yellow left on a waiting screen is the button you pressed. */
 .inflight {
-  font-family: var(--mono);
-  font-size: 13px;
-  color: var(--accent);
+  font-family: var(--font-instrument);
+  font-size: var(--fs-ui);
+  color: var(--touch);
 }
 
+/* A failure notice is the biggest thing on the screen when it appears, so it is bounded like a panel
+   and coloured by its own tone rather than by a gradient. The heading is the h3 baseline; only the
+   verbatim server text is mono, because that is data, not prose. */
 .banner {
-  border-radius: var(--r-md);
-  padding: 12px 15px;
   border: 1px solid var(--line);
+  padding: var(--s-4) var(--s-5);
 }
 
 .banner h3 {
-  margin: 0 0 6px;
-  font-size: 13.5px;
-  text-transform: none;
-  letter-spacing: 0;
+  margin: 0 0 var(--s-2);
   color: var(--ink);
 }
 
 .banner ul {
   margin: 0;
-  padding-left: 18px;
+  padding-left: var(--s-4);
 }
 
 .banner .verbatim,
 .banner .hint {
-  margin: 4px 0 0;
-  font-family: var(--mono);
-  font-size: 12.5px;
+  margin: var(--s-1) 0 0;
+  font-family: var(--font-instrument);
+  font-size: var(--fs-meta);
+  line-height: var(--lh-mono);
   white-space: pre-wrap;
   word-break: break-word;
 }
@@ -624,85 +1191,93 @@ code {
 
 .tone-preflight,
 .tone-timeout {
-  border-color: color-mix(in srgb, var(--warn) 60%, transparent);
-  background: color-mix(in srgb, var(--warn) 12%, var(--panel));
+  border-color: color-mix(in srgb, var(--warn) 55%, transparent);
+  --cut-ink: color-mix(in srgb, var(--warn) 55%, transparent);
+  background-color: color-mix(in srgb, var(--warn) 8%, var(--panel));
 }
 
 .tone-rejected,
-.tone-n8n,
+.tone-engine,
 .tone-unreachable {
-  border-color: color-mix(in srgb, var(--bad) 60%, transparent);
-  background: color-mix(in srgb, var(--bad) 12%, var(--panel));
+  border-color: color-mix(in srgb, var(--bad) 55%, transparent);
+  --cut-ink: color-mix(in srgb, var(--bad) 55%, transparent);
+  background-color: color-mix(in srgb, var(--bad) 8%, var(--panel));
 }
 
-.result-head {
-  display: flex;
-  align-items: baseline;
-  gap: 12px;
-  flex-wrap: wrap;
-  margin-bottom: 12px;
+/* The verdict's colour, declared once per classification. The word, the mark beside it and the ring
+   that carries the number all read `--tone`, so the answer cannot be two hues at once because one
+   rule was edited and the other wasn't. */
+.tone-ai_generated {
+  --tone: var(--bad);
 }
 
+.tone-human_likely {
+  --tone: var(--good);
+}
+
+.tone-review_required {
+  --tone: var(--neutral);
+}
+
+.tone-detection_unavailable {
+  --tone: var(--warn);
+}
+
+/* The verdict word is the machine's own vocabulary — the literal classification string, underscores
+   and all — so it is set in the instrument voice, not in the serif. The serif belongs to the writing
+   under examination, and putting a protocol label in a book face is how the two registers stop
+   meaning anything. Sized one rung under the figure it sits beside, with `balance` so "HUMAN LIKELY"
+   never breaks. */
 .verdict {
-  font-family: var(--font-display);
-  font-size: 24px;
-  font-weight: 600;
-  line-height: 1.15;
-  letter-spacing: 0.02em;
+  font-family: var(--font-instrument);
+  font-size: var(--fs-h2);
+  font-weight: 700;
+  line-height: var(--lh-tight);
+  letter-spacing: var(--tr-label);
+  color: var(--tone, var(--ink));
+  text-wrap: balance;
 }
 
 .method,
 .elapsed {
-  font-family: var(--mono);
-  font-size: 12.5px;
+  font-family: var(--font-instrument);
+  font-size: var(--fs-meta);
+  letter-spacing: var(--tr-label);
   color: var(--ink-dim);
 }
 
-/* "This verdict came from a different model than the one you picked." Warn-toned rather than
-   bad: the detection succeeded, and the substitution is the feature working, but the user has
-   to be able to see which model's number they are reading. */
+/* "This verdict came from a different model than the one you picked." Warn-toned rather than bad: the
+   detection succeeded, and the substitution is the feature working, but the user has to be able to see
+   which model's number they are reading. Drawn as the other callouts are — a stroke and a sentence —
+   because a gradient frame would make the app's most factual notice look like a promotion. */
 .switch-note {
   display: flex;
   flex-wrap: wrap;
   align-items: baseline;
-  gap: 6px;
-  margin: 10px 0;
-  padding: 9px 12px;
-  border-radius: var(--r-md);
-  border: 1px solid color-mix(in srgb, var(--warn) 45%, transparent);
-  background: linear-gradient(135deg, var(--warn-a16), transparent);
+  gap: var(--s-2);
+  margin: var(--s-3) 0;
+  padding: var(--s-2) var(--s-3);
+  border-left: 2px solid var(--warn);
+  background-color: color-mix(in srgb, var(--warn) 8%, transparent);
   color: var(--warn);
-  font-size: 13px;
+  font-size: var(--fs-ui);
+  line-height: var(--lh-snug);
 }
 
 .switch-note code {
-  background: transparent;
+  background-color: transparent;
   border: 0;
   padding: 0;
   color: var(--ink);
+  font-family: var(--font-instrument);
 }
 
 .switch-attempt {
   flex-basis: 100%;
-  font-family: var(--mono);
-  font-size: 11.5px;
+  font-family: var(--font-instrument);
+  font-size: var(--fs-micro);
+  letter-spacing: var(--tr-label);
   color: var(--ink-dim);
-}
-
-.tone-ai_generated .verdict {
-  color: var(--bad);
-}
-
-.tone-human_likely .verdict {
-  color: var(--good);
-}
-
-.tone-review_required .verdict {
-  color: var(--neutral);
-}
-
-.tone-detection_unavailable .verdict {
-  color: var(--warn);
 }
 
 .strong {
@@ -717,169 +1292,459 @@ code {
   color: var(--neutral);
 }
 
-.scores {
+/* ---- the two magnitudes ---------------------------------------------------------------
+   Confidence and the gap between the lanes have no cut to fall against, so they stay amounts: a
+   label, a number, a track. AI-ness itself no longer appears here — the scale under it puts that
+   figure on a ruler, and the same number printed twice on one screen is how a measurement becomes
+   decoration. */
+.score {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-  gap: 12px;
-  margin-bottom: 14px;
+  grid-template-columns: 1fr auto;
+  align-items: baseline;
+  column-gap: var(--s-3);
+  row-gap: var(--s-1);
 }
 
 .score .label {
-  display: block;
-  font-size: 11.5px;
-  text-transform: uppercase;
-  letter-spacing: 0.14em;
+  grid-column: 1;
+  font-size: var(--fs-meta);
+  letter-spacing: var(--tr-label);
   color: var(--ink-dim);
+  text-transform: none;
 }
 
 .score .value {
-  font-family: var(--font-display);
+  grid-column: 2;
+  text-align: right;
+  font-family: var(--font-instrument);
+  font-size: var(--fs-body);
   font-weight: 600;
-  font-size: 24px;
-  line-height: 1.1;
   font-variant-numeric: tabular-nums;
-}
-
-/* The number above is on the deciding lane's own scale, so say which one right under it:
-   85 % beside HUMAN_LIKELY is a correct tie-break reading and a wrong primary one. */
-.score .scale-note {
-  display: block;
-  margin-top: 5px;
-  font-size: 11.5px;
-  color: var(--ink-dim);
-  letter-spacing: 0.01em;
+  color: var(--ink);
 }
 
 .bar {
-  height: 6px;
-  background: var(--field-bg);
-  border: 1px solid var(--line);
+  grid-column: 1 / -1;
+  height: 3px;
+  background-color: var(--panel-2);
   overflow: hidden;
-  margin-top: 4px;
 }
 
 .fill {
   height: 100%;
-  background: var(--bad);
+  background-color: var(--neutral);
 }
 
-/* Confidence is a neutral quantity, so its bar carries no hue: `.fill` (red) measures AI-ness,
-   and blue is now reserved for hover, focus and selection. */
+/* The instrument's own certainty wears the response register; the disagreement between two lanes is a
+   caution, so it wears warn. Neither bar is the verdict — the verdict is the needle. */
 .fill.soft {
-  background: var(--neutral);
+  background-color: var(--touch);
 }
 
 .fill.warn {
-  background: var(--warn);
+  background-color: var(--warn);
 }
 
+/* ---- the score readout -------------------------------------------------------------
+   The verdict, the ruler it was measured on, and the two magnitudes beside it, lifted out of the
+   result card so the Detect rail can answer a press without the reader scrolling past the analysis to
+   find the number. This is the one place the score is printed. */
+.readout {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-4);
+}
+
+.readout-head {
+  display: flex;
+  align-items: center;
+  gap: var(--s-3);
+  flex-wrap: wrap;
+}
+
+/* ---- the calibrated magnitudes --------------------------------------------------------
+   A run answers with three numbers and each one is a magnitude on its own scale, so each gets a
+   ring: the arc is the fraction, the figure in the middle is the measurement. What used to be drawn
+   here was a needle on a ruler with the cuts notched into it, and the ruler's claim — that a
+   probability is only an answer once it has fallen on one side of a cut — is stated outright by the
+   scale note under the row, in the response's own numbers. Reading it off a pixel position was
+   decoration dressed as an instrument, and it cost the rail a screenful of height.
+
+   The headline keeps the full 108px dial because it is the only figure with a decimal in it and a
+   decimal needs the arc's interior to be wide enough to sit in one line; the two supporting
+   measurements take the compact dial, which is what the other surfaces that stack a verdict trail
+   already use. One row of 108 + 74 + 74 plus its gutters is 280px and the rail is 33 per cent of the
+   page, so the answer fits beside the writing instead of extending the page under it.
+
+   The labels are held to the width of the dial they sit under. They name a scale, so they are longer
+   than a dial: allowed to size themselves they would set the row's width and push the third ring onto
+   a second line, and the answer would be two rows tall instead of one. */
+.readout-rings {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: var(--s-3);
+  flex-wrap: wrap;
+}
+
+.readout-rings app-circular-metric {
+  flex: 0 1 auto;
+}
+
+.readout-rings .ring-label {
+  max-width: 108px;
+}
+
+.readout-rings .ring.compact + .ring-label {
+  max-width: 88px;
+}
+
+/* Which models answered, in the rail that pressed the button. `decided` marks the lane whose number
+   became the verdict, because two lanes can disagree and a reader comparing the ring above to the
+   model beside it has to know which of them the claim belongs to. */
+.readout-models {
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-1);
+  margin: 0;
+  padding: 0;
+}
+
+.readout-models li {
+  display: flex;
+  align-items: baseline;
+  gap: var(--s-2);
+  font-size: var(--fs-meta);
+  color: var(--ink-dim);
+}
+
+.rm-lane {
+  flex: none;
+  font-family: var(--font-instrument);
+  letter-spacing: var(--tr-label);
+  text-transform: uppercase;
+  font-size: var(--fs-micro);
+  color: var(--ink-hair);
+}
+
+.rm-id {
+  font-family: var(--font-instrument);
+  font-size: var(--fs-meta);
+  color: var(--ink-dim);
+  overflow-wrap: anywhere;
+}
+
+.readout-models li.decided .rm-id {
+  color: var(--tone, var(--ink));
+}
+
+.rm-tag {
+  flex: none;
+  font-family: var(--font-instrument);
+  font-size: var(--fs-micro);
+  letter-spacing: var(--tr-label);
+  color: var(--tone, var(--ink-dim));
+}
+
+.scale-note {
+  margin: 0;
+  max-width: 44ch;
+  font-size: var(--fs-meta);
+  line-height: var(--lh-snug);
+  color: var(--ink-dim);
+}
+
+/* The lanes that were called and gave nothing back. Same shape as the models-above row — one lane per
+   line, the machine's id in the instrument voice — but the reason is the point of the line, so it is
+   the part in the serif and the part a reader has to be able to read. */
+.readout-failures {
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-2);
+  margin: 0;
+  padding: 0;
+}
+
+.readout-failures li {
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: var(--s-2);
+  border-left: 2px solid color-mix(in srgb, var(--bad) 55%, transparent);
+  padding-left: var(--s-3);
+}
+
+.readout-failures li.skipped {
+  border-left-color: var(--line-strong);
+}
+
+.rf-lane {
+  flex: none;
+  font-family: var(--font-instrument);
+  letter-spacing: var(--tr-label);
+  text-transform: uppercase;
+  font-size: var(--fs-micro);
+  color: var(--ink-hair);
+}
+
+.rf-id {
+  font-family: var(--font-instrument);
+  font-size: var(--fs-meta);
+  color: var(--ink-dim);
+  overflow-wrap: anywhere;
+}
+
+.rf-tag {
+  flex: none;
+  font-family: var(--font-instrument);
+  font-size: var(--fs-micro);
+  letter-spacing: var(--tr-label);
+  color: var(--bad);
+}
+
+.readout-failures li.skipped .rf-tag {
+  color: var(--ink-hair);
+}
+
+.rf-detail {
+  flex: 1 1 100%;
+  font-family: var(--font-prose);
+  font-size: var(--fs-ui);
+  line-height: var(--lh-snug);
+  color: var(--ink);
+  overflow-wrap: anywhere;
+}
+
+/* Why the run declined to answer, or why nothing answered at all — prose, so it is set in the serif
+   and kept under the number it explains rather than in a fold. */
+.readout-note {
+  margin: 0;
+  font-size: var(--fs-ui);
+  line-height: var(--lh-body);
+  color: var(--ink-dim);
+  border-left: 2px solid color-mix(in srgb, var(--warn) 55%, transparent);
+  padding-left: var(--s-3);
+}
+
+/* ---- the detect areas -------------------------------------------------------------
+   The screen is split in percentages, not in resolved widths: the writing takes 66% of the row,
+   the panel takes 33%, and the gutter between them is the last per cent. Both areas own the whole
+   height under the bar, so the first screen is exactly these two and nothing else. `minmax(0,…)`
+   on the first track because a textarea carries a default intrinsic width -- without the floor the
+   wider of the two wins and the panel is squeezed out of the page.
+
+   The field is first in the DOM and first on the screen, so reading order and focus order agree:
+   write, then press. */
+.detect-cols {
+  display: grid;
+  grid-template-columns: minmax(0, 66%) minmax(0, 33%);
+  /* One row that owns whatever height the shell has left. The evidence and the raw response are
+     allowed to overflow beneath it rather than steal from it, so a long verdict trail never
+     shrinks the writing surface. */
+  grid-template-rows: minmax(0, 1fr);
+  align-content: start;
+  /* The gutter between the two areas is the last per cent, so 66 + 33 + 1 is the row and neither
+     area borrows from the other. A fixed pixel gutter would have made the panel 32 per cent on a
+     wide screen and 30 on a narrow one, which is the opposite of what a percentage asks for. */
+  column-gap: 1%;
+  row-gap: var(--s-5);
+  flex: 1 1 auto;
+  /* Every length in this row is a fraction of the screen, so the row has to be allowed to give way
+     to the viewport as well: without the zero floor a tall rail would hold the row open past the
+     bottom of a short screen instead of letting the page scroll under it. */
+  min-height: 0;
+}
+
+.detect-cols .col-input {
+  grid-column: 1;
+  grid-row: 1;
+  display: flex;
+  flex-direction: column;
+}
+
+.detect-cols .col-rail {
+  grid-column: 2;
+  grid-row: 1;
+  /* The half that can be taller than the screen: a long verdict trail — two gauges, the lanes, the
+     phrases — is more content than a third of a laptop has rows for. It scrolls inside its own
+     column, which keeps the page the height the shell promised. */
+  min-height: 0;
+  overflow-y: auto;
+}
+
+/* The writing area is not a card and does not draw one. It used to be a `.panel` whose border,
+   ground, bracket and padding were all stripped by an override here; the field is a framed
+   contenteditable now, so there is no panel left to unstyle and the only line on this half of the
+   screen is the 1px --edge of `.ed`, which belongs to the control and rings it when it has focus. */
+.detect-cols .col-input app-text-panel {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+
+/* The writing surface is one framed object — strip, field, one edge around both — so the stretch
+   has to reach the frame, not an inner layer of it. A floor expressed in the viewport, not a fixed
+   height: the field has to stay a writing surface when the two areas are stacked on a short screen,
+   and one pixel number cannot mean the same thing on a phone in landscape and on a 4K panel. */
+.detect-cols .col-input .ed {
+  flex: 1;
+  min-height: 34svh;
+}
+
+.rail {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-4);
+}
+
+/* The three starting points are a stack, not a run-on row: two of the three labels cannot share a
+   line in a column this narrow, and a ragged wrap reads as a sentence rather than as a choice.
+   Left-aligned so the labels scan as names, and tall enough to press without aiming. */
+.rail-samples {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-2);
+}
+
+.rail-samples button {
+  text-align: left;
+  min-height: 40px;
+}
+
+/* Load and empty act on the field rather than on what goes into it, so they share a line. */
+.rail-file-row {
+  display: flex;
+  align-items: center;
+  gap: var(--s-2);
+  flex-wrap: wrap;
+}
+
+/* The press takes the column's whole width: it is the primary action on the page, and a button
+   that stops short of the text above it reads as one option among several. */
+.rail .run-row {
+  flex-direction: column;
+  align-items: stretch;
+  gap: var(--s-2);
+}
+
+.rail .pick-banner {
+  margin: 0;
+}
+
+/* The readout under a run: one measurement per row, so the whole table is the instrument's voice and
+   the only serif left in it is the note, which is a sentence. Rows are separated by a hairline rather
+   than by space alone, because the caption and the value have to be read as pairs at a glance. */
 table.kv {
   width: 100%;
   border-collapse: collapse;
-  font-size: 13px;
+  font-family: var(--font-instrument);
+  font-size: var(--fs-ui);
 }
-
 table.kv th {
   text-align: left;
   font-weight: 500;
   color: var(--ink-dim);
   white-space: nowrap;
-  padding: 4px 12px 4px 0;
+  padding: var(--s-1) var(--s-3) var(--s-1) 0;
   vertical-align: top;
 }
 
 table.kv td {
-  padding: 4px 0;
+  padding: var(--s-1) 0;
   vertical-align: top;
 }
 
+table.kv tr + tr > * {
+  border-top: 1px solid var(--line);
+}
+
 table.kv td.note {
+  font-family: var(--font-ui);
   color: var(--ink-dim);
-  font-size: 12px;
-  line-height: 1.45;
-  padding-top: 9px;
+  font-size: var(--fs-meta);
+  line-height: var(--lh-snug);
+  padding-top: var(--s-2);
 }
 
 .attempts {
   display: grid;
-  gap: 10px;
+  gap: var(--s-3);
 }
 
 .attempt {
-  background: var(--panel-2);
+  background-color: var(--panel-2);
   border: 1px solid var(--line);
-  border-radius: var(--r-md);
-  padding: 10px 12px;
+  padding: var(--s-3);
 }
 
 .attempt.bad {
   border-color: color-mix(in srgb, var(--bad) 50%, var(--line));
+  --cut-ink: color-mix(in srgb, var(--bad) 50%, var(--line));
 }
 
 .attempt h4 {
-  margin: 0 0 6px;
-  font-size: 13px;
+  margin: 0 0 var(--s-2);
+  font-size: var(--fs-ui);
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: var(--s-2);
   flex-wrap: wrap;
   font-weight: 600;
 }
 
-.tag {
-  font-size: 11px;
-  font-family: var(--mono);
-  border: 1px solid var(--line);
-  border-radius: var(--r-pill);
-  padding: 1px 8px;
-  color: var(--ink-dim);
-}
-
+/* The result card's lane tags: the same label primitive as a ranking chip, so the base lives in the
+   register above and only the hues are stated here. A tag that carries no hue is a fact in grey. */
 .tag.good {
+  border-color: color-mix(in srgb, var(--good) 55%, transparent);
+  background-color: var(--good-a16);
   color: var(--good);
-  border-color: color-mix(in srgb, var(--good) 45%, transparent);
 }
 
 .tag.bad {
+  border-color: color-mix(in srgb, var(--bad) 55%, transparent);
+  background-color: var(--bad-a16);
   color: var(--bad);
-  border-color: color-mix(in srgb, var(--bad) 45%, transparent);
 }
 
 .tag.warn {
+  border-color: color-mix(in srgb, var(--warn) 55%, transparent);
+  background-color: var(--warn-a16);
   color: var(--warn);
-  border-color: color-mix(in srgb, var(--warn) 45%, transparent);
 }
 
 .provider-error {
-  margin: 6px 0 0;
-  font-family: var(--mono);
-  font-size: 12.5px;
+  margin: var(--s-2) 0 0;
+  font-family: var(--font-instrument);
+  font-size: var(--fs-meta);
   color: var(--bad);
   word-break: break-word;
 }
 
 .lane-numbers {
-  margin: 4px 0;
-  font-family: var(--mono);
-  font-size: 12.5px;
+  margin: var(--s-1) 0;
+  font-family: var(--font-instrument);
+  font-size: var(--fs-meta);
   font-variant-numeric: tabular-nums;
   color: var(--ink-dim);
 }
 
 ul.signals {
-  margin: 6px 0 0;
+  margin: var(--s-2) 0 0;
   padding: 0;
   list-style: none;
   display: grid;
-  gap: 3px;
-  font-size: 13px;
+  gap: var(--s-1);
+  font-size: var(--fs-ui);
 }
 
 ul.signals .dir {
-  font-family: var(--mono);
-  font-size: 11px;
+  font-family: var(--font-instrument);
+  font-size: var(--fs-micro);
   color: var(--bad);
-  margin-right: 6px;
+  margin-right: var(--s-2);
 }
 
 ul.signals .dir.human {
@@ -888,41 +1753,41 @@ ul.signals .dir.human {
 
 ul.signals .strength {
   float: right;
-  font-family: var(--mono);
-  font-size: 12px;
+  font-family: var(--font-instrument);
+  font-size: var(--fs-meta);
   color: var(--ink-dim);
 }
 
 .src {
-  font-family: var(--mono);
-  font-size: 11.5px;
+  font-family: var(--font-instrument);
+  font-size: var(--fs-meta);
   color: var(--ink-dim);
-  margin-left: 6px;
+  margin-left: var(--s-2);
 }
 
 /* Provenance emphasis: this number came from the request rather than the stored row. It is
-   emphasised with ink, not with the interaction blue, because nothing about it is clickable. */
+   emphasised with ink, not with the interaction gold, because nothing about it is clickable. */
 .src.from-request {
   color: var(--ink);
   font-weight: 600;
 }
 
 ul.warnings {
-  margin: 4px 0 0;
-  padding-left: 18px;
-  font-size: 13px;
+  margin: var(--s-1) 0 0;
+  padding-left: var(--s-4);
+  font-size: var(--fs-ui);
   color: var(--warn);
 }
 
 .footnote {
-  margin: 12px 0 0;
-  font-size: 12.5px;
+  margin: var(--s-3) 0 0;
+  font-size: var(--fs-meta);
   color: var(--ink-dim);
 }
 
 .purge-status {
-  margin: 14px 0 0;
-  font-size: 12.5px;
+  margin: var(--s-4) 0 0;
+  font-size: var(--fs-meta);
   color: var(--ink-dim);
 }
 
@@ -932,181 +1797,205 @@ ul.warnings {
   width: 8px;
   height: 8px;
   border-radius: 50%;
-  margin-right: 6px;
-  background: var(--good);
+  margin-right: var(--s-2);
+  background-color: var(--good);
 }
 
 .bad-dot {
-  background: var(--bad);
+  background-color: var(--bad);
 }
 
 .raw summary {
   cursor: pointer;
   color: var(--ink-dim);
-  font-size: 13px;
+  font-size: var(--fs-ui);
 }
 
 .raw pre {
-  margin: 10px 0 0;
-  font-family: var(--mono);
-  font-size: 12px;
-  line-height: 1.5;
-  max-height: 420px;
+  margin: var(--s-3) 0 0;
+  font-family: var(--font-instrument);
+  font-size: var(--fs-meta);
+  line-height: var(--lh-mono);
+  /* A ceiling in the viewport, not in pixels: the raw response quotes the whole request back, and on
+     a 600px-tall screen a 420px block would push the rest of the trail off the page while on a 1440
+     one it would stop with room still there. */
+  max-height: 40svh;
   overflow: auto;
-  background: var(--field-bg);
+  background-color: var(--field-bg);
   border: 1px solid var(--line);
-  border-radius: var(--r-md);
-  padding: 10px;
+  padding: var(--s-3);
   white-space: pre-wrap;
   word-break: break-word;
 }
 
 /* --- Configuration + Benchmarks views ---------------------------------- */
 
+/* The tab strip on Configuration + Benchmarks. These are named views, so they are the machine's own
+   labels — instrument voice, not the serif the page writes its sentences in. `font: inherit` used to
+   smuggle the serif back in, because it resets font-family and outranks the zero-specificity voice
+   rule. */
 .tabs {
   display: flex;
-  gap: 6px;
-  margin: 0 0 18px;
-  border-bottom: 1px solid var(--line);
-  padding-bottom: 10px;
+  gap: var(--s-2);
+  margin: 0 0 var(--s-4);
+  border-bottom: 1px solid var(--rule);
+  padding-bottom: var(--s-3);
 }
 
 .tabs button {
-  background: transparent;
+  background-color: transparent;
   border: 1px solid var(--line);
-  border-radius: var(--r-pill);
   color: var(--ink-dim);
   cursor: pointer;
-  font: inherit;
-  font-size: 13px;
-  padding: 5px 14px;
+  font-family: var(--font-instrument);
+  font-size: var(--fs-ui);
+  letter-spacing: var(--tr-label);
+  padding: var(--s-1) var(--s-4);
 }
 
+/* Selected tab: the same standing position the nav strip marks with a gold rule. Blue is kept for
+   what the machine answers *now* — the hover below, the focus ring, a run in flight — so a view you
+   are sitting on and a pointer that just moved do not compete for the same hue. */
 .tabs button[aria-selected='true'] {
-  background: var(--panel-2);
-  border-color: var(--royal);
+  border-color: var(--accent);
   color: var(--ink);
+  font-weight: 600;
 }
 
 .card {
-  background: var(--panel);
+  background-color: var(--panel);
   border: 1px solid var(--line);
-  border-radius: var(--r-lg);
-  margin: 0 0 14px;
-  padding: 14px 16px;
-}
-
-.card:hover {
-  border-color: var(--royal);
+  margin: 0 0 var(--s-4);
+  padding: var(--s-4);
 }
 
 .card-head {
   align-items: baseline;
   display: flex;
   flex-wrap: wrap;
-  gap: 8px;
+  gap: var(--s-2);
 }
 
 .card-head h3 {
   margin: 0;
 }
 
+/* Admin status pills.
+   These answer a yes/no question about one row, and the yes answer is the resting one: the template
+   adds `pill-off` when it is not yes, so the affirmative green stays on the base instead of being
+   re-typed onto twenty spans. Declared ahead of the three state variants below, which are the same
+   specificity and win only because they come later. */
 .pill {
-  background: var(--good-a16);
-  border: 1px solid color-mix(in srgb, var(--good) 40%, transparent);
-  border-radius: var(--r-pill);
+  border-color: color-mix(in srgb, var(--good) 55%, transparent);
+  background-color: var(--good-a16);
   color: var(--good);
-  font-size: 11px;
-  letter-spacing: 0.04em;
-  padding: 2px 9px;
-  text-transform: uppercase;
 }
 
+/* The word already says the state, so the pill is not raised by being shouted in capitals — the mono
+   tracking does that job, and the hue carries the state. */
 .pill-off {
-  background: color-mix(in srgb, var(--neutral) 14%, transparent);
-  border-color: color-mix(in srgb, var(--neutral) 40%, transparent);
+  background-color: color-mix(in srgb, var(--neutral) 14%, transparent);
+  border-color: color-mix(in srgb, var(--neutral) 55%, transparent);
   color: var(--neutral);
 }
 
 .pill-bad {
-  background: var(--bad-a16);
-  border-color: color-mix(in srgb, var(--bad) 40%, transparent);
+  background-color: var(--bad-a16);
+  border-color: color-mix(in srgb, var(--bad) 55%, transparent);
   color: var(--bad);
 }
 
 .pill-warn {
-  background: var(--warn-a16);
-  border-color: color-mix(in srgb, var(--warn) 40%, transparent);
+  background-color: var(--warn-a16);
+  border-color: color-mix(in srgb, var(--warn) 55%, transparent);
   color: var(--warn);
 }
 
 .mono {
-  font-family: var(--mono);
-  font-size: 12.5px;
+  font-family: var(--font-instrument);
+  font-size: var(--fs-meta);
   word-break: break-all;
 }
 
 .hint {
   color: var(--ink-dim);
-  font-size: 12.5px;
-  margin: 6px 0;
+  font-size: var(--fs-meta);
+  margin: var(--s-2) 0;
+}
+
+/* The admin's second-lane card. The checkbox label is the control's name, so it is set as the
+   control's name — but its words are a sentence ("Ask a second model when the first one defers"),
+   and tracking is for the single-word labels and chips, not for reading. The explanation that
+   answers "what does this write" hangs off the switch with a hairline, the same grouping job the
+   dashed border on the Advanced `.lane-switch` already does, one level further out. */
+.lane-card .lane-switch {
+  cursor: pointer;
+  font-size: var(--fs-ui);
+  font-weight: 600;
+}
+
+.lane-note {
+  border-left: 2px solid var(--line);
+  padding-left: var(--s-3);
 }
 
 .row-actions {
   display: flex;
   flex-wrap: wrap;
-  gap: 6px;
-  margin-top: 8px;
+  gap: var(--s-2);
+  margin-top: var(--s-2);
 }
 
 .inline-form {
   align-items: flex-end;
-  background: var(--panel-2);
+  background-color: var(--panel-2);
   border: 1px solid var(--line);
-  border-radius: var(--r-lg);
   display: flex;
   flex-wrap: wrap;
-  gap: 10px;
-  margin: 0 0 14px;
-  /* 16px of side padding keeps the 14px chamfer clear of the control it cuts past. */
-  padding: 12px 16px;
-}
-
-.inline-form:hover {
-  border-color: var(--royal);
+  gap: var(--s-3);
+  margin: 0 0 var(--s-4);
+  padding: var(--s-3) var(--s-4);
 }
 
 .inline-form label {
   color: var(--ink-dim);
   display: flex;
   flex-direction: column;
-  font-size: 12px;
-  letter-spacing: 0.02em;
-  gap: 4px;
+  font-size: var(--fs-meta);
+  letter-spacing: var(--tr-label);
+  gap: var(--s-1);
+  /* A field's `size` is a preference in characters, not a floor: the engine-URL box asks for 38 of
+     them and this row is allowed to be narrower than that. `min-width: 0` on the label AND the field
+     is what lets both shrink past the text they would rather hold — without it a 390px screen gets a
+     sideways scroll out of a settings form. */
+  min-width: 0;
 }
 
+/* Only the size and the fit differ here: a form that packs five fields into one row needs a
+   tighter box than a standalone field. The ground, the findable edge and the instrument voice are
+   already the global rule's, and re-typing them is how a control drifts off the ladder. */
 .inline-form input,
 .inline-form select {
-  background: var(--field-bg);
-  border: 1px solid var(--edge);
-  border-radius: var(--r-md);
-  color: var(--ink);
-  font: inherit;
-  font-size: 13px;
-  padding: 5px 8px;
+  min-width: 0;
+  font-size: var(--fs-ui);
+  padding: var(--s-1) var(--s-2);
 }
 
+/* The admin's editable tables. A grid of settings is an instrument panel: hairline rules between the
+   rows, the instrument voice in every cell, and the head rule one weight heavier than the rest so a
+   column of fields is read from its caption down. No stripes — a stripe would compete with the
+   selection fill, which is the one thing `--panel-2` is for. */
 table.grid {
   border-collapse: collapse;
-  margin: 10px 0 0;
+  margin: var(--s-3) 0 0;
   width: 100%;
 }
 
 table.grid th,
 table.grid td {
   border-bottom: 1px solid var(--line);
-  font-size: 12.5px;
-  padding: 6px 8px;
+  font-size: var(--fs-meta);
+  padding: var(--s-2);
   text-align: left;
   vertical-align: middle;
 }
@@ -1114,39 +2003,41 @@ table.grid td {
 table.grid th {
   color: var(--ink-dim);
   font-weight: 600;
-  letter-spacing: 0.03em;
-  text-transform: uppercase;
-  font-size: 11px;
+  letter-spacing: var(--tr-chip);
+  border-bottom-color: var(--rule);
+  font-size: var(--fs-micro);
+}
+
+/* In a table the fields are cells, not the page's subject, so they take the smaller voice and the
+   tightest box on the ladder. The instrument face, the well and the findable edge are the global
+   field rule's already. */
+table.grid input.num,
+table.grid select {
+  font-size: var(--fs-meta);
+  padding: var(--s-1);
 }
 
 table.grid input.num {
-  background: var(--field-bg);
-  border: 1px solid var(--edge);
-  border-radius: var(--r-sm);
-  color: var(--ink);
-  font: inherit;
-  font-size: 12.5px;
-  padding: 3px 5px;
-  width: 68px;
+  /* Said out loud rather than left to the shorthand above: this field is one cell in a column of
+     thresholds, so it stays on tabular figures even though the typing fields go back to
+     proportional. */
+  font-variant-numeric: tabular-nums;
+  /* Measured in characters, not pixels: the field is sized to the digits it holds, so it follows the
+     type scale instead of arguing with it. */
+  width: 8ch;
 }
 
-table.grid select {
-  background: var(--field-bg);
-  border: 1px solid var(--edge);
-  border-radius: var(--r-sm);
-  color: var(--ink);
-  font: inherit;
-  font-size: 12.5px;
-  padding: 3px 5px;
-}
-
-table.grid td.row-actions {
-  margin: 0;
+/* In a cell the buttons are the cell's only content, so the top margin that separates a control
+   block from the prose above it has nothing to separate from. The names stay on one line because a
+   row whose Save/Probe/Delete folded into a stack is a row nobody can read the height of: the table
+   is allowed to be wider than the screen, and `.scroll-x` lets it say so. */
+table.grid .row-actions {
+  margin-top: 0;
   white-space: nowrap;
 }
 
 button.danger {
-  border-color: color-mix(in srgb, var(--bad) 45%, transparent);
+  border-color: color-mix(in srgb, var(--bad) 55%, transparent);
   color: var(--bad);
 }
 
@@ -1158,6 +2049,9 @@ table.grid td.num-bad {
   color: var(--bad);
 }
 
+/* The one device for a grid that has a right to be wider than the screen. A box that scrolls keeps
+   the real table box — one column set, head aligned to cells — which is what `display:block` on the
+   table itself used to throw away at small widths. Every editable `table.grid` lives inside one. */
 .scroll-x {
   overflow-x: auto;
 }
@@ -1169,7 +2063,7 @@ table.grid td.num-bad {
   height: 15px;
   display: inline-block;
   vertical-align: -2px;
-  margin-right: 6px;
+  margin-right: var(--s-2);
   fill: none;
   stroke: currentColor;
   stroke-width: 1.7;
@@ -1179,37 +2073,46 @@ table.grid td.num-bad {
 
 .panel,
 .card {
-  /* A top hairline is the only material cue left: the ground is absolute, so there is no
-     shadow to sit in and nothing translucent to blur. */
-  box-shadow: var(--shadow), inset 0 1px 0 var(--sheen);
-  transition: border-color 0.18s ease, box-shadow 0.18s ease;
+  /* No depth at rest. The ground is absolute, so a shadow has nothing to fall on and an inset hairline
+     is a highlight from a language that filled its boxes; what a panel has is its rule and its
+     corner bracket. The transition is left for the hover state below. */
+  transition: border-color var(--t-fast) var(--ease-out);
 }
 
 .brand {
   display: flex;
-  gap: 14px;
-  align-items: flex-start;
+  gap: var(--s-3);
+  /* The mark is a square and the wordmark is a line of text; `flex-start` sat the top of the
+     letters on the top of the plate, so a 46px mark pushed the whole nameplate above the bar's
+     centre line while the tabs beside it sat on it. Both are centred now, and the mark is small
+     enough that the bar's height is set by the tabs, not by the logo. */
+  align-items: center;
 }
 
-/* The mark is neutral ink on a grey tile. Blue is spent on controls, and a logo is not one. */
+/* The mark is the favicon at 30px: three bars of prose cut in black out of a filled gold
+   thumbnail. Its cut is not a second exception to the corner language — it is the same polygon
+   the tab icon is drawn with (a 64-unit box with two corners taken off at 12; 8px is that ratio
+   at this size), and a square mark sitting beside a cut tab icon would be two logos.
+   It is the one surface that is gold while resting, because it is the identity, not a control.
+   The plate is --accent-fill — the bright yellow in BOTH themes — with black ink on it at 14.67:1.
+   Filling it with the theme's text gold is what used to paint the mark brown on a white page. */
 .brand-mark {
   flex: 0 0 auto;
-  width: 46px;
-  height: 46px;
-  border-radius: var(--r-lg);
+  width: 30px;
+  height: 30px;
   clip-path: var(--chamfer-sm);
   display: grid;
   place-items: center;
-  background: var(--panel-2);
-  border: 1px solid var(--line-strong);
+  background-color: var(--accent-fill);
+  border: 1px solid var(--accent-deep);
 }
 
 .brand-mark svg {
-  width: 26px;
-  height: 26px;
+  width: 17px;
+  height: 17px;
   fill: none;
-  stroke: var(--ink);
-  stroke-width: 1.6;
+  stroke: var(--on-accent-fill);
+  stroke-width: 2.2;
   stroke-linecap: round;
   stroke-linejoin: round;
 }
@@ -1217,19 +2120,20 @@ table.grid td.num-bad {
 .tabs button {
   display: inline-flex;
   align-items: center;
-  transition: color 0.2s ease, border-color 0.2s ease, background 0.2s ease, transform 0.15s ease;
+  transition: color var(--t-fast) var(--ease-out), border-color var(--t-fast) var(--ease-out), background var(--t-fast) var(--ease-out), transform var(--t-fast) var(--ease-out);
 }
 
 .tabs button:hover:not([aria-selected='true']) {
   color: var(--ink);
+  border-color: var(--touch);
   transform: translateY(-1px);
 }
 
 .banner {
   display: flex;
-  gap: 11px;
+  gap: var(--s-3);
   align-items: flex-start;
-  animation: rise 0.25s ease both;
+  animation: rise var(--t-mid) var(--ease-out) both;
 }
 
 .banner .ico {
@@ -1245,7 +2149,7 @@ table.grid td.num-bad {
 }
 
 .tone-rejected .banner-ico,
-.tone-n8n .banner-ico,
+.tone-engine .banner-ico,
 .tone-unreachable .banner-ico {
   stroke: var(--bad);
 }
@@ -1254,22 +2158,24 @@ table.grid td.num-bad {
   min-width: 0;
 }
 
-/* The glow this rule used to carry cannot exist here: `button` is chamfered, and a clip-path
-   cuts everything painted outside the box — including its own shadow. */
+/* No glow on the primary action, and it is the cut that forbids it: this is one of the two clipped
+   boxes, and a clip-path removes everything painted outside the edge — including its own shadow.
+   The act reads as gold fill, not as light. The lift is the only thing hover adds here, because the
+   fill step to --accent-2 is declared with the control above; a `brightness()` on top of that step
+   fought it on the white ground, where --accent-2 is the DEEPER gold. */
 button.primary {
   display: inline-flex;
   align-items: center;
   gap: 2px;
-  transition: transform 0.15s ease, filter 0.2s ease;
+  transition: transform var(--t-fast) var(--ease-out), background-color var(--t-fast) var(--ease-out), border-color var(--t-fast) var(--ease-out);
 }
 
 button.primary:hover:not(:disabled) {
   transform: translateY(-1px);
-  filter: brightness(1.07);
 }
 
 button.primary .ico {
-  margin: 0 6px 0 0;
+  margin: 0 var(--s-2) 0 0;
   width: 16px;
   height: 16px;
   stroke-width: 1.9;
@@ -1280,8 +2186,8 @@ button.primary .ico {
   width: 8px;
   height: 8px;
   border-radius: 50%;
-  background: var(--accent);
-  margin-right: 8px;
+  background-color: var(--touch);
+  margin-right: var(--s-2);
   animation: pulse 1.1s ease-in-out infinite;
 }
 
@@ -1295,24 +2201,33 @@ button.primary .ico {
   to { opacity: 1; transform: none; }
 }
 
+/* `from` alone: the end of each of these is whatever the element was already given, so a bar
+   animates to its own [style.width] and a number to its own text. Declaring the start only is what
+   keeps the measurement in the markup rather than duplicated in the sheet. */
+@keyframes settle {
+  from { opacity: 0; transform: scale(0.9); }
+}
+
+@keyframes measure {
+  from { width: 0; }
+}
+
+/* The needle's start is the left end of the ruler, so its end is whatever position the run put it
+   at — the same trick as `measure`: the markup owns the number, the sheet only owns the travel. */
+@keyframes sweep {
+  from { left: 0; }
+}
+
 .fade-in {
-  animation: rise 0.3s ease both;
+  animation: rise var(--t-mid) var(--ease-out) both;
 }
 
 .lanes.one-lane .lane {
-  max-width: 560px;
-}
-
-.lane {
-  transition: border-color 0.25s ease, box-shadow 0.25s ease;
-}
-
-.lane:hover {
-  border-color: var(--royal);
+  max-width: 35rem;
 }
 
 .lane-enter {
-  animation: rise 0.25s ease both;
+  animation: rise var(--t-mid) var(--ease-out) both;
 }
 
 .lane h3 {
@@ -1321,7 +2236,7 @@ button.primary .ico {
 }
 
 /* The lane glyph labels a section, it is not a control, so it takes the ink of a heading
-   rather than the interaction blue that now belongs only to hover, focus and selection. */
+   rather than the interaction gold that belongs only to hover, focus and selection. */
 .lane h3 .ico {
   stroke: var(--ink-dim);
 }
@@ -1332,12 +2247,13 @@ button.primary .ico {
 
 /* the expandable second lane */
 .lane-switch {
-  display: flex;
-  gap: 12px;
   align-items: center;
   border-top: 1px dashed var(--line);
-  margin-top: 14px;
-  padding-top: 12px;
+  display: flex;
+  font-family: var(--font-ui);
+  gap: var(--s-3);
+  margin-top: var(--s-4);
+  padding-top: var(--s-3);
 }
 
 .lane-switch .lane-switch-copy {
@@ -1346,10 +2262,10 @@ button.primary .ico {
 
 .lane-switch h4 {
   margin: 0 0 2px;
-  font-size: 13.5px;
+  font-size: var(--fs-ui);
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: var(--s-2);
 }
 
 .switch {
@@ -1367,17 +2283,17 @@ button.primary .ico {
   cursor: pointer;
 }
 
-/* The track is deliberately square rather than chamfered: --r-pill is now 0px, so the shape
-   already matches the rest of the language, and a notch in the right-hand corners would slice
-   the thumb at the exact moment it arrives there — the one position the switch is read at. */
+/* The track is square, like every control that is not the primary action: nothing else in this
+   language takes a corner off, and a notch in the right-hand corners would slice the thumb at the
+   exact moment it arrives there — the one position the switch is read at. */
 .switch .track {
   display: block;
   width: 40px;
   height: 22px;
-  background: var(--field-bg);
+  background-color: var(--field-bg);
   border: 1px solid var(--edge);
   position: relative;
-  transition: background 0.25s ease, border-color 0.25s ease;
+  transition: background var(--t-mid) var(--ease-out), border-color var(--t-mid) var(--ease-out);
 }
 
 .switch .thumb {
@@ -1387,39 +2303,34 @@ button.primary .ico {
   width: 16px;
   height: 16px;
   border-radius: 50%;
-  background: var(--neutral);
-  transition: transform 0.25s cubic-bezier(0.2, 0.9, 0.3, 1.2), background 0.25s ease;
+  background-color: var(--neutral);
+  transition: transform var(--t-mid) var(--ease-spring), background var(--t-mid) var(--ease-out);
 }
 
 .lane-switch.on .track {
-  background: color-mix(in srgb, var(--good) 22%, var(--field-bg));
+  background-color: color-mix(in srgb, var(--good) 22%, var(--field-bg));
   border-color: color-mix(in srgb, var(--good) 55%, transparent);
 }
 
 .lane-switch.on .thumb {
   transform: translateX(18px);
-  background: var(--good);
+  background-color: var(--good);
 }
 
 .switch input:focus-visible + .track {
-  outline: 2px solid var(--royal);
+  outline: 2px solid var(--touch);
   outline-offset: var(--focus-offset);
 }
 
-/* result card */
-.result-head {
-  align-items: center;
-}
-
+/* the verdict mark, shared by the rail readout and nothing else */
 .verdict-badge {
   flex: 0 0 auto;
   width: 38px;
   height: 38px;
-  border-radius: var(--r-lg);
   display: grid;
   place-items: center;
   border: 1px solid var(--line);
-  background: var(--panel-2);
+  background-color: var(--panel-2);
 }
 
 .verdict-badge svg {
@@ -1433,21 +2344,21 @@ button.primary .ico {
 }
 
 .tone-ai_generated .verdict-badge {
-  border-color: color-mix(in srgb, var(--bad) 45%, transparent);
-  background: color-mix(in srgb, var(--bad) 10%, var(--panel-2));
+  border-color: color-mix(in srgb, var(--bad) 55%, transparent);
+  background-color: color-mix(in srgb, var(--bad) 10%, var(--panel-2));
 }
 .tone-ai_generated .verdict-badge svg { stroke: var(--bad); }
 
 .tone-human_likely .verdict-badge {
-  border-color: color-mix(in srgb, var(--good) 45%, transparent);
-  background: color-mix(in srgb, var(--good) 10%, var(--panel-2));
+  border-color: color-mix(in srgb, var(--good) 55%, transparent);
+  background-color: color-mix(in srgb, var(--good) 10%, var(--panel-2));
 }
 .tone-human_likely .verdict-badge svg { stroke: var(--good); }
 
 .tone-review_required .verdict-badge svg { stroke: var(--ink-dim); }
 
 .tone-detection_unavailable .verdict-badge {
-  border-color: color-mix(in srgb, var(--warn) 45%, transparent);
+  border-color: color-mix(in srgb, var(--warn) 55%, transparent);
 }
 .tone-detection_unavailable .verdict-badge svg { stroke: var(--warn); }
 
@@ -1458,21 +2369,46 @@ button.primary .ico {
   margin-right: auto;
 }
 
-.score,
-.attempt {
-  transition: transform 0.2s ease, border-color 0.2s ease;
+/* ---- the verdict landing: the one orchestrated moment ------------------------------
+   `run()` clears `result` before it sends, so every verdict is a fresh insert and this replays
+   once per Detect — which is why it is spent here and nowhere else: it answers a press, it is not
+   an entrance animation for the page. The order is the order of a reading: the mark arrives, the
+   word names it, and only then do the bars measure themselves out. `backwards` and never
+   `both`, because a forwards fill would pin each bar to the width the keyframe ended on and the
+   next verdict would paint nothing; `prefers-reduced-motion` already flattens all three.
+   It hangs on the readout because the verdict moved there: the card below answers a different
+   question and must not animate twice for one press. */
+.readout .verdict-badge {
+  animation: settle var(--t-fast) var(--ease-out) backwards;
 }
 
-.attempt:hover {
-  transform: translateY(-1px);
-  border-color: var(--royal);
+.readout .verdict {
+  animation: rise var(--t-mid) var(--ease-out) var(--t-fast) backwards;
+}
+
+.readout .fill,
+.readout .band {
+  animation: measure var(--t-draw) var(--ease-draw) calc(var(--t-fast) * 2) backwards;
+}
+
+/* The needle walks in from the left end of the ruler to the position this run put it at. It is the
+   slowest thing in the sequence on purpose: it is the measurement arriving, and the eye is supposed
+   to follow it to its place rather than have the answer appear already-finished. */
+.readout .marker {
+  animation: sweep var(--t-travel) var(--ease-travel) calc(var(--t-fast) * 2) backwards;
+}
+
+/* A failed leg turns its own frame red. That is the only state this row changes, so it is the only
+   property that animates — the row is not a target and never lifted on hover. */
+.attempt {
+  transition: border-color var(--t-fast) var(--ease-out);
 }
 
 /* fold-up sections */
 .fold {
   border-top: 1px solid var(--line);
-  margin-top: 14px;
-  padding-top: 4px;
+  margin-top: var(--s-4);
+  padding-top: var(--s-1);
 }
 
 .fold summary {
@@ -1481,11 +2417,12 @@ button.primary .ico {
   display: flex;
   align-items: center;
   color: var(--ink-dim);
-  font-size: 13px;
-  text-transform: uppercase;
-  letter-spacing: 0.14em;
-  padding: 8px 0 10px;
-  transition: color 0.2s ease;
+  font-size: var(--fs-ui);
+  font-weight: 600;
+  letter-spacing: var(--tr-label);
+  text-transform: none;
+  padding: var(--s-2) 0 var(--s-3);
+  transition: color var(--t-fast) var(--ease-out);
 }
 
 .fold summary:hover {
@@ -1499,7 +2436,7 @@ button.primary .ico {
 .fold summary .ico {
   width: 14px;
   height: 14px;
-  transition: transform 0.2s ease;
+  transition: transform var(--t-fast) var(--ease-out);
 }
 
 .fold[open] summary .ico {
@@ -1509,7 +2446,7 @@ button.primary .ico {
 .raw summary {
   display: flex;
   align-items: center;
-  transition: color 0.2s ease;
+  transition: color var(--t-fast) var(--ease-out);
 }
 
 .raw summary:hover {
@@ -1519,11 +2456,10 @@ button.primary .ico {
 /* --- Phrase-level evidence highlighting ---------------------------------- */
 
 .evidence-fold summary {
-  gap: 4px;
+  gap: var(--s-1);
 }
 
 .ev-lane {
-  margin-left: 6px;
   text-transform: none;
   letter-spacing: 0;
 }
@@ -1532,52 +2468,57 @@ button.primary .ico {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  gap: 12px;
-  margin: 2px 0 10px;
-  font-size: 12px;
+  gap: var(--s-3);
+  margin: var(--s-1) 0 var(--s-3);
+  font-size: var(--fs-meta);
   color: var(--ink-dim);
 }
 
 .ev-key {
   display: inline-flex;
   align-items: center;
-  gap: 5px;
+  gap: var(--s-1);
 }
 
 .ev-legend .sw {
   width: 14px;
   height: 14px;
-  border-radius: var(--r-sm);
   display: inline-block;
   border: 1px solid var(--line);
 }
 
 .ev-note {
   flex: 1 1 220px;
-  font-size: 11.5px;
+  font-size: var(--fs-meta);
+  /* --ink-dim and nothing else: the contrast the palette gate measures is the ink on the ground, and
+     an opacity multiplier quietly changes it without changing any number the gate can see. */
   color: var(--ink-dim);
-  opacity: 0.85;
 }
 
 .ev-text {
   margin: 0;
-  padding: 12px 14px;
-  max-height: 460px;
+  padding: var(--s-3) var(--s-4);
+  /* The same viewport ceiling as the raw response, for the same reason: this is the longest block on
+     the page, and a fixed pixel height is a different fraction of the screen on every screen. */
+  max-height: 40svh;
   overflow: auto;
-  background: var(--field-bg);
+  background-color: var(--field-bg);
   border: 1px solid var(--line);
-  border-radius: var(--r-md);
-  font-family: var(--mono);
-  font-size: 13px;
-  line-height: 1.75;
+  /* The subject's own voice, and the only place left in the app that uses it: this block is somebody
+     else's writing, and setting it in the interface grotesque would put the app and its specimen in
+     the same typeface on the same screen. */
+  font-family: var(--font-prose);
+  font-size: var(--fs-body);
+  line-height: var(--lh-marked);
   white-space: pre-wrap;
   word-break: break-word;
   color: var(--ink);
 }
 
+/* No `color` here on purpose: the plate and the ink that reads on it come back together from
+   evidencePaint(), so a highlight never paints text colour that its own background defeats. */
 .ev-hit {
-  color: var(--ink);
-  padding: 1px 1px;
+  padding: 2px var(--s-1);
   /* keep the tint intact when a highlight wraps across lines */
   -webkit-box-decoration-break: clone;
   box-decoration-break: clone;
@@ -1587,90 +2528,125 @@ button.primary .ico {
   color: var(--ink);
 }
 
+/* Under the writing surface, a plate is the ONLY thing the layer is allowed to change. The fold's
+   marks get 2px of side padding so a highlight reads as a block of colour around a phrase; behind
+   the editor those same pixels would push every later character right, and the plate would sit on
+   the words after the ones the model quoted. It lives in the global sheet because the plate spans
+   are made with document.createElement inside a clone of the field's markup, so they carry no
+   component scoping attribute and a rule written in the component would read as absent on them. */
+.ev-plate {
+  padding: 0;
+  -webkit-box-decoration-break: clone;
+  box-decoration-break: clone;
+}
+
 .ev-unmatched {
-  margin: 8px 0 0;
-  font-size: 12px;
+  margin: var(--s-2) 0 0;
+  font-size: var(--fs-meta);
   color: var(--ink-dim);
 }
 
 /* ===================== the shell (shared/hostable build) ===================== */
 
-/* Top app bar: brand on the left, role-aware nav centre, theme + account right. Opaque, so
-   scrolled content is cut off behind it rather than bleeding through a frosted panel. */
+/* Top app bar: the wordmark, the tab strip, then the account. Opaque, so scrolled content is cut
+   off behind it rather than bleeding through. In this language the bar is not a panel — it is the
+   header rule of the document, which is why it carries no bracket and no fill of its own: on an
+   absolute ground, a bar is its bottom line and nothing else. */
 .appbar {
   position: sticky;
   top: 0;
   z-index: 20;
   display: flex;
   align-items: center;
-  gap: 16px;
+  gap: var(--s-4);
   flex-wrap: wrap;
-  padding: 12px 18px;
-  margin: -28px -20px 4px;
-  background: var(--panel);
+  padding: var(--s-3) var(--s-4);
+  /* Reads the page gutters rather than repeating them: this bar pulls itself out of .shell's
+     padding to sit flush to the window edge, so the two numbers must be one number — at 390px
+     they both drop a step, and a literal here would leave the bar inset inside its own gutter. */
+  margin: calc(-1 * var(--page-pad-y)) calc(-1 * var(--page-pad-x)) var(--s-1);
+  background-color: var(--panel);
   border-bottom: 1px solid var(--line-strong);
+}
+
+/* The bar's height is the mark plus the breathing around it, so one number sets the whole strip:
+   a 30px plate at --s-2 above and below is 46px of content, and the 56px floor keeps the tap
+   targets on the right (a 38px icon button) inside the bar instead of overflowing it. */
+.appbar {
+  min-height: 56px;
+  padding-block: var(--s-2);
 }
 
 .appbar .brand {
   margin: 0;
 }
 
+/* The wordmark is the one place the serif is allowed to be an identity rather than prose: 18px,
+  600, pulled in — a nameplate, not a heading. */
 .appbar .brand h1 {
   margin: 0;
   font-family: var(--font-display);
   font-weight: 600;
-  font-size: 19px;
-  letter-spacing: 0;
+  font-size: var(--fs-lead);
+  line-height: 1;
+  letter-spacing: var(--tr-head);
 }
 
 .appbar .brand .sub {
   display: none;
 }
 
+/* The nav is a tab strip, not a row of buttons. A filled gold pill said "you are here" by being
+   loud; an underline says it by being the line the page is measured against, and it leaves the gold
+   free for the one control that actually asks for a press. Labels are mono because they name a
+   surface of the instrument, not a passage of text. */
 .nav {
   display: flex;
-  gap: 6px;
+  gap: var(--s-5);
   flex: 1;
   flex-wrap: wrap;
+  /* `baseline` aligned the tab labels with each other, which is right inside the strip and wrong
+     against the bar: the mark beside them is a box, so a baseline row left the labels sitting low
+     relative to the plate. The strip centres, and the labels keep their own shared baseline because
+     they are all one line of one font. */
+  align-items: center;
 }
 
 .nav button {
   display: inline-flex;
   align-items: center;
-  gap: 7px;
-  padding: 8px 14px;
-  border-radius: var(--r-pill);
-  border: 1px solid transparent;
-  background: transparent;
+  gap: var(--s-2);
+  padding: var(--s-2) 0 calc(var(--s-2) - 2px);
+  border: 0;
+  border-bottom: 2px solid transparent;
+  background-color: transparent;
   color: var(--ink-dim);
-  font: inherit;
-  font-size: 13.5px;
-  letter-spacing: 0.02em;
+  font-family: var(--font-instrument);
+  font-size: var(--fs-meta);
+  letter-spacing: var(--tr-label);
   cursor: pointer;
-  transition: background 0.18s ease, color 0.18s ease, border-color 0.18s ease, transform 0.12s ease;
+  transition: color var(--t-fast) var(--ease-out), border-color var(--t-fast) var(--ease-out);
 }
 
 .nav button:hover {
-  color: var(--accent);
-  border-color: var(--royal);
+  color: var(--ink);
+  border-bottom-color: var(--touch);
 }
 
 .nav button:active {
-  transform: translateY(1px);
+  color: var(--ink);
 }
 
-/* The selected tab is the one place a filled blue control belongs: it reports state, and it
-   is the thing you just clicked. The glow is gone — a clip-path would cut it off anyway. */
 .nav button[aria-selected='true'] {
-  color: var(--on-grad);
-  background: var(--grad-cta);
-  border-color: var(--royal);
+  color: var(--ink);
+  border-bottom-color: var(--accent);
+  font-weight: 600;
 }
 
 .appbar-right {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: var(--s-3);
   margin-left: auto;
 }
 
@@ -1680,58 +2656,56 @@ button.primary .ico {
   display: inline-grid;
   place-items: center;
   padding: 0;
-  border-radius: var(--r-lg);
   border: 1px solid var(--edge);
-  background: var(--panel-2);
+  background-color: transparent;
   color: var(--ink);
   cursor: pointer;
-  transition: border-color 0.18s ease, color 0.18s ease, transform 0.12s ease, background 0.18s ease;
+  transition: border-color var(--t-fast) var(--ease-out), color var(--t-fast) var(--ease-out), transform var(--t-instant) var(--ease-out), background var(--t-fast) var(--ease-out);
 }
 
+/* The response is gold and it is a fill the size of the affordance — nothing glows until a pointer
+   is on it. */
 .icon-btn:hover {
-  border-color: var(--royal);
-  color: var(--accent);
-  background: color-mix(in srgb, var(--royal) 10%, var(--panel-2));
+  border-color: var(--touch);
+  color: var(--ink);
+  background-color: var(--touch-a12);
 }
 
 .icon-btn:active {
   transform: translateY(1px);
 }
 
-/* Sign-out lives inside the user chip, so it is a step smaller than the bar's other icons —
-   and it takes the 5px cut, because an 8px notch on a 30px box is most of its corner. */
+/* Sign-out lives inside the user chip, so it is a step smaller than the bar's other icons. */
 .icon-btn.sm {
   width: 30px;
   height: 30px;
-  clip-path: var(--chamfer-xs);
 }
 
 .user-chip {
   display: inline-flex;
   align-items: center;
-  gap: 8px;
-  padding: 5px 6px 5px 12px;
-  border-radius: var(--r-pill);
+  gap: var(--s-2);
+  padding: var(--s-1) var(--s-2) var(--s-1) var(--s-3);
   border: 1px solid var(--line);
-  background: var(--panel-2);
-  font-size: 13px;
+  background-color: transparent;
+  font-family: var(--font-instrument);
+  font-size: var(--fs-meta);
 }
 
-/* Role is a fact about the account, not a control, so it is ink on the ground rather than
-   a second blue fill competing with the selected tab. */
+/* Role is a fact about the account, so it is a stamp: ink reversed out of the ground for the one
+   account that can change things, a bare rule for everyone else. Never gold — gold is a request. */
 .user-chip .role {
-  font-size: 10.5px;
+  font-size: var(--fs-micro);
   text-transform: uppercase;
-  letter-spacing: 0.14em;
-  padding: 2px 8px;
-  border-radius: var(--r-pill);
-  background: var(--ink);
+  letter-spacing: var(--tr-chip);
+  padding: 2px var(--s-2);
+  background-color: var(--ink);
   color: var(--bg);
   font-weight: 600;
 }
 
 .user-chip .role.user {
-  background: transparent;
+  background-color: transparent;
   color: var(--ink-dim);
   border: 1px solid var(--line-strong);
 }
@@ -1751,7 +2725,7 @@ button.primary .ico {
   height: 54px;
   border-radius: 50%;
   border: 3px solid var(--line-strong);
-  border-top-color: var(--royal);
+  border-top-color: var(--touch);
   animation: spin 0.9s linear infinite;
 }
 
@@ -1765,97 +2739,103 @@ button.primary .ico {
 
 .auth-wrap {
   min-height: 100vh;
+  min-height: 100dvh;
   display: grid;
   place-items: center;
-  padding: 24px;
+  padding: var(--s-5);
 }
 
 .auth-card {
-  width: min(420px, 100%);
-  padding: 30px 28px 26px;
-  border-radius: var(--r-lg);
+  width: min(26.25rem, 100%);
+  padding: var(--s-6) var(--s-6) var(--s-5);
   border: 1px solid var(--line-strong);
-  background: var(--panel);
-  box-shadow: var(--shadow), inset 0 1px 0 var(--sheen);
+  background-color: var(--panel);
 }
 
 .auth-card .auth-brand {
   display: flex;
   align-items: center;
-  gap: 12px;
-  margin-bottom: 6px;
+  gap: var(--s-3);
+  margin-bottom: var(--s-2);
 }
 
 .auth-card h1 {
   margin: 0;
   font-family: var(--font-display);
-  font-weight: 600;
-  font-size: 25px;
-  line-height: 1.15;
+  font-weight: 700;
+  font-size: var(--fs-h1);
+  line-height: var(--lh-head);
+  letter-spacing: var(--tr-display);
 }
 
 .auth-card .tagline {
-  margin: 0 0 20px;
+  margin: 0 0 var(--s-5);
   color: var(--ink-dim);
-  font-size: 13.5px;
+  font-size: var(--fs-ui);
 }
 
 .auth-modes {
   display: flex;
-  gap: 6px;
-  padding: 4px;
-  border-radius: var(--r-lg);
-  background: var(--panel-2);
+  gap: var(--s-2);
+  padding: var(--s-1);
+  background-color: var(--panel-2);
   border: 1px solid var(--line);
-  margin-bottom: 18px;
+  margin-bottom: var(--s-4);
 }
 
+/* Only the voice changes on hover; the ground never does, so `color` is the whole transition and
+   `background` is declared as the thing that stays transparent. */
 .auth-modes button {
   flex: 1;
-  padding: 8px;
+  padding: var(--s-2);
   border: 0;
-  border-radius: var(--r-md);
-  background: transparent;
+  background-color: transparent;
   color: var(--ink-dim);
   font: inherit;
-  font-size: 13.5px;
+  font-size: var(--fs-ui);
   cursor: pointer;
-  transition: background 0.18s ease, color 0.18s ease;
+  transition: color var(--t-fast) var(--ease-out), box-shadow var(--t-fast) var(--ease-out);
 }
 
+.auth-modes button:hover {
+  color: var(--ink);
+}
+
+/* The chosen mode is said with the accent hairline the stickers and the held pool cards already
+   use — not with the CTA fill, because gold filled means "press this", and the press this card
+   asks for is the submit button underneath. A segment that is already selected asks for nothing.
+   Inset, not a border: the row has no edge to give it, and a real border would resize the label. */
 .auth-modes button[aria-selected='true'] {
-  background: var(--grad-cta);
-  color: var(--on-grad);
+  color: var(--ink);
+  box-shadow: inset 0 0 0 1px var(--accent);
 }
 
 .auth-card .field {
-  margin-bottom: 14px;
+  margin-bottom: var(--s-4);
 }
 
 .auth-card button.primary {
   width: 100%;
   justify-content: center;
-  margin-top: 4px;
+  margin-top: var(--s-1);
 }
 
 .auth-error {
-  margin: 0 0 14px;
-  padding: 10px 12px;
-  border-radius: var(--r-lg);
-  border: 1px solid color-mix(in srgb, var(--bad) 40%, transparent);
-  background: var(--bad-a16);
-  color: #ffd7db;
-  font-size: 13px;
-}
-
-:root[data-theme='light'] .auth-error {
+  margin: 0 0 var(--s-4);
+  padding: var(--s-3);
+  border: 1px solid color-mix(in srgb, var(--bad) 55%, transparent);
+  background-color: var(--bad-a16);
+  /* --bad on its own wash measures 6.07:1 dark and 5.58:1 light (check_palette_contrast) — both over
+     the text floor, so the one hue needs no theme override here and no pale custom tint, which was a
+     second red that turned unreadable the moment the ground went white. */
   color: var(--bad);
+  font-size: var(--fs-ui);
 }
 
 .auth-foot {
-  margin: 16px 0 0;
+  margin: var(--s-4) 0 0;
   text-align: center;
-  font-size: 12px;
+  font-size: var(--fs-meta);
   color: var(--ink-dim);
 }
 
@@ -1865,80 +2845,74 @@ button.primary .ico {
   display: flex;
   align-items: flex-end;
   justify-content: space-between;
-  gap: 16px;
+  gap: var(--s-4);
   flex-wrap: wrap;
-  margin-bottom: 4px;
+  margin-bottom: var(--s-1);
 }
 
+/* The study is the loudest link on this page, so it is the one filled slab: the plate is the act. Its
+   edge used to be the response colour, which put a transient register on a resting control and made
+   the frame compete with the fill it was drawn around. Hover darkens the plate itself — the same step
+   `button.primary` takes — because a pressed thing brightening by a filter is a second idiom for the
+   one response, and a filter also makes this box a containing block for anything fixed inside it. */
 .paper-link {
   display: inline-flex;
   align-items: center;
-  gap: 8px;
-  padding: 9px 16px;
-  border-radius: var(--r-pill);
+  gap: var(--s-2);
+  padding: var(--s-2) var(--s-4);
   text-decoration: none;
-  font-size: 13.5px;
-  letter-spacing: 0.02em;
-  color: var(--on-grad);
-  background: var(--grad-cta);
-  border: 1px solid var(--royal);
-  transition: transform 0.12s ease, filter 0.18s ease;
+  font-size: var(--fs-ui);
+  letter-spacing: var(--tr-label);
+  color: var(--on-accent-fill);
+  background-color: var(--accent-fill);
+  transition: transform var(--t-instant) var(--ease-out), background-color var(--t-fast) var(--ease-out);
 }
 
-/* The box-shadow is gone, not hidden: a clip-path clips what is painted outside the box, so
-   a glow on a chamfered control would be cut off at three of its five edges anyway. */
 .paper-link:hover {
   transform: translateY(-1px);
-  filter: brightness(1.08);
+  background-color: color-mix(in srgb, var(--accent-fill) 84%, #000000);
 }
 
 .rank-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(340px, 1fr));
-  gap: 16px;
+  grid-template-columns: repeat(auto-fill, minmax(21.25rem, 1fr));
+  gap: var(--s-4);
 }
 
 .rank-card {
   position: relative;
   display: flex;
-  gap: 16px;
-  /* 48px on top: the chamfer clips anything reaching the corner, so the rank mark lives
-     inside the card now instead of straddling its top edge. */
-  padding: 48px 16px 16px;
-  border-radius: var(--r-lg);
+  align-items: flex-start;
+  gap: var(--s-3);
+  /* Uniform: the 48px that used to sit here existed only to keep the rank mark clear of a chamfer
+     this card no longer has. A clipped corner is now the primary control's alone. */
+  padding: var(--s-4);
   border: 1px solid var(--line);
-  background: var(--panel);
-  box-shadow: var(--shadow), inset 0 1px 0 var(--sheen);
-  transition: border-color 0.18s ease, transform 0.14s ease;
+  background-color: var(--panel);
+  /* Only the frame ever changes here, and it changes when a run lands, not when the cursor passes:
+     this card holds the pick button, it is not itself one. One channel, one fact — the frame says
+     "this one is in your using pool" and nothing else. It used to carry a second reading, a green
+     edge for the deployment's own lane, and the two could not coexist: putting the deployed default
+     into the pool swapped green for gold and the deployed marker disappeared. That fact has words
+     (`deployed · primary`) and a bar above the grid to state it in; the frame is the user's. */
+  transition: border-color var(--t-fast) var(--ease-out);
 }
 
-.rank-card:hover {
-  border-color: var(--royal);
-  transform: translateY(-2px);
-}
-
-.rank-card.deployed {
-  border-color: color-mix(in srgb, var(--good) 50%, transparent);
-}
-
-/* Neutral, like the brand mark and the role chip: a rank is a fact, and blue is reserved for
-   things the user can do. */
+/* A rank is a fact, so it is a numeral and not a badge: no fill, no pill, set in the instrument
+   voice and riding at the head of the same column as the accuracy ring, because "1st at 98%" is one
+   reading of one model. The hash is the quieter of the two marks: it is the convention, the number is
+   the information. */
 .rank-badge {
-  position: absolute;
-  top: 13px;
-  left: 14px;
-  min-width: 30px;
-  height: 30px;
-  padding: 0 9px;
-  display: grid;
-  place-items: center;
-  border-radius: var(--r-pill);
-  font-family: var(--font-display);
-  font-size: 15px;
+  font-size: var(--fs-lead);
   font-weight: 600;
+  line-height: var(--lh-none);
+  letter-spacing: var(--tr-label);
   font-variant-numeric: tabular-nums;
-  color: var(--bg);
-  background: var(--ink);
+  color: var(--ink);
+}
+
+.rank-badge .rb-hash {
+  color: var(--ink-hair);
 }
 
 .rank-body {
@@ -1947,27 +2921,37 @@ button.primary .ico {
 }
 
 .rank-body h3 {
-  margin: 4px 0 2px;
-  font-size: 15px;
-  text-transform: none;
-  letter-spacing: 0;
+  margin: var(--s-1) 0 var(--s-1);
+  font-size: var(--fs-lead);
+  font-weight: 600;
+  letter-spacing: var(--tr-head);
   color: var(--ink);
+  /* A model id is a machine string: it has to break wherever it has to, and an even two-line
+     split is worth less than never splitting a slash. */
+  text-wrap: auto;
   word-break: break-word;
 }
 
 .rank-meta {
   display: flex;
   flex-wrap: wrap;
-  gap: 6px;
-  margin: 8px 0 10px;
+  /* Tickets state one fact each, so they are set as one row of equal boxes. A flex row left at
+     `align-items: normal` STRETCHES every item to the tallest thing on the line, and the tallest
+     thing here is the provider mark with its logo — measured on the served page, that pulled the
+     `free tier` and `add a key` tickets from 21.88px to 60.89px. Centering is also what the row
+     should have looked like: the mark is taller because it has two lines of text, and a ticket
+     beside it should sit in the middle of that height, not be drawn out to it. */
+  align-items: center;
+  gap: var(--s-2);
+  margin: var(--s-2) 0 var(--s-3);
 }
 
 .rank-stats {
   display: flex;
-  gap: 14px;
+  gap: var(--s-4);
   flex-wrap: wrap;
   /* serif reads smaller than the old system-ui at 12px */
-  font-size: 12.5px;
+  font-size: var(--fs-meta);
   color: var(--ink-dim);
 }
 
@@ -1976,70 +2960,74 @@ button.primary .ico {
   font-variant-numeric: tabular-nums;
 }
 
-.chip {
-  display: inline-flex;
-  align-items: center;
-  gap: 5px;
-  padding: 2px 9px;
-  border-radius: var(--r-pill);
-  font-size: 11px;
-  border: 1px solid var(--line);
-  background: var(--panel-2);
-  color: var(--ink-dim);
-}
-
+/* A chip that carries a data hue wears that hue as a wash and an edge at the same time, so the state
+   is legible before the word is read. The wash replaces the well rather than sitting on it: a chip is
+   a fact about the row, not a field the reader types into. */
 .chip.good {
-  border-color: color-mix(in srgb, var(--good) 45%, transparent);
+  border-color: color-mix(in srgb, var(--good) 55%, transparent);
+  background-color: var(--good-a16);
   color: var(--good);
 }
 
+/* "free tier" is a fact about what the model costs, and it is the last standing label in the app that
+   is not a verdict, so it wears the identity gold rather than a hue of its own. Violet used to live
+   here — the one blue left anywhere in the rulebook — and a person reading the ranking table could
+   not tell it apart from the interaction colour it was meant to be distinct from. */
 .chip.free {
-  border-color: color-mix(in srgb, var(--violet) 45%, transparent);
-  color: var(--violet);
+  border-color: color-mix(in srgb, var(--accent) 55%, transparent);
+  background-color: var(--accent-a16);
+  color: var(--accent);
 }
 
-/* Which lane a model serves is a fact about the row, not a control, so the chip is drawn in
-   ink and lets the green (verified) and violet (free) chips keep the only hues that carry data. */
+/* Which lane a model serves is a fact about the row, not a control, so the chip is drawn in ink and
+   lets the green (verified) and gold (free) chips keep the only hues that carry data. */
 .chip.lane {
   border-color: var(--line-strong);
   color: var(--ink);
 }
 
 .chip.warn {
-  border-color: color-mix(in srgb, var(--warn) 50%, transparent);
+  border-color: color-mix(in srgb, var(--warn) 55%, transparent);
+  background-color: var(--warn-a16);
   color: var(--warn);
 }
 
-/* Ranking card action: run a detection with this measured model. At rest it is a neutral
-   outlined control; the blue only arrives under the cursor. */
+.chip.bad {
+  border-color: color-mix(in srgb, var(--bad) 55%, transparent);
+  background-color: var(--bad-a16);
+  color: var(--bad);
+}
+
+/* Ranking card action: run a detection with this measured model. At rest it is a neutral outlined
+   control; the pointer gets a reply in the response register, and the state "this is the one your
+   next run uses" is a selection, which is also the response register. Gold stays on the frames that
+   point a person at a model, not on every control they can press. */
 .pick-btn {
   display: inline-flex;
   align-items: center;
-  gap: 7px;
-  margin-top: 12px;
-  padding: 7px 13px;
-  border-radius: var(--r-pill);
-  font-size: 12px;
+  gap: var(--s-2);
+  padding: var(--s-2) var(--s-3);
+  font-size: var(--fs-meta);
   font-weight: 600;
-  letter-spacing: 0.02em;
+  letter-spacing: var(--tr-label);
   color: var(--ink);
   border: 1px solid var(--edge);
-  background: transparent;
+  background-color: transparent;
   cursor: pointer;
-  transition: border-color 0.16s ease, background 0.16s ease, color 0.16s ease, transform 0.12s ease;
+  transition: border-color var(--t-fast) var(--ease-out), background var(--t-fast) var(--ease-out), color var(--t-fast) var(--ease-out), transform var(--t-instant) var(--ease-out);
 }
 
 .pick-btn:hover {
-  color: var(--accent);
-  border-color: var(--royal);
-  background: linear-gradient(135deg, var(--accent-a16), transparent);
+  color: var(--touch);
+  border-color: var(--touch);
+  background-color: var(--touch-a12);
   transform: translateY(-1px);
 }
 
 .pick-btn.active {
-  color: var(--good);
-  border-color: color-mix(in srgb, var(--good) 55%, transparent);
-  background: linear-gradient(135deg, var(--good-a16), transparent);
+  color: var(--touch);
+  border-color: var(--touch);
+  background-color: var(--touch-a12);
 }
 
 .pick-btn .ico {
@@ -2052,19 +3040,20 @@ button.primary .ico {
   stroke-linejoin: round;
 }
 
-/* Detect-tab banner naming the model a run will be scored with. The royal hairline and the dot say
-   "this is your selection"; a blue wash behind it would be decoration, and blue is not for that. */
+/* Detect-tab banner naming the model a run will be scored with. The gold hairline and the dot say
+   "this is your selection"; a wash behind it would be decoration, and the accent is not for that. */
 .pick-banner {
   display: flex;
   align-items: center;
   flex-wrap: wrap;
-  gap: 8px;
-  margin: 12px 0 0;
-  padding: 12px 16px;
-  font-size: 12.5px;
+  gap: var(--s-2);
+  margin: var(--s-3) 0 0;
+  padding: var(--s-3) var(--s-4);
+  font-size: var(--fs-meta);
   color: var(--ink-dim);
-  border: 1px solid color-mix(in srgb, var(--royal) 40%, transparent);
-  background: var(--panel);
+  border: 1px solid color-mix(in srgb, var(--touch) 40%, transparent);
+  --cut-ink: color-mix(in srgb, var(--touch) 40%, transparent);
+  background-color: var(--panel);
 }
 
 .pick-banner b {
@@ -2073,12 +3062,12 @@ button.primary .ico {
 }
 
 /* The dot is the selection marker, not a lamp: clip-path already cuts a glow at the banner's
-   own notch, and a soft blue bloom is the decoration this palette pass removed. */
+   own notch, and a soft gold bloom is the decoration this palette pass removed. */
 .pick-dot {
   width: 8px;
   height: 8px;
   flex: none;
-  background: var(--royal);
+  background-color: var(--touch);
 }
 
 .pick-note {
@@ -2088,10 +3077,10 @@ button.primary .ico {
 
 .linkbtn {
   border: 0;
-  background: none;
+  background-color: none;
   padding: 0;
   margin-left: auto;
-  font-size: 12px;
+  font-size: var(--fs-meta);
   color: var(--accent-2);
   text-decoration: underline;
   cursor: pointer;
@@ -2137,12 +3126,14 @@ button.primary .ico {
   stroke: var(--ring-track);
 }
 
-/* An untoned ring is a metric with no verdict attached to it, so it is neutral: the four
-   `data-tone` states below carry the meaning, and blue would read as a fifth verdict. */
+/* An untoned ring is a metric with no verdict attached to it, so it is neutral: the three
+   `data-tone` states below carry the meaning, and the accent hue would read as a fifth verdict.
+   Violet stays off the dial — it is the free-tier chip's fact, and a fourth arc colour would be
+   a hue with no reading. */
 .ring-value {
   stroke: var(--neutral);
   stroke-linecap: round;
-  transition: stroke-dashoffset 0.7s cubic-bezier(0.22, 1, 0.36, 1);
+  transition: stroke-dashoffset var(--t-draw) var(--ease-draw);
 }
 
 .ring[data-tone='green'] .ring-value {
@@ -2157,10 +3148,6 @@ button.primary .ico {
   stroke: var(--warn);
 }
 
-.ring[data-tone='violet'] .ring-value {
-  stroke: var(--violet);
-}
-
 .ring-center {
   position: absolute;
   inset: 0;
@@ -2168,38 +3155,48 @@ button.primary .ico {
   flex-direction: column;
   align-items: center;
   justify-content: center;
+  gap: var(--s-1);
   line-height: 1;
 }
 
+/* The figure inside a dial is a measurement, and measurements are the instrument's voice. It keeps
+   --fs-figure rather than a scale step because it is sized by the circle it has to fit inside. */
 .ring-num {
-  font-family: var(--font-display);
-  font-size: 30px;
-  font-weight: 600;
+  font-family: var(--font-instrument);
+  font-size: var(--fs-figure);
+  font-weight: 700;
+  line-height: var(--lh-tight);
+  letter-spacing: var(--tr-display);
   font-variant-numeric: tabular-nums;
   color: var(--ink);
 }
 
 .ring.compact .ring-num {
-  font-size: 20px;
+  font-size: var(--fs-h2);
 }
 
 .ring-unit {
-  margin-top: 2px;
-  font-size: 11px;
+  font-size: var(--fs-micro);
+  letter-spacing: var(--tr-label);
   color: var(--ink-dim);
 }
 
 .ring-label {
-  margin-top: 6px;
-  font-size: 11.5px;
+  font-size: var(--fs-meta);
+  line-height: var(--lh-snug);
   color: var(--ink-dim);
   text-align: center;
+  text-wrap: pretty;
 }
 
+/* The column a metric reads in: rank (ranking cards only), the ring, then its label. One gap token
+   instead of margins on the three children, so the numeral and the label sit the same distance from
+   the arc whether or not the rank is there. */
 .ring-metric {
   display: flex;
   flex-direction: column;
   align-items: center;
+  gap: var(--s-2);
 }
 
 /* A run that never reached a model has no score to draw. It keeps the ring slot — the row does not
@@ -2208,7 +3205,7 @@ button.primary .ico {
 .ring-metric.no-score {
   width: 74px;
   flex: none;
-  gap: 6px;
+  gap: var(--s-2);
 }
 
 .ns-ring {
@@ -2220,8 +3217,8 @@ button.primary .ico {
 }
 
 .ns-text {
-  font-size: 11px;
-  line-height: 1.2;
+  font-size: var(--fs-micro);
+  line-height: var(--lh-snug);
   color: var(--ink-dim);
   text-align: center;
 }
@@ -2230,13 +3227,13 @@ button.primary .ico {
 
 /* The pool is the one control on the page whose order changes what a detection costs, so it
    reads as a ranked list rather than a grid: position number, model, health, and the handles.
-   Drag states are drawn with the royal token at low alpha so the drop target is obvious in
+   Drag states are drawn with the --touch token at low alpha so the drop target is obvious in
    both themes without a second colour vocabulary. */
 .pool-list {
   list-style: none;
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: var(--s-2);
   margin: 0;
   padding: 0;
 }
@@ -2244,17 +3241,18 @@ button.primary .ico {
 .pool-row {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: var(--s-3);
   flex-wrap: wrap;
-  padding: 9px 12px;
-  border-radius: var(--r-md);
+  /* --s-4 on the right because this row is cut: the notch takes that corner out of the box, and a
+     row's trailing control — the remove button, the demote ticket — has to clear the wedge. */
+  padding: var(--s-2) var(--s-4);
   border: 1px solid var(--line);
-  background: var(--panel-2);
-  transition: border-color 0.16s ease, background 0.16s ease, transform 0.12s ease;
+  background-color: var(--panel-2);
+  transition: border-color var(--t-fast) var(--ease-out), background var(--t-fast) var(--ease-out), transform var(--t-instant) var(--ease-out);
 }
 
 .pool-row:hover {
-  border-color: var(--royal);
+  border-color: var(--touch);
 }
 
 .pool-row.dragging {
@@ -2263,33 +3261,43 @@ button.primary .ico {
 }
 
 .pool-row.drop-before {
-  border-top: 2px solid var(--royal);
+  border-top: 2px solid var(--touch);
 }
 
 .pool-row.demoted {
-  border-color: color-mix(in srgb, var(--warn) 45%, transparent);
-  background: linear-gradient(135deg, var(--warn-a16), transparent);
+  border-color: color-mix(in srgb, var(--warn) 55%, transparent);
+  background-image: linear-gradient(135deg, var(--warn-a16), transparent);
+}
+
+/* The one pool row that is waiting on the person rather than on a server, and waiting on a clock.
+   It takes the same burnt-orange edge as the countdown chip inside it — deliberately not the
+   accent, which the picker already spends on "this one is yours", and not a wash, which demoted
+   rows use for "something is wrong with this one". Nothing here is wrong: a decision is open. */
+.offer-row {
+  border-color: color-mix(in srgb, var(--warn) 55%, transparent);
 }
 
 .pool-row .grip {
   cursor: grab;
   color: var(--ink-dim);
-  font-size: 13px;
-  letter-spacing: -2px;
+  font-size: var(--fs-ui);
+  /* Relative, like everything that rides on type: the grip is two marks that want to read as one
+     handle, and a px nudge would hold its gap while the letters around it grow. */
+  letter-spacing: -.15em;
   user-select: none;
 }
 
 .pool-row .grow {
   flex: 1;
-  min-width: 160px;
+  min-width: 10rem;
   display: flex;
   align-items: center;
-  gap: 7px;
+  gap: var(--s-2);
   flex-wrap: wrap;
 }
 
 .pool-row .hint {
-  font-size: 12px;
+  font-size: var(--fs-meta);
   color: var(--ink-dim);
 }
 
@@ -2298,7 +3306,7 @@ button.primary .ico {
   color: var(--warn);
 }
 
-/* The served position, in a royal disc: it is the number detection actually follows, which
+/* The served position, in an ink disc: it is the number detection actually follows, which
    is why it is styled as a badge and `your_rank` only appears in the demotion sentence. */
 .pool-pos {
   flex: none;
@@ -2308,10 +3316,10 @@ button.primary .ico {
   place-items: center;
   font-family: var(--font-display);
   font-weight: 600;
-  font-size: 13px;
+  font-size: var(--fs-ui);
   font-variant-numeric: tabular-nums;
   color: var(--bg);
-  background: var(--ink);
+  background-color: var(--ink);
 }
 
 .pool-row button.icon-only {
@@ -2324,57 +3332,56 @@ button.primary .ico {
 .pool-actions {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: var(--s-2);
   flex-wrap: wrap;
-  margin-top: 10px;
+  margin-top: var(--s-3);
 }
 
 .discover {
-  margin-top: 18px;
-  padding-top: 14px;
+  margin-top: var(--s-4);
+  padding-top: var(--s-4);
   border-top: 1px solid var(--line);
 }
 
 .discover .panel-head h3 {
   margin: 0;
-  font-size: 15px;
+  font-size: var(--fs-body);
 }
 
 .discover-actions {
   display: flex;
-  gap: 8px;
+  gap: var(--s-2);
   flex-wrap: wrap;
-  margin: 10px 0 0;
+  margin: var(--s-3) 0 0;
 }
 
 .job-list {
   list-style: none;
   display: flex;
   flex-direction: column;
-  gap: 6px;
-  margin: 12px 0 0;
+  gap: var(--s-2);
+  margin: var(--s-3) 0 0;
   padding: 0;
 }
 
 .job-row {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: var(--s-2);
   flex-wrap: wrap;
-  padding: 7px 10px;
-  border-radius: var(--r-sm);
+  padding: var(--s-2) var(--s-3);
   border: 1px solid var(--line);
-  background: var(--panel-2);
-  font-size: 12.5px;
+  background-color: var(--panel-2);
+  font-size: var(--fs-meta);
 }
 
 .job-row.bad {
-  border-color: color-mix(in srgb, var(--bad) 45%, transparent);
+  border-color: color-mix(in srgb, var(--bad) 55%, transparent);
 }
 
 .job-row .hint {
-  font-family: var(--mono);
-  font-size: 11.5px;
+  font-family: var(--font-instrument);
+  font-size: var(--fs-meta);
   color: var(--ink-dim);
 }
 
@@ -2383,65 +3390,62 @@ button.primary .ico {
 .byok {
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: var(--s-3);
 }
 
 .key-row {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: var(--s-3);
   flex-wrap: wrap;
   /* the 14px notch is cut from this box's own corner, so the right-hand padding has to
      clear it or the trailing button sits in the wedge */
-  padding: 12px 14px;
+  padding: var(--s-3) var(--s-4);
   border: 1px solid var(--line);
-  background: var(--panel-2);
+  background-color: var(--panel-2);
 }
 
 .key-row .grow {
   flex: 1;
-  min-width: 140px;
+  min-width: 8.75rem;
 }
 
 .key-row .hint {
-  font-family: var(--mono);
-  font-size: 12px;
+  font-family: var(--font-instrument);
+  font-size: var(--fs-meta);
   color: var(--ink-dim);
 }
 
 .guides {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
-  gap: 12px;
+  grid-template-columns: repeat(auto-fill, minmax(15rem, 1fr));
+  gap: var(--s-3);
 }
 
+/* Nothing here answers the pointer except the link inside it, which has its own hover below. A card
+   that lifts and rings in the response colour under a cursor resting on somebody's setup steps
+   claims to be the thing you click. */
 .guide {
-  padding: 16px;
+  padding: var(--s-4);
   border: 1px solid var(--line);
-  background: var(--panel-2);
-  transition: border-color 0.18s ease, transform 0.14s ease;
-}
-
-.guide:hover {
-  border-color: var(--royal);
-  transform: translateY(-2px);
+  background-color: var(--panel-2);
 }
 
 .guide h4 {
-  margin: 0 0 4px;
-  font-size: 14px;
+  margin: 0 0 var(--s-1);
+  font-size: var(--fs-body);
   color: var(--ink);
 }
 
 .guide p {
-  margin: 0 0 10px;
-  font-size: 12.5px;
+  margin: 0 0 var(--s-3);
+  font-size: var(--fs-meta);
   color: var(--ink-dim);
 }
 
 .guide a {
   color: var(--accent);
-  font-size: 13px;
+  font-size: var(--fs-ui);
   text-decoration: none;
 }
 
@@ -2455,53 +3459,58 @@ button.primary .ico {
 .history-list {
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: var(--s-2);
 }
 
 .history-row {
   display: flex;
   align-items: center;
-  gap: 14px;
-  padding: 12px 16px;
+  gap: var(--s-4);
+  padding: var(--s-3) var(--s-4);
   border: 1px solid var(--line);
-  background: var(--panel-2);
+  background-color: var(--panel-2);
   cursor: pointer;
-  transition: border-color 0.18s ease, transform 0.12s ease;
+  transition: border-color var(--t-fast) var(--ease-out), transform var(--t-instant) var(--ease-out);
 }
 
 .history-row:hover {
-  border-color: var(--royal);
+  border-color: var(--touch);
   transform: translateX(2px);
 }
 
-.history-row .verdict-pill {
-  padding: 3px 10px;
-  border-radius: var(--r-pill);
-  font-size: 11.5px;
+/* The verdict is not a chip. A chip states a fact about the row it sits on in the neutral voice and
+   takes a hue only when the hue is the fact; this object IS the machine's conclusion, so the hue is
+   the content and it is set at the reading size, not the label size. It is the one label in the app
+   that is allowed --good / --warn / --bad as a fill. */
+.history-row .verdict-pill,
+.sheet-head .verdict-pill {
+  min-height: 1.75rem;
+  padding: 0 var(--s-3);
+  font-size: var(--fs-meta);
   font-weight: 600;
   white-space: nowrap;
 }
 
 .verdict-pill.ai {
-  background: var(--bad-a16);
+  background-color: var(--bad-a16);
   color: var(--bad);
-  border: 1px solid color-mix(in srgb, var(--bad) 40%, transparent);
+  border: 1px solid color-mix(in srgb, var(--bad) 55%, transparent);
 }
 
 .verdict-pill.human {
-  background: var(--good-a16);
+  background-color: var(--good-a16);
   color: var(--good);
-  border: 1px solid color-mix(in srgb, var(--good) 40%, transparent);
+  border: 1px solid color-mix(in srgb, var(--good) 55%, transparent);
 }
 
 .verdict-pill.review {
-  background: var(--warn-a16);
+  background-color: var(--warn-a16);
   color: var(--warn);
-  border: 1px solid color-mix(in srgb, var(--warn) 40%, transparent);
+  border: 1px solid color-mix(in srgb, var(--warn) 55%, transparent);
 }
 
 .verdict-pill.none {
-  background: var(--panel);
+  background-color: var(--panel);
   color: var(--ink-dim);
   border: 1px solid var(--line);
 }
@@ -2512,23 +3521,275 @@ button.primary .ico {
 }
 
 .history-row .h-when {
-  font-size: 12px;
+  font-size: var(--fs-meta);
   color: var(--ink-dim);
 }
 
 .history-row .h-model {
-  font-size: 12.5px;
+  font-size: var(--fs-meta);
   color: var(--ink);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
 }
 
+/* Nothing to show yet, said in the same left-aligned voice as everything else on the panel.
+   Four of these carry two or three sentences of instruction, and centering them gave the page the
+   one thing it has nowhere else: text with two ragged edges and a ~95-character measure. The
+   horizontal padding is gone for the same reason — the panel already insets its content, and this
+   paragraph used to sit 52px in from an edge that h3s, cards and rows all share. */
 .empty {
-  padding: 30px;
-  text-align: center;
+  padding: var(--s-4) 0;
   color: var(--ink-dim);
-  font-size: 13.5px;
+  font-size: var(--fs-ui);
+  max-width: 62ch;
+}
+
+/* ===================== the history sheet =====================
+   One saved run, read without leaving the list. Two layers: the scrim at 40 and the dialog at 41,
+   both above the appbar's 20 so the sheet is not tucked under a sticky bar.
+
+   The dialog itself never scrolls. A clip-path cuts away the outside of a box, so on a scrolling
+   panel the notch eats the scrollbar's corner — the same reason .ev-text and textarea are left as
+   plain rectangles (see the corner language at the top of this file). The writing inside is the
+   scroll area instead, and the sheet clips it. */
+.sheet-scrim {
+  position: fixed;
+  inset: 0;
+  z-index: 40;
+  /* Not glass: a flat, opaque wash of the page's own ground, so the list behind goes dark without
+     pretending to be frosted. */
+  background-color: color-mix(in srgb, var(--bg) 74%, transparent);
+  animation: scrim-in var(--t-fast) var(--ease-out) both;
+}
+
+/* `rise` is not used here: a scrim that translates leaves an uncovered strip of page at the edge for
+   the length of the animation, and the only thing it should do is arrive. */
+@keyframes scrim-in {
+  from { opacity: 0; }
+}
+
+.sheet {
+  position: fixed;
+  inset: 0;
+  z-index: 41;
+  /* `inset: 0` with `margin: auto` and an auto height centres the box in the leftover space on
+     both axes — no transform, which the entrance animation needs to itself. The two ceilings are
+     percentages rather than vw/vh because that is the only box this can be measured against: a
+     fixed element's containing block is the viewport *without* a classic scrollbar, while `100vw`
+     counts the bar it is trying to fit inside, which made the sheet ~17px wider than its own
+     window on a desktop with a permanent bar. */
+  margin: auto;
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-4);
+  width: min(47.5rem, calc(100% - (var(--page-pad-x) * 2)));
+  max-height: calc(100% - (var(--page-pad-y) * 2));
+  padding: var(--s-5) var(--s-6);
+  overflow: hidden;
+  /* The only surface in the app that is not the page's own ground: it sits on top of a list that is
+     still there underneath, so it has to cover rather than merely frame. That covering IS its lift —
+     --panel-solid against the scrim it stands on, plus a --line-strong edge and the cut. A cast shadow
+     is not available to it: this box is clipped, and a clip-path takes away everything painted outside
+     the edge, which would leave a shadow with two corners missing. */
+  background-color: var(--panel-solid);
+  border: 1px solid var(--line-strong);
+  animation: rise var(--t-mid) var(--ease-out) both;
+}
+
+/* The dialog is focused so that Escape and Tab act on it, not on the list behind the scrim. It is
+   not a control, and a ring around the whole box is a frame, not a focus — what is inside it keeps
+   its own. */
+.sheet:focus-visible {
+  outline: none;
+}
+
+.sheet-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--s-4);
+  flex: none;
+}
+
+/* The dials, centred: this is the short read, so the magnitudes get their own block and the scale the
+   headline was judged on sits under it, on one line, in the wording the Detect rail uses. Which
+   models made the number is drawn after this block, left-aligned with the writing below it — a list
+   of ids centred under a ring reads as a caption of the ring, and it is not. */
+.sheet-score {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--s-2);
+  flex: none;
+}
+
+.sheet-score .no-score {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--s-2);
+}
+
+/* Everything this line shares with the readout's own scale note — size, measure, voice, colour —
+   comes from `.scale-note`; the sheet adds the one thing its column layout needs, which is to
+   centre under the ring. No `letter-spacing` here: the note is a sentence, and tracking belongs on
+   the labels. */
+.sheet-score .scale-note {
+  text-align: center;
+}
+
+.sheet-text {
+  flex: 1 1 auto;
+  /* Without this the flex item refuses to shrink below its content and the sheet grows past the
+     viewport instead of scrolling the writing. */
+  min-height: 0;
+  max-height: none;
+}
+
+/* A run whose text predates storage, or which never reached a verdict: the panel says which, rather
+   than leaving the space the highlights would have filled. */
+.sheet-empty {
+  margin: 0;
+  padding: var(--s-5);
+  text-align: center;
+  font-size: var(--fs-ui);
+  line-height: var(--lh-body);
+  color: var(--ink-dim);
+  background-color: var(--field-bg);
+  border: 1px solid var(--line);
+}
+
+.sheet-foot {
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--s-3);
+  flex: none;
+}
+
+/* A side page rather than a centred dialog. The run sheet is a thing you look AT, so it sits in the
+   middle and takes the eye off the list; the report is a thing you read WHILE still comparing rows,
+   so it docks to one edge and leaves the rest of the window on screen. `inset` names the edge and
+   `margin: 0` cancels the centring contract the base rule depends on — the two ceilings stay in
+   percentages for the reason stated there, because a fixed box's containing block is the viewport
+   without the classic scrollbar. The frame stays whole (no `border-right: 0`): the chamfer's two
+   diagonals are the frame carried around the corner, and a docked panel with its right edge erased
+   would read as a panel with two missing corners. */
+.sheet--side {
+  inset: 0 0 0 auto;
+  margin: 0;
+  width: min(56rem, 100%);
+  max-height: 100%;
+  padding: var(--s-4) var(--s-5);
+}
+
+/* The document is the reason the box exists, so it gets the leftover height and scrolls inside itself;
+   `min-height: 0` is what lets a flex child shrink instead of pushing the sheet past the window. It
+   paints nothing of its own — the report is a white, print-styled page in both themes, and a ground
+   here would only be a frame around somebody else's paper. */
+.report-frame {
+  flex: 1 1 auto;
+  min-height: 0;
+  width: 100%;
+  border: 1px solid var(--line);
+}
+
+.report-cite {
+  margin: 0;
+  flex: none;
+  font-size: var(--fs-meta);
+  line-height: var(--lh-body);
+  color: var(--ink-dim);
+  overflow-wrap: anywhere;
+}
+
+.sheet--side .sheet-head h3 {
+  margin: 0;
+  font-size: var(--fs-ui);
+}
+
+/* ===================== small screens (2026-10-21) =====================
+   The stylesheet used to have one width breakpoint in the whole app — `min-width: 55rem`, inside the
+   providers picker — which means every other layout was written for a desktop and merely wrapped
+   when it arrived on a phone. This is the real narrow layer, and it is about three things:
+   the gutters come in (and the appbar follows, because it reads the same two tokens), the
+   multi-column grids stop promising columns that cannot fit, and the wide admin tables scroll in
+   their own box instead of pushing the page past the window. Nothing here changes what is on the
+   page. A bracketed surface never pads below --s-4, because the corner marks (--tick is 14px) would
+   sit inside the air they are meant to have — which is why .panel stops at 16px and not at the 12px
+   the gutter uses. .shell and .appbar draw no bracket, so they may. */
+/* The one place the layout changes its mind is asked in rem rather than px: a media query in px is
+   blind to someone who reads the page at a larger base text size, and this is the breakpoint where
+   two areas become a stack. Everything else in the sheet already scales. */
+@media (max-width: 43.75rem) {
+  :root {
+    --page-pad-y: var(--s-4);
+    --page-pad-x: var(--s-3);
+  }
+
+  .shell {
+    gap: var(--s-4);
+    padding-bottom: var(--s-7);
+  }
+
+  .panel {
+    padding: var(--s-4);
+  }
+
+  /* The dialog already sizes itself off the gutters, so on a phone it is nearly the whole screen;
+     what has to come in is its own padding (the notch) and the gaps between its blocks. */
+  .sheet {
+    gap: var(--s-3);
+    padding: var(--s-4);
+  }
+
+  .appbar {
+    gap: var(--s-3);
+    padding: var(--s-2) var(--s-3);
+  }
+
+  .nav button {
+    padding: var(--s-2) var(--s-3);
+  }
+
+  /* minmax(20.625rem)/minmax(21.25rem) is a floor, not a suggestion: a track cannot shrink below it, so
+     on a 360px screen these two grids were the overflow. One column is what they already rendered at
+     390px — this makes it true one step wider down instead of hoping the viewport is big enough. */
+  .lanes,
+  .rank-grid {
+    grid-template-columns: 1fr;
+  }
+
+  /* The two thirds / one third pair becomes a stack in the order a run happens: write, then start,
+     then read. Stacked, "whole height" would mean one field stretched to the fold with the rail
+     under it, so the row stops claiming the leftover and both parts take the height they need. */
+  .detect-cols {
+    grid-template-columns: 1fr;
+    grid-template-rows: none;
+    flex: none;
+  }
+
+  .detect-cols .col-input,
+  .detect-cols .col-rail,
+  .detect-cols .col-wide {
+    grid-column: 1;
+    grid-row: auto;
+  }
+
+  /* Stacked, nothing owns a leftover height any more: the page is the scroll again, which is the
+     only shape a phone has. The cap and the inner scroll both belong to the two-column workspace. */
+  .shell.bleed {
+    height: auto;
+    overflow: visible;
+  }
+
+  .detect-cols .col-rail {
+    overflow-y: visible;
+  }
+
+  /* Nothing here for `table.grid`: the editable grids already live inside `.scroll-x`, so a narrow
+     screen gets a scrolling table with its columns intact. `display: block` on the table used to be
+     done here, and it cost the table box — the head stopped sharing columns with the cells. */
 }
 
 @media (prefers-reduced-motion: reduce) {

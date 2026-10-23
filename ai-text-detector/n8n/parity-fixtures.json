@@ -1,0 +1,512 @@
+{
+  "_comment": [
+    "Shared fixtures for the Python-engine parity proof.",
+    "tools/engine_parity.js runs each case through the shipped n8n code nodes and writes n8n/parity-golden.json;",
+    "tools/engine_parity.py runs the same case through backend/engine.py and diffs the two traces.",
+    "A case is: id, env (the $env the workflow would see), payload (the webhook body), headers (webhook",
+    "headers, i.e. the BYOK route), responses (what the gateway returned per lane; a lane that is absent",
+    "from the map is a lane whose branch never ran).",
+    "Add a case whenever engine.py grows a branch, or whenever a workflow node changes and the golden is",
+    "re-recorded. Cases with a harness_error mean the FIXTURE is wrong, not the port."
+  ],
+  "cases": [
+    {
+      "id": "env-keys-decisive-ai",
+      "env": { "PRIMARY_API_KEY": "nvapi-environmentkey", "SECONDARY_API_KEY": "nvapi-environmentkey" },
+      "payload": { "text": "In today's fast-paced digital landscape it is essential to leverage synergy.", "document_id": "doc-parity-1" },
+      "responses": {
+        "primary": { "choices": [{ "message": { "content": "{\"ai_probability\": 0.93, \"confidence\": 0.88, \"signals\": [{\"name\": \"uniform rhythm\", \"direction\": \"AI\", \"strength\": 0.7}], \"phrases\": [{\"quote\": \"fast-paced digital landscape\", \"direction\": \"AI\", \"strength\": 0.8}]}" }, "finish_reason": "stop" }] },
+        "secondary": { "choices": [{ "message": { "content": "{\"ai_probability\": 0.95, \"confidence\": 0.9}" }, "finish_reason": "stop" }] }
+      }
+    },
+    {
+      "id": "keyless-loopback",
+      "env": { "PRIMARY_BASE_URL": "http://127.0.0.1:20128/v1", "SECONDARY_BASE_URL": "http://127.0.0.1:20128/v1" },
+      "payload": { "text": "A paragraph long enough to clear the minimum length gate.", "document_id": "doc-parity-2" },
+      "responses": {
+        "primary": { "choices": [{ "message": { "content": "{\"ai_probability\": 0.2, \"confidence\": 0.9}" }, "finish_reason": "stop" }] }
+      }
+    },
+    {
+      "id": "keyless-remote-rejected",
+      "env": {},
+      "payload": { "text": "A paragraph long enough to clear the minimum length gate." },
+      "responses": {}
+    },
+    {
+      "id": "host-suffix-trick",
+      "env": { "PRIMARY_API_KEY": "nvapi-environmentkey", "SECONDARY_API_KEY": "nvapi-environmentkey" },
+      "payload": { "text": "a long enough sentence for detection", "lane_config": { "primary": { "base_url": "https://openrouter.ai.evil.com/v1" } } },
+      "responses": {}
+    },
+    {
+      "id": "request-lane-both",
+      "env": {},
+      "payload": {
+        "text": "a long enough sentence for detection",
+        "lane_config": {
+          "primary": { "base_url": "http://127.0.0.1:20128/v1", "model": "local/primary-a" },
+          "secondary": { "base_url": "http://127.0.0.1:20128/v1", "model": "local/secondary-b" }
+        }
+      },
+      "responses": {
+        "primary": { "choices": [{ "message": { "content": "{\"ai_probability\": 0.5, \"confidence\": 0.3}" }, "finish_reason": "stop" }] },
+        "secondary": { "choices": [{ "message": { "content": "{\"ai_probability\": 0.91, \"confidence\": 0.7}" }, "finish_reason": "stop" }] }
+      }
+    },
+    {
+      "id": "secondary-off-in-body",
+      "env": { "PRIMARY_API_KEY": "nvapi-environmentkey", "SECONDARY_API_KEY": "nvapi-environmentkey" },
+      "payload": { "text": "a long enough sentence for detection", "lane_config": { "secondary": { "enabled": false } } },
+      "responses": {
+        "primary": { "choices": [{ "message": { "content": "{\"ai_probability\": 0.5, \"confidence\": 0.4}" }, "finish_reason": "stop" }] }
+      }
+    },
+    {
+      "id": "secondary-enabled-string-true",
+      "env": { "PRIMARY_API_KEY": "nvapi-environmentkey", "SECONDARY_API_KEY": "nvapi-environmentkey", "SECONDARY_ENABLED": "false" },
+      "payload": { "text": "a long enough sentence for detection", "lane_config": { "secondary": { "enabled": "  TRUE " } } },
+      "responses": {
+        "primary": { "choices": [{ "message": { "content": "{\"ai_probability\": 0.5, \"confidence\": 0.4}" }, "finish_reason": "stop" }] },
+        "secondary": { "choices": [{ "message": { "content": "{\"ai_probability\": 0.4, \"confidence\": 0.8}" }, "finish_reason": "stop" }] }
+      }
+    },
+    {
+      "id": "secondary-enabled-junk",
+      "env": { "PRIMARY_API_KEY": "nvapi-environmentkey", "SECONDARY_API_KEY": "nvapi-environmentkey" },
+      "payload": { "text": "a long enough sentence for detection", "lane_config": { "secondary": { "enabled": "maybe" } } },
+      "responses": {}
+    },
+    {
+      "id": "unsupported-lane-field",
+      "env": { "PRIMARY_API_KEY": "nvapi-environmentkey", "SECONDARY_API_KEY": "nvapi-environmentkey" },
+      "payload": { "text": "a long enough sentence for detection", "lane_config": { "primary": { "api_key": "nvapi-sneaky" } } },
+      "responses": {}
+    },
+    {
+      "id": "lane-is-array",
+      "env": { "PRIMARY_API_KEY": "nvapi-environmentkey", "SECONDARY_API_KEY": "nvapi-environmentkey" },
+      "payload": { "text": "a long enough sentence for detection", "lane_config": { "primary": [] } },
+      "responses": {}
+    },
+    {
+      "id": "tuning-applied",
+      "env": { "PRIMARY_API_KEY": "nvapi-environmentkey", "SECONDARY_API_KEY": "nvapi-environmentkey" },
+      "payload": {
+        "text": "a long enough sentence for detection",
+        "tuning": { "temperature": 0.5, "max_tokens": 800, "ai_prob_threshold": 0.6, "request_timeout_ms": 45000 }
+      },
+      "responses": {
+        "primary": { "choices": [{ "message": { "content": "{\"ai_probability\": 0.62, \"confidence\": 0.7}" }, "finish_reason": "stop" }] },
+        "secondary": { "choices": [{ "message": { "content": "{\"ai_probability\": 0.3, \"confidence\": 0.9}" }, "finish_reason": "stop" }] }
+      }
+    },
+    {
+      "id": "tuning-out-of-range",
+      "env": { "PRIMARY_API_KEY": "nvapi-environmentkey", "SECONDARY_API_KEY": "nvapi-environmentkey" },
+      "payload": { "text": "a long enough sentence for detection", "tuning": { "temperature": 3 } },
+      "responses": {}
+    },
+    {
+      "id": "tuning-string-number",
+      "env": { "PRIMARY_API_KEY": "nvapi-environmentkey", "SECONDARY_API_KEY": "nvapi-environmentkey" },
+      "payload": { "text": "a long enough sentence for detection", "tuning": { "top_p": "0.4abc" } },
+      "responses": {
+        "primary": { "choices": [{ "message": { "content": "{\"ai_probability\": 0.9, \"confidence\": 0.9}" }, "finish_reason": "stop" }] }
+      }
+    },
+    {
+      "id": "tuning-null-and-empty",
+      "env": { "PRIMARY_API_KEY": "nvapi-environmentkey", "SECONDARY_API_KEY": "nvapi-environmentkey" },
+      "payload": { "text": "a long enough sentence for detection", "tuning": { "temperature": null, "top_p": "", "max_tokens": 0 } },
+      "responses": {
+        "primary": { "choices": [{ "message": { "content": "{\"ai_probability\": 0.9, \"confidence\": 0.9}" }, "finish_reason": "stop" }] }
+      }
+    },
+    {
+      "id": "tuning-bool",
+      "env": { "PRIMARY_API_KEY": "nvapi-environmentkey", "SECONDARY_API_KEY": "nvapi-environmentkey" },
+      "payload": { "text": "a long enough sentence for detection", "tuning": { "temperature": true } },
+      "responses": {}
+    },
+    {
+      "id": "tuning-unsupported-field",
+      "env": { "PRIMARY_API_KEY": "nvapi-environmentkey", "SECONDARY_API_KEY": "nvapi-environmentkey" },
+      "payload": { "text": "a long enough sentence for detection", "tuning": { "nope": 1 } },
+      "responses": {}
+    },
+    {
+      "id": "thresholds-inverted",
+      "env": { "PRIMARY_API_KEY": "nvapi-environmentkey", "SECONDARY_API_KEY": "nvapi-environmentkey" },
+      "payload": { "text": "a long enough sentence for detection", "tuning": { "human_prob_threshold": 0.8 } },
+      "responses": {}
+    },
+    {
+      "id": "byok-disabled-rejects-header",
+      "env": { "ALLOW_BYOK": "false", "PRIMARY_API_KEY": "nvapi-environmentkey", "SECONDARY_API_KEY": "nvapi-environmentkey" },
+      "payload": { "text": "a long enough sentence for detection" },
+      "headers": { "x-primary-api-key": "nvapi-visitorkey" },
+      "responses": {}
+    },
+    {
+      "id": "byok-allowed-takes-header",
+      "env": { "ALLOW_BYOK": "true", "PRIMARY_API_KEY": "nvapi-environmentkey", "SECONDARY_API_KEY": "nvapi-environmentkey" },
+      "payload": { "text": "a long enough sentence for detection" },
+      "headers": { "x-primary-api-key": "nvapi-visitorkey", "x-secondary-api-key": " sk-or-v1-visitor " },
+      "responses": {
+        "primary": { "choices": [{ "message": { "content": "{\"ai_probability\": 0.9, \"confidence\": 0.9}" }, "finish_reason": "stop" }] }
+      }
+    },
+    {
+      "id": "byok-unsupported-key-chars",
+      "env": { "ALLOW_BYOK": "true", "PRIMARY_API_KEY": "nvapi-environmentkey", "SECONDARY_API_KEY": "nvapi-environmentkey" },
+      "payload": { "text": "a long enough sentence for detection" },
+      "headers": { "x-primary-api-key": "bad key with spaces" },
+      "responses": {}
+    },
+    {
+      "id": "text-too-short",
+      "env": { "PRIMARY_API_KEY": "nvapi-environmentkey", "SECONDARY_API_KEY": "nvapi-environmentkey" },
+      "payload": { "text": "tiny" },
+      "responses": {}
+    },
+    {
+      "id": "text-not-a-string",
+      "env": { "PRIMARY_API_KEY": "nvapi-environmentkey", "SECONDARY_API_KEY": "nvapi-environmentkey" },
+      "payload": { "text": 42 },
+      "responses": {}
+    },
+    {
+      "id": "body-is-array",
+      "env": { "PRIMARY_API_KEY": "nvapi-environmentkey", "SECONDARY_API_KEY": "nvapi-environmentkey" },
+      "payload": ["a", "b"],
+      "responses": {}
+    },
+    {
+      "id": "body-is-null",
+      "env": { "PRIMARY_API_KEY": "nvapi-environmentkey", "SECONDARY_API_KEY": "nvapi-environmentkey" },
+      "payload": null,
+      "responses": {}
+    },
+    {
+      "id": "astral-chars-length",
+      "env": { "PRIMARY_API_KEY": "nvapi-environmentkey", "SECONDARY_API_KEY": "nvapi-environmentkey" },
+      "payload": { "text": "\ud83d\ude00\ud83d\ude00\ud83d\ude00 emoji counted as two code units each in JS, so the gate and the quote offsets must agree.", "document_id": "doc-parity-astral", "metadata": { "k": "v" } },
+      "responses": {
+        "primary": { "choices": [{ "message": { "content": "{\"ai_probability\": 0.9, \"confidence\": 0.9, \"phrases\": [{\"quote\": \"\ud83d\ude00 emoji counted\", \"direction\": \"AI\", \"strength\": 0.6}]}" }, "finish_reason": "stop" }] }
+      }
+    },
+    {
+      "id": "record-separator-trim",
+      "env": { "PRIMARY_API_KEY": "nvapi-environmentkey", "SECONDARY_API_KEY": "nvapi-environmentkey" },
+      "payload": { "text": "  trailing record separator must not be trimmed by JS\u001c", "document_id": "doc-parity-rs" },
+      "responses": {
+        "primary": { "choices": [{ "message": { "content": "{\"ai_probability\": 0.1, \"confidence\": 0.9}" }, "finish_reason": "stop" }] }
+      }
+    },
+    {
+      "id": "document-id-too-long",
+      "env": { "PRIMARY_API_KEY": "nvapi-environmentkey", "SECONDARY_API_KEY": "nvapi-environmentkey" },
+      "payload": { "text": "a long enough sentence for detection", "document_id": "x01234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890" },
+      "responses": {
+        "primary": { "choices": [{ "message": { "content": "{\"ai_probability\": 0.9, \"confidence\": 0.9}" }, "finish_reason": "stop" }] }
+      }
+    },
+    {
+      "id": "metadata-is-array",
+      "env": { "PRIMARY_API_KEY": "nvapi-environmentkey", "SECONDARY_API_KEY": "nvapi-environmentkey" },
+      "payload": { "text": "a long enough sentence for detection", "document_id": "doc-parity-meta", "metadata": [1, 2], "source_url": "http://example.com/a", "content_type": "text/plain", "requested_by": "tester" },
+      "responses": {
+        "primary": { "choices": [{ "message": { "content": "{\"ai_probability\": 0.9, \"confidence\": 0.9}" }, "finish_reason": "stop" }] }
+      }
+    },
+    {
+      "id": "max-tokens-env-sets-body",
+      "env": { "PRIMARY_API_KEY": "nvapi-environmentkey", "SECONDARY_API_KEY": "nvapi-environmentkey", "LLM_MAX_TOKENS": "700" },
+      "payload": { "text": "a long enough sentence for detection", "document_id": "doc-parity-cap" },
+      "responses": {
+        "primary": { "choices": [{ "message": { "content": "{\"ai_probability\": 0.9, \"confidence\": 0.9}" }, "finish_reason": "length" }] }
+      }
+    },
+    {
+      "id": "fractional-integer-env",
+      "env": { "PRIMARY_API_KEY": "nvapi-environmentkey", "SECONDARY_API_KEY": "nvapi-environmentkey", "MIN_TEXT_LENGTH": "10.9", "MAX_TEXT_LENGTH": "50.7" },
+      "payload": { "text": "this text is longer than the maximum that the env allows here at all", "document_id": "doc-parity-frac" },
+      "responses": {}
+    },
+    {
+      "id": "timeout-out-of-range",
+      "env": { "PRIMARY_API_KEY": "nvapi-environmentkey", "SECONDARY_API_KEY": "nvapi-environmentkey" },
+      "payload": { "text": "a long enough sentence for detection", "tuning": { "request_timeout_ms": 300001 } },
+      "responses": {}
+    },
+    {
+      "id": "ipv6-loopback-url",
+      "env": { "ALLOWED_LLM_HOSTS": "localhost,127.0.0.1,::1" },
+      "payload": {
+        "text": "a long enough sentence for detection",
+        "document_id": "doc-parity-v6",
+        "lane_config": { "primary": { "base_url": "HTTP://[::1]:20128/v1///" } }
+      },
+      "responses": {
+        "primary": { "choices": [{ "message": { "content": "{\"ai_probability\": 0.9, \"confidence\": 0.9}" }, "finish_reason": "stop" }] }
+      }
+    },
+    {
+      "id": "chat-completions-suffix-rejected",
+      "env": { "PRIMARY_API_KEY": "nvapi-environmentkey", "SECONDARY_API_KEY": "nvapi-environmentkey" },
+      "payload": { "text": "a long enough sentence for detection", "lane_config": { "primary": { "base_url": "https://integrate.api.nvidia.com/v1/chat/completions" } } },
+      "responses": {}
+    },
+    {
+      "id": "allowlist-whitespace-and-case",
+      "env": { "PRIMARY_API_KEY": "nvapi-environmentkey", "SECONDARY_API_KEY": "nvapi-environmentkey", "ALLOWED_LLM_HOSTS": " OpenRouter.AI , 127.0.0.1 , " },
+      "payload": {
+        "text": "a long enough sentence for detection",
+        "document_id": "doc-parity-hosts",
+        "lane_config": { "primary": { "base_url": "https://openrouter.ai/api/v1" } }
+      },
+      "responses": {
+        "primary": { "choices": [{ "message": { "content": "{\"ai_probability\": 0.9, \"confidence\": 0.9}" }, "finish_reason": "stop" }] }
+      }
+    },
+    {
+      "id": "parse-cut-inside-the-decimal",
+      "env": { "PRIMARY_API_KEY": "nvapi-environmentkey", "SECONDARY_API_KEY": "nvapi-environmentkey" },
+      "payload": { "text": "a long enough sentence for detection", "document_id": "doc-parity-cut1" },
+      "responses": {
+        "primary": { "choices": [{ "message": { "content": "{\"ai_probability\": 0." }, "finish_reason": "length" }] },
+        "secondary": { "choices": [{ "message": { "content": "{\"ai_probability\": 0.88, \"confidence\": 0.8}" }, "finish_reason": "stop" }] }
+      }
+    },
+    {
+      "id": "parse-cut-after-complete-number",
+      "env": { "PRIMARY_API_KEY": "nvapi-environmentkey", "SECONDARY_API_KEY": "nvapi-environmentkey" },
+      "payload": { "text": "a long enough sentence for detection", "document_id": "doc-parity-cut2" },
+      "responses": {
+        "primary": { "choices": [{ "message": { "content": "{\"ai_probability\": 0.72, \"confidence\": 0.9, \"signals\": [{\"name\": \"rhy" }, "finish_reason": "length" }] },
+        "secondary": { "choices": [{ "message": { "content": "{\"ai_probability\": 0.4, \"confidence\": 0.8}" }, "finish_reason": "stop" }] }
+      }
+    },
+    {
+      "id": "parse-fenced-with-prose",
+      "env": { "PRIMARY_API_KEY": "nvapi-environmentkey", "SECONDARY_API_KEY": "nvapi-environmentkey" },
+      "payload": { "text": "a long enough sentence for detection", "document_id": "doc-parity-fence" },
+      "responses": {
+        "primary": { "choices": [{ "message": { "content": "Here is my judgement:\n```JSON\n{\"ai_probability\": 0.75, \"confidence\": 0.65}\n```\nDone." }, "finish_reason": "stop" }] }
+      }
+    },
+    {
+      "id": "parse-no-json-at-all",
+      "env": { "PRIMARY_API_KEY": "nvapi-environmentkey", "SECONDARY_API_KEY": "nvapi-environmentkey" },
+      "payload": { "text": "a long enough sentence for detection", "document_id": "doc-parity-nojson" },
+      "responses": {
+        "primary": { "choices": [{ "message": { "content": "I cannot analyse this text." }, "finish_reason": "stop" }] },
+        "secondary": { "choices": [{ "message": { "content": "nor can I" }, "finish_reason": "stop" }] }
+      }
+    },
+    {
+      "id": "parse-no-choices",
+      "env": { "PRIMARY_API_KEY": "nvapi-environmentkey", "SECONDARY_API_KEY": "nvapi-environmentkey" },
+      "payload": { "text": "a long enough sentence for detection", "document_id": "doc-parity-noch" },
+      "responses": {
+        "primary": { "id": "chatcmpl-1", "model": "glm" },
+        "secondary": { "choices": [] }
+      }
+    },
+    {
+      "id": "parse-provider-error-code",
+      "env": { "PRIMARY_API_KEY": "nvapi-environmentkey", "SECONDARY_API_KEY": "nvapi-environmentkey" },
+      "payload": { "text": "a long enough sentence for detection", "document_id": "doc-parity-err1" },
+      "responses": {
+        "primary": { "error": { "code": 429, "message": "Too Many Requests", "param": null } },
+        "secondary": { "error": { "status": 503 } }
+      }
+    },
+    {
+      "id": "parse-provider-error-empty-object",
+      "env": { "PRIMARY_API_KEY": "nvapi-environmentkey", "SECONDARY_API_KEY": "nvapi-environmentkey" },
+      "payload": { "text": "a long enough sentence for detection", "document_id": "doc-parity-err2" },
+      "responses": {
+        "primary": { "error": {} },
+        "secondary": { "error": "upstream rejected the request" }
+      }
+    },
+    {
+      "id": "parse-response-is-string",
+      "env": { "PRIMARY_API_KEY": "nvapi-environmentkey", "SECONDARY_API_KEY": "nvapi-environmentkey" },
+      "payload": { "text": "a long enough sentence for detection", "document_id": "doc-parity-str" },
+      "responses": {
+        "primary": "404 page not found",
+        "secondary": [1, 2]
+      }
+    },
+    {
+      "id": "parse-response-is-null",
+      "env": { "PRIMARY_API_KEY": "nvapi-environmentkey", "SECONDARY_API_KEY": "nvapi-environmentkey" },
+      "payload": { "text": "a long enough sentence for detection", "document_id": "doc-parity-null" },
+      "responses": {
+        "primary": null,
+        "secondary": { "error": { "code": 503, "message": "upstream unavailable" } }
+      }
+    },
+    {
+      "id": "parse-reasoning-fallback",
+      "env": { "PRIMARY_API_KEY": "nvapi-environmentkey", "SECONDARY_API_KEY": "nvapi-environmentkey" },
+      "payload": { "text": "a long enough sentence for detection", "document_id": "doc-parity-reason" },
+      "responses": {
+        "primary": { "choices": [{ "message": { "content": null, "reasoning": "{\"ai_probability\": 0.3, \"confidence\": 0.8}" }, "finish_reason": "stop" }] }
+      }
+    },
+    {
+      "id": "parse-message-is-array",
+      "env": { "PRIMARY_API_KEY": "nvapi-environmentkey", "SECONDARY_API_KEY": "nvapi-environmentkey" },
+      "payload": { "text": "a long enough sentence for detection", "document_id": "doc-parity-msgarr" },
+      "responses": {
+        "primary": { "choices": [{ "message": [1, 2], "finish_reason": "stop" }] },
+        "secondary": { "choices": [0] }
+      }
+    },
+    {
+      "id": "parse-units-clamp-and-string-number",
+      "env": { "PRIMARY_API_KEY": "nvapi-environmentkey", "SECONDARY_API_KEY": "nvapi-environmentkey" },
+      "payload": { "text": "a long enough sentence for detection", "document_id": "doc-parity-clamp" },
+      "responses": {
+        "primary": { "choices": [{ "message": { "content": "{\"ai_probability\": 5, \"confidence\": \"0.42xyz\"}" }, "finish_reason": "stop" }] },
+        "secondary": { "choices": [{ "message": { "content": "{\"ai_probability\": -3, \"confidence\": 2}" }, "finish_reason": "stop" }] }
+      }
+    },
+    {
+      "id": "parse-plus-prefixed-number",
+      "env": { "PRIMARY_API_KEY": "nvapi-environmentkey", "SECONDARY_API_KEY": "nvapi-environmentkey" },
+      "payload": { "text": "a long enough sentence for detection", "document_id": "doc-parity-plus" },
+      "responses": {
+        "primary": { "choices": [{ "message": { "content": "{\"ai_probability\": +0.9, \"confidence\": 0.9" }, "finish_reason": "length" }] },
+        "secondary": { "error": { "code": 503, "message": "upstream unavailable" } }
+      }
+    },
+    {
+      "id": "parse-signals-and-phrases-junk",
+      "env": { "PRIMARY_API_KEY": "nvapi-environmentkey", "SECONDARY_API_KEY": "nvapi-environmentkey" },
+      "payload": { "text": "a long enough sentence for detection", "document_id": "doc-parity-junk" },
+      "responses": {
+        "primary": {
+          "choices": [{
+            "message": {
+              "content": "{\"ai_probability\": 0.8, \"confidence\": 0.7, \"signals\": [null, \"str\", {\"name\": \"\", \"direction\": \"human\", \"strength\": \"0.9\"}, {\"name\": \"a\", \"direction\": 7}, {\"name\": \"b\"}, {\"name\": \"dropped\"}, {\"name\": \"also dropped\"}], \"phrases\": [{\"quote\": \"   \"}, {\"quote\": 5}, {\"quote\": \"kept exactly\", \"direction\": \"HUMAN\"}, {\"quote\": \"kept two\", \"strength\": 0.1}, {\"quote\": \"kept three\"}, {\"quote\": \"kept four\"}, {\"quote\": \"dropped seven\"}]}"
+            },
+            "finish_reason": "stop"
+          }]
+        }
+      }
+    },
+    {
+      "id": "parse-duplicate-keys",
+      "env": { "PRIMARY_API_KEY": "nvapi-environmentkey", "SECONDARY_API_KEY": "nvapi-environmentkey" },
+      "payload": { "text": "a long enough sentence for detection", "document_id": "doc-parity-dup" },
+      "responses": {
+        "primary": { "choices": [{ "message": { "content": "{\"ai_probability\": 0.2, \"ai_probability\": 0.9, \"confidence\": 0.9}" }, "finish_reason": "stop" }] }
+      }
+    },
+    {
+      "id": "ensemble-tie-break-ai-at-threshold",
+      "env": { "PRIMARY_API_KEY": "nvapi-environmentkey", "SECONDARY_API_KEY": "nvapi-environmentkey" },
+      "payload": { "text": "a long enough sentence for detection", "document_id": "doc-parity-tb1" },
+      "responses": {
+        "primary": { "choices": [{ "message": { "content": "{\"ai_probability\": 0.5, \"confidence\": 0.55}" }, "finish_reason": "stop" }] },
+        "secondary": { "choices": [{ "message": { "content": "{\"ai_probability\": 0.9, \"confidence\": 0.4}" }, "finish_reason": "stop" }] }
+      }
+    },
+    {
+      "id": "ensemble-tie-break-human",
+      "env": { "PRIMARY_API_KEY": "nvapi-environmentkey", "SECONDARY_API_KEY": "nvapi-environmentkey" },
+      "payload": { "text": "a long enough sentence for detection", "document_id": "doc-parity-tb2" },
+      "responses": {
+        "primary": { "choices": [{ "message": { "content": "{\"ai_probability\": 0.45, \"confidence\": 0.2}" }, "finish_reason": "stop" }] },
+        "secondary": { "choices": [{ "message": { "content": "{\"ai_probability\": 0.2, \"confidence\": 0.9}" }, "finish_reason": "stop" }] }
+      }
+    },
+    {
+      "id": "ensemble-exactly-zero-is-not-failure",
+      "env": { "PRIMARY_API_KEY": "nvapi-environmentkey", "SECONDARY_API_KEY": "nvapi-environmentkey" },
+      "payload": { "text": "a long enough sentence for detection", "document_id": "doc-parity-zero" },
+      "responses": {
+        "primary": { "choices": [{ "message": { "content": "{\"ai_probability\": 0, \"confidence\": 0.95}" }, "finish_reason": "stop" }] }
+      }
+    },
+    {
+      "id": "ensemble-primary-decisive-human",
+      "env": { "PRIMARY_API_KEY": "nvapi-environmentkey", "SECONDARY_API_KEY": "nvapi-environmentkey" },
+      "payload": { "text": "a long enough sentence for detection", "document_id": "doc-parity-hu" },
+      "responses": {
+        "primary": { "choices": [{ "message": { "content": "{\"ai_probability\": 0.12, \"confidence\": 0.91, \"phrases\": [{\"quote\": \"long enough sentence\", \"direction\": \"HUMAN\", \"strength\": 0.77}]}" }, "finish_reason": "stop" }] },
+        "secondary": { "choices": [{ "message": { "content": "{\"ai_probability\": 0.99, \"confidence\": 0.9}" }, "finish_reason": "stop" }] }
+      }
+    },
+    {
+      "id": "ensemble-both-lanes-fail",
+      "env": { "PRIMARY_API_KEY": "nvapi-environmentkey", "SECONDARY_API_KEY": "nvapi-environmentkey" },
+      "payload": { "text": "a long enough sentence for detection", "document_id": "doc-parity-allfail" },
+      "responses": {
+        "primary": { "error": { "message": "upstream timeout" } },
+        "secondary": { "error": { "message": "upstream timeout" } }
+      }
+    },
+    {
+      "id": "ensemble-only-secondary-answers",
+      "env": { "PRIMARY_API_KEY": "nvapi-environmentkey", "SECONDARY_API_KEY": "nvapi-environmentkey" },
+      "payload": { "text": "a long enough sentence for detection", "document_id": "doc-parity-solo2" },
+      "responses": {
+        "primary": { "error": { "code": "model_not_found" } },
+        "secondary": { "choices": [{ "message": { "content": "{\"ai_probability\": 0.93, \"confidence\": 0.8}" }, "finish_reason": "stop" }] }
+      }
+    },
+    {
+      "id": "ensemble-single-model-penalty",
+      "env": { "PRIMARY_API_KEY": "nvapi-environmentkey", "SECONDARY_API_KEY": "nvapi-environmentkey", "SINGLE_MODEL_CONFIDENCE_PENALTY": "0.85" },
+      "payload": { "text": "a long enough sentence for detection", "document_id": "doc-parity-pen" },
+      "responses": {
+        "primary": { "choices": [{ "message": { "content": "{\"ai_probability\": 0.86, \"confidence\": 0.8}" }, "finish_reason": "stop" }] }
+      }
+    },
+    {
+      "id": "ensemble-secondary-off-and-gray",
+      "env": { "PRIMARY_API_KEY": "nvapi-environmentkey", "SECONDARY_API_KEY": "nvapi-environmentkey", "SECONDARY_ENABLED": "false" },
+      "payload": { "text": "a long enough sentence for detection", "document_id": "doc-parity-off" },
+      "responses": {
+        "primary": { "choices": [{ "message": { "content": "{\"ai_probability\": 0.5, \"confidence\": 0.5}" }, "finish_reason": "stop" }] }
+      }
+    },
+    {
+      "id": "ensemble-gray-primary-secondary-solo",
+      "env": { "PRIMARY_API_KEY": "nvapi-environmentkey", "SECONDARY_API_KEY": "nvapi-environmentkey" },
+      "payload": { "text": "a long enough sentence for detection", "document_id": "doc-parity-gs" },
+      "responses": {
+        "primary": { "choices": [{ "message": { "content": "{\"ai_probability\": 0.55, \"confidence\": 0.5}" }, "finish_reason": "stop" }] },
+        "secondary": { "error": { "message": "429" } }
+      }
+    },
+    {
+      "id": "env-versions-overridden",
+      "env": { "PRIMARY_API_KEY": "nvapi-environmentkey", "SECONDARY_API_KEY": "nvapi-environmentkey", "DETECTOR_VERSION": "3.1", "THRESHOLD_VERSION": "4", "CLASSIFIER_VERSION": "" },
+      "payload": { "text": "a long enough sentence for detection", "document_id": "doc-parity-ver" },
+      "responses": {
+        "primary": { "choices": [{ "message": { "content": "{\"ai_probability\": 0.9, \"confidence\": 0.9}" }, "finish_reason": "stop" }] }
+      }
+    },
+    {
+      "id": "env-bad-numbers-fall-back",
+      "env": { "PRIMARY_API_KEY": "nvapi-environmentkey", "SECONDARY_API_KEY": "nvapi-environmentkey", "AI_PROBABILITY_THRESHOLD": "abc", "LLM_MAX_TOKENS": "-5", "MIN_TEXT_LENGTH": "0" },
+      "payload": { "text": "a long enough sentence for detection", "document_id": "doc-parity-badenv" },
+      "responses": {
+        "primary": { "choices": [{ "message": { "content": "{\"ai_probability\": 0.9, \"confidence\": 0.9}" }, "finish_reason": "stop" }] }
+      }
+    },
+    {
+      "id": "env-base-url-without-scheme",
+      "env": { "PRIMARY_API_KEY": "nvapi-environmentkey", "SECONDARY_API_KEY": "nvapi-environmentkey", "PRIMARY_BASE_URL": "integrate.api.nvidia.com/v1" },
+      "payload": { "text": "a long enough sentence for detection" },
+      "responses": {}
+    }
+  ]
+}

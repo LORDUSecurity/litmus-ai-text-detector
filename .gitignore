@@ -69,3 +69,31 @@ ai-text-detector/*.qoder.site
 # Fonts and payloads the verifier scripts stage in order to fetch them; the
 # real copies live in frontend/public/fonts and public-site/dist/fonts.
 ai-text-detector/.probe/
+
+# --- Live-probe scratch -------------------------------------------------
+# Screenshots and throwaway dev-proxy config a verification run stages in order to
+# drive the app over CDP. The README's copies live in ai-text-detector/docs/assets;
+# these are the working shots that produced them.
+.qoder-screens/
+ai-text-detector/frontend/proxy.live.json
+
+# --- Run logs -----------------------------------------------------------
+# Every file here is the transcript of a measurement (a capture round, a build, a
+# verifier run), and the numbers they produced are already recorded in the ranking,
+# the research notes and the deposit manifest. They are kept on disk for the run they
+# belong to and never committed: a capture log quotes request bodies and endpoint URLs
+# that have no business in a public history.
+ai-text-detector/benchmark/*.log
+ai-text-detector/benchmark/logboot/
+ai-text-detector/benchmark/_catalog_dump.txt
+
+# --- Crash logs ---------------------------------------------------------
+# JVM crash dumps from an n8n boot. Regenerated on the next crash, useful for exactly
+# one thing: nothing.
+hs_err_pid*.log
+replay_pid*.log
+
+# --- Empty legacy file --------------------------------------------------
+# A 0-byte SQLite file the very first boot created before the path moved to
+# backend/data/. Nothing reads it; it was tracked by mistake.
+ai-text-detector/detector.db

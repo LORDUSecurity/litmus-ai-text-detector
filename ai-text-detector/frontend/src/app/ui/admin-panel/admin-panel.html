@@ -6,16 +6,15 @@
       database — not in <code>.env</code>. Keys are stored encrypted and are shown here only as a
       masked hint.
     </p>
+    <!-- Only the two acts that belong to a model row are offered here. The credentials and the
+         endpoints they hang on moved to `Models & keys`, next to the logos they light up, and the
+         tie-break switch moved with them — see `app-admin-keys` and `app-tie-break-switch`. What is
+         left on this surface is the chooser: which rows exist, which lane each serves, and what
+         parameters a row is scored with. -->
     <div class="row-actions">
       <button type="button" (click)="reload()">Reload</button>
-      <button type="button" (click)="showNewProvider.set(!showNewProvider())">
-        {{ showNewProvider() ? 'Cancel' : 'Add provider' }}
-      </button>
       <button type="button" (click)="showNewModel.set(!showNewModel())">
         {{ showNewModel() ? 'Cancel' : 'Add model' }}
-      </button>
-      <button type="button" (click)="showNewKey.set(!showNewKey())">
-        {{ showNewKey() ? 'Cancel' : 'Add API key' }}
       </button>
     </div>
   </header>
@@ -24,40 +23,6 @@
     <div [class]="'banner tone-' + (m.tone === 'ok' ? 'preflight' : 'rejected')" role="status">
       <p class="verbatim">{{ m.text }}</p>
     </div>
-  }
-
-  @if (showNewProvider()) {
-    <form class="inline-form" (ngSubmit)="createProvider(); $event.preventDefault()">
-      <label>name <input name="pname" [(ngModel)]="newProvider().name" placeholder="nvidia" /></label>
-      <label>base_url
-        <input name="purl" size="38" [(ngModel)]="newProvider().base_url"
-               placeholder="https://integrate.api.nvidia.com/v1" />
-      </label>
-      <label>label <input name="plabel" [(ngModel)]="newProvider().label" /></label>
-      <label>notes <input name="pnotes" size="30" [(ngModel)]="newProvider().notes" /></label>
-      <button class="primary" type="submit" [disabled]="busy()">Save provider</button>
-    </form>
-  }
-
-  @if (showNewKey()) {
-    <form class="inline-form" (ngSubmit)="addKey(); $event.preventDefault()">
-      <label>provider
-        <select name="kprov" [(ngModel)]="newKey().providerId">
-          <option [ngValue]="0">— choose —</option>
-          @for (p of providers(); track p.id) {
-            <option [ngValue]="p.id">{{ p.name }}</option>
-          }
-        </select>
-      </label>
-      <label>label <input name="klabel" [(ngModel)]="newKey().label" /></label>
-      <label>api key
-        <input name="kval" type="password" size="40" autocomplete="off"
-               [(ngModel)]="newKey().api_key" placeholder="nvapi-… / sk-or-…" />
-      </label>
-      <button class="primary" type="submit" [disabled]="busy()">Store encrypted</button>
-      <span class="hint">The plaintext is sent once over loopback, encrypted with Fernet, and never
-        returned by any endpoint.</span>
-    </form>
   }
 
   @if (showNewModel()) {
@@ -98,76 +63,60 @@
       <p class="hint">
         {{ p.key_count }} key(s) · {{ p.model_count }} model(s) · auth
         <code>{{ p.auth_header }}: {{ p.auth_prefix }}&lt;key&gt;</code>
+        <span class="muted"> — stored and spent on Models &amp; keys, where the endpoint's logo is.</span>
       </p>
 
-      <table class="grid">
-        <thead>
-          <tr><th>stored keys</th><th>hint</th><th>last used</th><th>active</th><th></th></tr>
-        </thead>
-        <tbody>
-          @for (k of p.keys; track k.id) {
-            <tr>
-              <td>{{ k.label }}</td>
-              <td class="mono">{{ k.key_hint }}</td>
-              <td class="hint">{{ keyUsed(k.last_used_at) }}</td>
-              <td>
-                <button type="button" (click)="toggleKey(k.id, !k.is_active)">
-                  {{ k.is_active ? 'deactivate' : 'activate' }}
-                </button>
-              </td>
-              <td><button type="button" class="danger" (click)="deleteKey(k.id)">delete</button></td>
-            </tr>
-          } @empty {
-            <tr><td colspan="5" class="hint">No key stored — detection for this provider will fail
-              with PROVIDER_KEY_MISSING unless the browser supplies one.</td></tr>
-          }
-        </tbody>
-      </table>
-
       @if (p.models.length) {
-        <table class="grid">
-          <thead>
-            <tr>
-              <th>model</th><th>lane</th><th>temp</th><th>top_p</th>
-              <th title="0 sends no max_tokens at all: the model answers until it closes its JSON">
-                max_tok (0 = auto)</th>
-              <th>ai ≥</th><th>human ≤</th><th>tie-break ≥</th><th></th>
-            </tr>
-          </thead>
-          <tbody>
-            @for (m of p.models; track m.id) {
+        <div class="scroll-x">
+          <table class="grid">
+            <thead>
               <tr>
-                <td class="mono">{{ m.model_id }}</td>
-                <td>
-                  <select (change)="assign(m, $any($event.target).value)">
-                    <option value="" [selected]="m.lane === null">—</option>
-                    <option value="primary" [selected]="m.lane === 'primary'">primary</option>
-                    <option value="secondary" [selected]="m.lane === 'secondary'">secondary</option>
-                  </select>
-                </td>
-                <td><input class="num" type="number" step="0.05" [value]="m.temperature"
-                           (change)="editDraft(m, 'temperature', $any($event.target).value)" /></td>
-                <td><input class="num" type="number" step="0.05" [value]="m.top_p"
-                           (change)="editDraft(m, 'top_p', $any($event.target).value)" /></td>
-                <td><input class="num" type="number" step="50" [value]="m.max_tokens"
-                           (change)="editDraft(m, 'max_tokens', $any($event.target).value)" /></td>
-                <td><input class="num" type="number" step="0.01" [value]="m.ai_prob_threshold"
-                           (change)="editDraft(m, 'ai_prob_threshold', $any($event.target).value)" /></td>
-                <td><input class="num" type="number" step="0.01" [value]="m.human_prob_threshold"
-                           (change)="editDraft(m, 'human_prob_threshold', $any($event.target).value)" /></td>
-                <td><input class="num" type="number" step="0.01" [value]="m.secondary_decision_threshold"
-                           (change)="editDraft(m, 'secondary_decision_threshold', $any($event.target).value)" /></td>
-                <td class="row-actions">
-                  <button type="button" (click)="saveModel(m)" [disabled]="!hasDraft(m) || busy()">
-                    Save
-                  </button>
-                  <button type="button" (click)="runProbe(p, m.model_id)" [disabled]="busy()">Probe</button>
-                  <button type="button" class="danger" (click)="deleteModel(m)">Delete</button>
-                </td>
+                <th>model</th><th>lane</th><th>temp</th><th>top_p</th>
+                <th title="0 sends no max_tokens at all: the model answers until it closes its JSON">
+                  max_tok (0 = auto)</th>
+                <th>ai ≥</th><th>human ≤</th><th>tie-break ≥</th><th></th>
               </tr>
-            }
-          </tbody>
-        </table>
+            </thead>
+            <tbody>
+              @for (m of p.models; track m.id) {
+                <tr>
+                  <td class="mono">{{ m.model_id }}</td>
+                  <td>
+                    <select (change)="assign(m, $any($event.target).value)">
+                      <option value="" [selected]="m.lane === null">—</option>
+                      <option value="primary" [selected]="m.lane === 'primary'">primary</option>
+                      <option value="secondary" [selected]="m.lane === 'secondary'">secondary</option>
+                    </select>
+                  </td>
+                  <td><input class="num" type="number" step="0.05" [value]="m.temperature"
+                             (change)="editDraft(m, 'temperature', $any($event.target).value)" /></td>
+                  <td><input class="num" type="number" step="0.05" [value]="m.top_p"
+                             (change)="editDraft(m, 'top_p', $any($event.target).value)" /></td>
+                  <td><input class="num" type="number" step="50" [value]="m.max_tokens"
+                             (change)="editDraft(m, 'max_tokens', $any($event.target).value)" /></td>
+                  <td><input class="num" type="number" step="0.01" [value]="m.ai_prob_threshold"
+                             (change)="editDraft(m, 'ai_prob_threshold', $any($event.target).value)" /></td>
+                  <td><input class="num" type="number" step="0.01" [value]="m.human_prob_threshold"
+                             (change)="editDraft(m, 'human_prob_threshold', $any($event.target).value)" /></td>
+                  <td><input class="num" type="number" step="0.01" [value]="m.secondary_decision_threshold"
+                             (change)="editDraft(m, 'secondary_decision_threshold', $any($event.target).value)" /></td>
+                  <!-- A cell that is also a flex container stops being a table cell (the UA has to put
+                       an anonymous one back around it), so the row of buttons is a div INSIDE the cell
+                       and the cell keeps its own job. -->
+                  <td>
+                    <div class="row-actions">
+                      <button type="button" (click)="saveModel(m)" [disabled]="!hasDraft(m) || busy()">
+                        Save
+                      </button>
+                      <button type="button" (click)="runProbe(p, m.model_id)" [disabled]="busy()">Probe</button>
+                      <button type="button" class="danger" (click)="deleteModel(m)">Delete</button>
+                    </div>
+                  </td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
       }
       <div class="row-actions">
         <button type="button" (click)="updateProvider(p, 'enabled', !p.enabled)">
@@ -178,7 +127,7 @@
     </article>
   } @empty {
     <p class="hint">No providers in the database yet. Run <code>python -m backend.seed</code> to
-      import them from <code>.env</code>, or add one above.</p>
+      import them from <code>.env</code>, or add one on Models &amp; keys.</p>
   }
 
   @if (probe(); as r) {
@@ -198,16 +147,29 @@
   }
 
   <!-- Engine target + ranking-page links. Admin-only on the server: /settings is in
-       _ADMIN_PREFIXES_ANY_METHOD, so a plain user gets 403 on GET and POST alike. This is the
-       answer to "how does a packaged local app get a verdict" — it posts to the URL below, and
-       the machine it runs on is the only place that can be wrong. -->
+       _ADMIN_PREFIXES_ANY_METHOD, so a plain user gets 403 on GET and POST alike. Half of this card
+       is a deployment fact, not a preference: a packaged install scores text in its own process, so
+       the workflow target it still stores is not on its request path, and showing those two fields
+       asks the owner to fix a machine that is not used. `/n8n/status` says which half this install
+       has, and the target block appears only when the answer is that the workflow is dialled.
+       On a packaged install this whole card is empty: the engine is not dialled, and the links,
+       the gateway list and the guides are answers the deployment ships with rather than settings
+       one person's machine needs. -->
+  @if (!nativeEngine() || !local()) {
   <article class="card">
     <header class="card-head">
-      <h3>Detection engine &amp; site links</h3>
+      <h3>{{ nativeEngine() ? 'Site links' : 'Detection engine &amp; site links' }}</h3>
       @if (engine(); as e) {
-        <span class="pill" [class.pill-off]="!e.reachable">
-          {{ e.reachable ? 'engine reachable' : 'engine unreachable' }}
-        </span>
+        @if (nativeEngine()) {
+          <!-- The verdict is made in this process, so there is no second server to be reachable or
+               unreachable. `e.reachable` is simply absent on this answer, and drawing the pill off
+               because a field was never sent reports a workflow this install does not dial as down. -->
+          <span class="pill">scores in this process</span>
+        } @else {
+          <span class="pill" [class.pill-off]="!e.reachable">
+            {{ e.reachable ? 'engine reachable' : 'engine unreachable' }}
+          </span>
+        }
       } @else {
         <span class="pill pill-off">engine status unknown</span>
       }
@@ -219,49 +181,68 @@
         change the engine target, the paper link and the key guides for every user.
       </p>
     } @else {
-      <p class="hint">
-        Every detection is decided by the n8n workflow at the URL below — the packaged app ships
-        pointing at <code>{{ engineTarget() }}</code>, so on a machine without n8n nothing here can
-        answer until you point it at a reachable one (a hosted deployment, or
-        <code>docker compose up n8n</code> on this host). Leave a field blank to use that default.
-      </p>
+      @if (!nativeEngine()) {
+        <p class="hint">
+          Every detection this install runs is decided by the n8n workflow at the URL below. Point it
+          at a reachable one — a hosted deployment, or <code>docker compose up n8n</code> on this
+          host — or leave a field blank to use the built-in default.
+        </p>
 
-      <form class="inline-form" (ngSubmit)="saveEngine(); $event.preventDefault()">
-        <label>engine URL
-          <input name="n8n_url" size="38" [ngModel]="draft().n8n_url"
-                 (ngModelChange)="editSetting('n8n_url', $event)"
-                 [placeholder]="defaultEngineUrl" autocomplete="off" />
-        </label>
-        <label>webhook path
-          <input name="webhook_path" size="26" [ngModel]="draft().webhook_path"
-                 (ngModelChange)="editSetting('webhook_path', $event)"
-                 [placeholder]="defaultWebhookPath" autocomplete="off" />
-        </label>
-        <button class="primary" type="submit" [disabled]="busy() || draftProblem() !== null">
-          Save engine target
-        </button>
-        <button type="button" (click)="checkEngine()">Re-check</button>
-      </form>
+        <form class="inline-form" (ngSubmit)="saveEngine(); $event.preventDefault()">
+          <label>engine URL
+            <input name="n8n_url" size="38" [ngModel]="draft().n8n_url"
+                   (ngModelChange)="editSetting('n8n_url', $event)"
+                   [placeholder]="defaultEngineUrl" autocomplete="off" />
+          </label>
+          <label>webhook path
+            <input name="webhook_path" size="26" [ngModel]="draft().webhook_path"
+                   (ngModelChange)="editSetting('webhook_path', $event)"
+                   [placeholder]="defaultWebhookPath" autocomplete="off" />
+          </label>
+          <button class="primary" type="submit" [disabled]="busy() || draftProblem() !== null">
+            Save engine target
+          </button>
+          <button type="button" (click)="checkEngine()">Re-check</button>
+        </form>
+      }
 
+      <!-- Outside that block on purpose: the same check covers the paper link, which a local
+           install still edits. -->
       @if (draftProblem(); as problem) {
         <p class="verbatim">{{ problem }}</p>
       }
 
-      @if (engine(); as e) {
-        <p class="mono">
-          posting to {{ e.n8n_url }} · /healthz {{ e.healthz ?? 'no answer' }} · workflow
-          <code>{{ e.workflow_id }}</code>
-        </p>
-        <p class="hint">
-          @if (e.published) { workflow published } @else { workflow NOT published — a webhook on an
-          unpublished version answers 404 }
-          @if (e.webhook_registered) { · webhook registered } @else { · webhook not registered }
-          @if (!e.db_readable) { · n8n database not readable from the backend ({{ e.db_error }}) }
-        </p>
+      @if (!nativeEngine()) {
+        @if (engine(); as e) {
+          <p class="mono">
+            posting to {{ e.n8n_url }} · /healthz {{ e.healthz ?? 'no answer' }} · workflow
+            <code>{{ e.workflow_id }}</code>
+          </p>
+          <p class="hint">
+            @if (e.published) { workflow published } @else { workflow NOT published — a webhook on an
+            unpublished version answers 404 }
+            @if (e.webhook_registered) { · webhook registered } @else { · webhook not registered }
+            @if (!e.db_readable) { · n8n database not readable from the backend ({{ e.db_error }}) }
+          </p>
+        }
       }
 
-      <h4>Ranking page links</h4>
-      <form class="inline-form" (ngSubmit)="saveLinks(); $event.preventDefault()">
+      <!-- ONE ACT WRITES ALL OF THIS. `saveLinks()` posts the paper link, the gateway list and every
+           guide row in a single settings document, so the page must not draw three groups with one
+           button living in the middle of the first: the fields sit in a form of their own, the guide
+           rows keep theirs, and the act that writes both stands at the end of the whole block — joined
+           to the form above by `form="linksForm"`, which also makes Enter in a field do the same thing
+           the button does. The gateway field lives here rather than orphaned under a paragraph because
+           it is a setting like the other two, and a caption outside `.inline-form` reads in the prose
+           voice while its four siblings read in the instrument voice. -->
+      <!-- Nothing from here to the end of the guides is a local setting. A packaged install has one
+           owner, one machine and one ranking page, so the three things this block edits — where the
+           citation points, which gateway hosts may be dialled, and the per-provider "how to get a
+           key" guide — are deployment answers the install already ships with. They stay on the
+           site's admin, where they are answers for everybody. -->
+      @if (!local()) {
+      <h4>Ranking page links and key guides</h4>
+      <form class="inline-form" id="linksForm" (ngSubmit)="saveLinks(); $event.preventDefault()">
         <label>paper URL
           <input name="paper_url" size="38" [ngModel]="draft().paper_url"
                  (ngModelChange)="editSetting('paper_url', $event)"
@@ -271,23 +252,25 @@
           <input name="paper_title" [ngModel]="draft().paper_title"
                  (ngModelChange)="editSetting('paper_title', $event)" />
         </label>
-        <button class="primary" type="submit" [disabled]="busy() || draftProblem() !== null">
-          Save links
-        </button>
+        <label>allowed gateway hosts
+          <input name="allowed_llm_hosts" size="60" [ngModel]="draft().allowed_llm_hosts"
+                 (ngModelChange)="editSetting('allowed_llm_hosts', $event)"
+                 [placeholder]="defaultAllowedHosts" autocomplete="off" />
+        </label>
       </form>
       <p class="hint">
         With a blank paper URL the Ranking page links the technical report that this build ships
         (<code>/research/report.html</code>); set a URL to point that button at the published copy
         instead. A relative path cannot be stored here — the validator wants an absolute http(s) URL,
         which is why the in-site report is the fallback rather than a setting.
-        <code>allowed_llm_hosts</code> is the comma-list of gateway hosts BYOK may point at.
       </p>
-      <label>allowed gateway hosts
-        <input name="allowed_llm_hosts" size="60" [ngModel]="draft().allowed_llm_hosts"
-               (ngModelChange)="editSetting('allowed_llm_hosts', $event)"
-               placeholder="integrate.api.nvidia.com, openrouter.ai" autocomplete="off" />
-      </label>
-
+      <p class="hint">
+        The gateway list is the host allowlist a detection is checked against before anything is
+        dialled: a lane naming a host outside it is refused with <code>LANE_CONFIG_INVALID</code>.
+        Leave it blank to keep the engine's own default — loopback plus the gateways this build ships
+        with, which the empty field prints as its placeholder. A host you save a key for is trusted
+        for your own detections without being opened here for everybody else.
+      </p>
       <h4>Key guides</h4>
       <!-- Each row is bound through editGuide rather than [(ngModel)]: the rows live inside the
            `guides` signal, and mutating g.provider in place never re-invalidates it under zoneless
@@ -317,7 +300,14 @@
       }
       <div class="row-actions">
         <button type="button" (click)="addGuide()">Add guide</button>
+        <!-- Not "Save links": the click writes the links, the gateway list and these rows, and a
+             button has to name everything it writes. -->
+        <button class="primary" type="submit" form="linksForm"
+                [disabled]="busy() || draftProblem() !== null">Save links and guides</button>
       </div>
+      }
     }
   </article>
+  }
+
 </section>

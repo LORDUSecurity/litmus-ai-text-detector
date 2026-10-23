@@ -2,20 +2,25 @@
   <div class="splash">
     <div class="orbit" aria-hidden="true"></div>
   </div>
-} @else if (!auth.user()) {
-  <app-login-view />
-} @else {
-  <main class="shell">
+} @else if (auth.user() || auth.local()) {
+  <!-- The shell renders for a signed-in account and for a single-owner local install, which is
+       signed in by definition: the packaged exe has no sign-in page, the backend answers every
+       route as its owner, and `auth_mode: "local"` on /auth/me is how this one built bundle knows
+       it is not the hosted page. Hiding the gate here rather than in the login view keeps the
+       rule in one place -- and the view cannot be reached by a stray null user, because `local`
+       alone is enough to open the app. -->
+  <main class="shell" [class.bleed]="view() === 'detect'">
     <header class="appbar">
       <div class="brand">
         <span class="brand-mark" aria-hidden="true">
           <svg viewBox="0 0 24 24">
-            <path d="M12 2.6l7.5 4.2v5.4c0 4.7-3.2 8.2-7.5 9.4-4.3-1.2-7.5-4.7-7.5-9.4V6.8L12 2.6z" />
-            <path d="M8.2 12.4l2.4 2.4 5-5.4" />
+            <path d="M4.5 7.5h11" />
+            <path d="M4.5 12h14" />
+            <path d="M4.5 16.5h8" />
           </svg>
         </span>
         <div>
-          <h1>AI text detection</h1>
+          <h1>Litmus</h1>
           <p class="sub">Calibrated free-model lanes</p>
         </div>
       </div>
@@ -34,6 +39,9 @@
                 }
                 @case ('history') {
                   <circle cx="12" cy="12" r="8.5" /><path d="M12 7.5V12l3 2" />
+                }
+                @case ('providers') {
+                  <circle cx="8" cy="12" r="3.5" /><path d="M11.5 12H21M17.5 12v3M14.5 12v2.2" />
                 }
                 @default {
                   <path d="M4 7h9M17.5 7H20M4 17h2M10.5 17H20" />
@@ -60,13 +68,22 @@
           </svg>
         </button>
         <div class="user-chip">
-          <span>{{ auth.username() }}</span>
-          <span class="role" [class.user]="!auth.isAdmin()">{{ auth.isAdmin() ? 'admin' : 'user' }}</span>
-          <button type="button" class="icon-btn sm" (click)="logout()" aria-label="Sign out" title="Sign out">
-            <svg class="ico" viewBox="0 0 24 24" aria-hidden="true">
-              <path d="M15 4h3a2 2 0 012 2v12a2 2 0 01-2 2h-3M10 8l-4 4 4 4M6 12h11" />
-            </svg>
-          </button>
+          <span>{{ auth.displayName() }}</span>
+          @if (!auth.local()) {
+            <!-- A single-owner install has one person and one role, so printing "admin" next to
+                 his own name would only imply a second kind of user. -->
+            <span class="role" [class.user]="!auth.isAdmin()">{{ auth.isAdmin() ? 'admin' : 'user' }}</span>
+          }
+          @if (!auth.local()) {
+            <!-- A single-owner install has no session to end: signing out would leave the app
+                 exactly where it was, because the backend answers as the owner regardless. So the
+                 control is not offered, rather than offered and inert. -->
+            <button type="button" class="icon-btn sm" (click)="logout()" aria-label="Sign out" title="Sign out">
+              <svg class="ico" viewBox="0 0 24 24" aria-hidden="true">
+                <path d="M15 4h3a2 2 0 012 2v12a2 2 0 01-2 2h-3M10 8l-4 4 4 4M6 12h11" />
+              </svg>
+            </button>
+          }
         </div>
       </div>
     </header>
@@ -90,13 +107,13 @@
                 }
               </ul>
             } @else if (n.kind === 'rejected') {
-              <h3>The workflow rejected the request · HTTP {{ n.status }} · {{ n.errorCode }}</h3>
+              <h3>The detection refused this request · HTTP {{ n.status }} · {{ n.errorCode }}</h3>
               <p class="verbatim">{{ n.error }}</p>
               @if (n.hint) {
                 <p class="hint">{{ n.hint }}</p>
               }
-            } @else if (n.kind === 'n8n') {
-              <h3>n8n answered before the workflow could · HTTP {{ n.status }}</h3>
+            } @else if (n.kind === 'engine') {
+              <h3>The server answered, but not with a verdict · HTTP {{ n.status }}</h3>
               <p class="verbatim">{{ n.detail }}</p>
             } @else if (n.kind === 'unreachable') {
               <h3>Cannot reach the detection path</h3>
@@ -109,44 +126,40 @@
         </div>
       }
 
-      <app-text-panel [state]="form" />
+        <!-- Two areas, sized in percentages and filling the whole height under the bar. The left 66
+           per cent is nothing but the writing -- no card drawn around it, because the split of the
+           screen already says where it ends -- and the phrases the model quoted are painted inside
+           it rather than copied out below. The right area holds the press, the samples, the
+           document loader, the model that will be used and the score that came back: everything
+           that answers "what happens when I press this".
 
-      @if (pickedModel(); as p) {
-        <!-- Say out loud that this run is NOT the deployed lane. A ranked model picked from
-             the Ranking tab answers outside its calibration only if it has no stored band,
-             and the verdict row records the model that decided, so a mislabel is traceable. -->
-        <div class="pick-banner">
-          <span class="pick-dot" aria-hidden="true"></span>
-          Scoring with <b>{{ p }}</b> — chosen on the Ranking tab. Its endpoint, calibrated band
-          and key are applied by the backend.
-          @if (pickedIsTieBreak()) {
-            <span class="pick-note">It is also the deployed tie-break model, so the second opinion
-              is off for this run — a model cannot corroborate itself.</span>
-          }
-          <button class="linkbtn" type="button" (click)="clearPickedModel()">use the deployed lane</button>
-        </div>
-      }
+           Nothing is added under the two areas when a run lands. The verdict, the models that
+           produced it and the sentences they quoted are all inside what is already here, so an
+           answer costs no extra height and the page never grows a scroll the reader did not ask
+           for. The longer trail a run carries — every lane's own read, the provenance of each
+           number, the response verbatim — is on the stored row, opened from History. -->
+        <div class="detect-cols">
+        <app-text-panel class="col-input" [state]="form"
+                        [result]="result()" [scoredText]="detectedText()" />
 
-      <div class="run-row">
-        <button class="primary" type="button" [disabled]="pending()" (click)="run()">
-          <svg class="ico" viewBox="0 0 24 24" aria-hidden="true">
-            <circle cx="12" cy="12" r="8.5" /><path d="M12 7.5V12l3 2" />
-          </svg>
-          {{ pending() ? 'Detecting… ' + elapsed() + 's' : 'Detect' }}
-        </button>
-        @if (pending()) {
-          <span class="inflight"><span class="pulse" aria-hidden="true"></span>elapsed {{ elapsed() }}s · {{ inflightHint() }}</span>
-        }
+        <app-detect-rail class="col-rail" [state]="form"
+                         [pending]="pending()" [elapsed]="elapsed()" [inflightHint]="inflightHint()"
+                         [pickedModel]="pickedModel()" [pickedIsTieBreak]="pickedIsTieBreak()"
+                         [result]="result()"
+                         (run)="run()" (clearPicked)="clearPickedModel()" />
       </div>
-
-      @if (result(); as r) {
-        <app-result-card [result]="r" [elapsedSeconds]="elapsed()" [text]="detectedText()" />
-        <app-raw-json [data]="r" />
-      }
     }
 
     @if (view() === 'ranking') {
-      <app-ranking-view (useModel)="useRankedModel($event)" (clearModel)="clearPickedModel()" />
+      <!-- Three outputs, and not one of them writes: point a run at a model, ask for the key that
+          would let an unaffordable card be pointed, or ask the model-control surface to show him
+          the card for this exact model. The last two are routes. -->
+      <app-ranking-view (useModel)="useRankedModel($event)" (clearModel)="clearPickedModel()"
+                        (getKeys)="openKeyForm($event)" (openPool)="openPoolFor($event)" />
+    }
+
+    @if (view() === 'providers') {
+      <app-providers-view [focusProviderId]="pendingProvider()" [focusPair]="pendingPoolPair()" />
     }
 
     @if (view() === 'history') {
@@ -154,14 +167,22 @@
     }
 
     @if (view() === 'admin' && auth.isAdmin()) {
-      <div class="panel" style="padding:14px 18px">
-        <p class="muted" style="margin:0">
-          Admin controls. The models, per-model tuned bands, shared API keys and thresholds you set
-          here become the defaults for every user — they never see or change these parameters.
+      <div class="panel panel-intro">
+        <p class="muted">
+          @if (auth.local()) {
+            Advanced parameters. The models, per-model calibrated bands, shared API keys and
+            thresholds you set here are what this install scores with. There is no other account on
+            it, and no second set of defaults to keep apart from yours.
+          } @else {
+            Admin controls. The models, per-model tuned bands, shared API keys and thresholds you set
+            here become the defaults for every user — they never see or change these parameters.
+          }
         </p>
       </div>
       <app-admin-panel />
       <app-config-panel [state]="form" />
     }
   </main>
+} @else {
+  <app-login-view />
 }

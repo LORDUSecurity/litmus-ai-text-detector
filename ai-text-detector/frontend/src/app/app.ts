@@ -3,11 +3,11 @@ import { HttpErrorResponse } from '@angular/common/http';
 import { TimeoutError } from 'rxjs';
 import { ConfigPanel } from './ui/config-panel/config-panel';
 import { TextPanel } from './ui/text-panel/text-panel';
-import { ResultCard } from './ui/result-card/result-card';
-import { RawJson } from './ui/raw-json/raw-json';
+import { DetectRail } from './ui/detect-rail/detect-rail';
 import { AdminPanel } from './ui/admin-panel/admin-panel';
 import { LoginView } from './ui/login-view/login-view';
 import { RankingView } from './ui/ranking-view/ranking-view';
+import { ProvidersView } from './ui/providers-view/providers-view';
 import { HistoryView } from './ui/history-view/history-view';
 import { DetectionService, MAX_TEXT_LENGTH, MIN_TEXT_LENGTH } from './core/detection.service';
 import { HTTP_PATIENCE_MS } from './core/http-budget';
@@ -19,12 +19,12 @@ import type { RankedModel } from './core/backend.types';
 
 const KEY_PATTERN = /^[A-Za-z0-9._:+\/-]+$/;
 
-export type ViewId = 'detect' | 'ranking' | 'history' | 'admin';
+export type ViewId = 'detect' | 'ranking' | 'history' | 'providers' | 'admin';
 
 export type Notice =
   | { kind: 'preflight'; lines: string[] }
   | { kind: 'rejected'; status: number; error: string; errorCode: string; hint: string | null }
-  | { kind: 'n8n'; status: number; detail: string }
+  | { kind: 'engine'; status: number; detail: string }
   | { kind: 'unreachable'; detail: string }
   | { kind: 'timeout'; detail: string };
 
@@ -33,11 +33,11 @@ export type Notice =
   imports: [
     ConfigPanel,
     TextPanel,
-    ResultCard,
-    RawJson,
+    DetectRail,
     AdminPanel,
     LoginView,
     RankingView,
+    ProvidersView,
     HistoryView,
   ],
   templateUrl: './app.html',
@@ -55,21 +55,58 @@ export class App implements OnInit, OnDestroy {
       limit at a tier that cannot read the tier it belongs to. */
   readonly patienceSeconds = Math.round(HTTP_PATIENCE_MS / 1000);
 
-  /** Role-aware nav: everyone gets Detect / Ranking / History; only an admin sees Admin,
-      which is where the models, thresholds and shared keys are set for all users. */
+  /** The one place a tab's name is written, because two of these names change with the deployment
+      and a template string elsewhere would be a second authority. `admin` is the same surface in
+      both cases — thresholds, bands, shared keys, capture imports — and only the WORD differs: a
+      packaged single-owner install has nobody to administer but the owner, so calling it "Admin"
+      told the one person using it that there was somebody else in charge. */
+  private readonly VIEW_LABELS: Record<ViewId, string> = {
+    detect: 'Detect',
+    ranking: 'Ranking',
+    history: 'History',
+    providers: 'Models & keys',
+    admin: 'Advanced parameters',
+  };
+
+  label(id: ViewId): string {
+    return id === 'admin' && !this.auth.local() ? 'Admin' : this.VIEW_LABELS[id];
+  }
+
+  /** Role-aware nav: everyone gets Detect / Ranking / History; the surface that controls models and
+      endpoints needs a session to own a key or a pool, so it appears once there is one; and only an
+      admin sees the deployed parameters. */
   readonly tabs = computed(() => {
-    const base: { id: ViewId; label: string }[] = [
-      { id: 'detect', label: 'Detect' },
-      { id: 'ranking', label: 'Ranking' },
-      { id: 'history', label: 'History' },
-    ];
-    if (this.auth.isAdmin()) {
-      base.push({ id: 'admin', label: 'Admin' });
-    }
-    return base;
+    const ids: ViewId[] = ['detect', 'ranking', 'history'];
+    if (this.auth.user() !== null) ids.push('providers');
+    if (this.auth.isAdmin()) ids.push('admin');
+    return ids.map((id) => ({ id, label: this.label(id) }));
   });
 
   readonly view = signal<ViewId>('detect');
+
+  /** Which endpoint the keys surface should open on, set by a locked ranking card. */
+  readonly pendingProvider = signal<number | null>(null);
+
+  /** Which MODEL's card the add-models menu should light up and scroll to, as the picker's own
+      `provider|model` address. Built here rather than on the ranking card so the shape has one
+      owner: `/ranking` labels an endpoint (`NVIDIA NIM`) and `/my/pool/options` keys its cards by
+      the slug (`nvidia`), and a route built from the label arrives with nothing highlighted. */
+  readonly pendingPoolPair = signal<string | null>(null);
+
+  /** A rank card's "Add to using pool" is a route, not a write — this view keeps its hands off the
+      pool, which is the other surface's to own and to explain. Cleared when the user leaves, so a
+      later visit to that page is not still centring a card he asked for three views ago. */
+  openPoolFor(m: RankedModel): void {
+    this.pendingPoolPair.set(`${m.provider}|${m.model}`);
+    this.setView('providers');
+  }
+
+  /** A ranking card the user cannot pay for still has exactly one action, and this is where it
+      goes: the surface that holds keys, preselected on the endpoint that card belongs to. */
+  openKeyForm(providerId: number | null): void {
+    this.pendingProvider.set(providerId);
+    this.setView('providers');
+  }
 
   /** Read-only for the template: which ranked model, if any, the next run scores with. */
   readonly pickedModel = this.service.pickedModel;
@@ -138,8 +175,13 @@ export class App implements OnInit, OnDestroy {
   }
 
   setView(id: ViewId): void {
-    // Never let a stale admin view survive a logout.
+    // Never let a stale admin view survive a logout, and never open the model-control surface for
+    // a visitor who has no keys or pool to show there.
     if (id === 'admin' && !this.auth.isAdmin()) return;
+    if (id === 'providers' && this.auth.user() === null) return;
+    // Leaving the picker retires the address it was asked to centre on. Held any longer, the next
+    // visit to that page would scroll back to a card from a previous route.
+    if (id !== 'providers') this.pendingPoolPair.set(null);
     this.view.set(id);
   }
 
@@ -150,19 +192,24 @@ export class App implements OnInit, OnDestroy {
     });
   }
 
-  /** A history row was clicked: reopen its stored verdict on the Detect tab. The original
-      text is not stored, so the phrase highlights stay dark — the scores still render. */
-  reopenFromHistory(res: DetectionResult): void {
-    this.result.set(res);
+  /** A History row's "Open on Detect": put the stored verdict and the writing it was reached on back
+      on the Detect tab. The text goes into the field as well as behind the highlights, so the reader
+      can edit it and score it again — and because `detectedText` is set to the same characters, the
+      evidence paint lights up on arrival instead of showing a bare number over a quote that is not on
+      screen. Rows saved before the backend kept the text reopen with the verdict alone. */
+  reopenFromHistory(reopened: { result: DetectionResult; text: string | null }): void {
+    this.result.set(reopened.result);
     this.notice.set(null);
-    this.detectedText.set('');
+    const text = reopened.text ?? '';
+    this.form.text.set(text);
+    this.detectedText.set(text);
     this.view.set('detect');
   }
 
   /** Checked here, on the client, before anything leaves the page — a key with a
-      space or a CRLF in it would be rejected by the workflow anyway, but it would
-      first be written into n8n's execution database as part of the inbound
-      request. Refusing to send it is what keeps it off the disk. */
+      space or a CRLF in it would be rejected by the engine anyway, but on a hosted deploy the
+      inbound request is stored whole before the workflow even runs, and that record would carry
+      it. Refusing to send it is what keeps it off somebody else's disk. */
   private preflight(): string[] {
     const lines: string[] = [];
     const text = this.form.text();
@@ -170,7 +217,7 @@ export class App implements OnInit, OnDestroy {
     if (n === 0) {
       lines.push('Text is empty.');
     } else if (n < MIN_TEXT_LENGTH) {
-      lines.push(`Text is ${n} characters; the workflow needs at least ${MIN_TEXT_LENGTH}.`);
+      lines.push(`Text is ${n} characters; the detector needs at least ${MIN_TEXT_LENGTH}.`);
     } else if (text.length > MAX_TEXT_LENGTH) {
       lines.push(`Text is ${text.length} characters; the limit is ${MAX_TEXT_LENGTH}.`);
     }
@@ -272,12 +319,12 @@ export class App implements OnInit, OnDestroy {
         kind: 'timeout',
         detail:
           `No answer within ${this.patienceSeconds} seconds. Free-tier pools queue: a slow lane ` +
-          'is not a dead lane, but nothing came back in time — try again or change the pool order ' +
-          'on the Ranking tab.',
+          'is not a dead lane, but nothing came back in time — try again, or put another model ' +
+          `first in the pool on the ${this.label('providers')} tab.`,
       };
     }
     if (!(err instanceof HttpErrorResponse)) {
-      return { kind: 'n8n', status: 0, detail: String(err) };
+      return { kind: 'engine', status: 0, detail: String(err) };
     }
 
     const body = err.error as
@@ -299,10 +346,10 @@ export class App implements OnInit, OnDestroy {
       };
     }
     if (err.status === 502) {
-      // Two different 502s. The Flask backend answers 502 with a JSON body when n8n is
-      // down; the Angular dev-server proxy answers 502 with no body when nothing
-      // is listening on the backend port. Saying "n8n is down" in the second case
-      // would send the user to the wrong process.
+      // Two different 502s. The Flask backend answers 502 with a JSON body when the engine it
+      // forwards to is down; the Angular dev-server proxy answers 502 with no body when nothing
+      // is listening on the backend port. Naming a server program in the second case would send
+      // the user to the wrong process.
       return {
         kind: 'unreachable',
         detail:
@@ -321,10 +368,16 @@ export class App implements OnInit, OnDestroy {
         hint: body?.hint ?? null,
       };
     }
+    // Anything else the server answered with is not a verdict, whatever it is: a gateway's own
+    // error page, a workflow that failed before its Respond node, an exception body. The sentence
+    // has to name the fact the reader can check -- an HTTP status and the body that came with it --
+    // and not a program this deployment may not even run. A packaged install answers /detect in
+    // this process, and telling its owner to go and look at n8n would send them to software that is
+    // not installed.
     return {
-      kind: 'n8n',
+      kind: 'engine',
       status: err.status,
-      detail: bodyText || err.statusText || 'Rejected before the workflow could answer.',
+      detail: bodyText || err.statusText || 'The server answered, but not with a verdict.',
     };
   }
 

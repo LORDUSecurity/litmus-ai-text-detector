@@ -9,7 +9,11 @@ import type { AuthResponse, SessionUser } from './backend.types';
     The backend keeps the session in a signed HttpOnly cookie, so there is nothing sensitive
     to store on the client: this service just mirrors WHO is signed in (and their theme) into
     a signal the nav shell, the admin gate and the detect page read. `boot()` is called once at
-    startup to pick up an existing cookie; a 401 there simply means "not signed in yet". */
+    startup to pick up an existing cookie; a 401 there simply means "not signed in yet".
+
+    It also mirrors WHICH DEPLOYMENT it is talking to. The container and the packaged exe serve
+    the same built bundle, so the difference cannot be a build flag -- it arrives on `/auth/me`
+    as `auth_mode`, and `local` means the shell must not render the sign-in gate at all. */
 @Injectable({ providedIn: 'root' })
 export class AuthService {
   private readonly backend = inject(BackendService);
@@ -17,9 +21,14 @@ export class AuthService {
 
   readonly user = signal<SessionUser | null>(null);
   readonly ready = signal(false);
+  readonly mode = signal<'local' | 'accounts'>('accounts');
 
   readonly isAdmin = computed(() => this.user()?.role === 'admin');
-  readonly username = computed(() => this.user()?.username ?? '');
+  /** The single-owner local install: no sign-in page, and nothing to sign out of. */
+  readonly local = computed(() => this.mode() === 'local');
+  /** What to call the person in the header. The legacy handle is the fallback, never the
+      label, for anyone who gave us a name. */
+  readonly displayName = computed(() => this.user()?.display_name || this.user()?.username || '');
 
   /** Blue is the tune colour; the theme attribute drives the CSS custom properties in
       styles.css so dark/light is one class flip, not a rebuild. */
@@ -36,6 +45,7 @@ export class AuthService {
 
   private adopt(res: AuthResponse): AuthResponse {
     this.user.set(res.user);
+    if (res.auth_mode) this.mode.set(res.auth_mode);
     if (res.user?.theme) {
       this.theme.set(res.user.theme);
       this.applyTheme(res.user.theme);
@@ -54,12 +64,12 @@ export class AuthService {
     );
   }
 
-  login(username: string, password: string): Observable<AuthResponse> {
-    return this.backend.login(username, password).pipe(tap((res) => this.adopt(res)));
+  login(identifier: string, password: string): Observable<AuthResponse> {
+    return this.backend.login(identifier, password).pipe(tap((res) => this.adopt(res)));
   }
 
-  register(username: string, password: string): Observable<AuthResponse> {
-    return this.backend.register(username, password).pipe(tap((res) => this.adopt(res)));
+  register(signup: { name: string; email: string; password: string; confirm: string }): Observable<AuthResponse> {
+    return this.backend.register(signup).pipe(tap((res) => this.adopt(res)));
   }
 
   logout(): Observable<{ ok: boolean }> {

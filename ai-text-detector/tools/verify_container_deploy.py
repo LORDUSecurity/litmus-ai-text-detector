@@ -9,9 +9,11 @@ three only surface against a live daemon, so this drives the running stack and r
 actually got.
 
     python tools/verify_container_deploy.py [base_url]
+    SKIP_DETECT=1 python tools/verify_container_deploy.py     # served bytes + catalogue, no lane call
 
 Defaults to http://localhost:8080 (the published nginx origin) and talks to the API through it at
-/api/*, so every answer below travelled nginx -> gunicorn -> n8n -> the provider lane. The texts come
+/api/*, so every answer below travelled nginx -> gunicorn -> n8n -> the provider lane -- except the
+two detections, which are a purchase on the operator's key and are skipped when SKIP_DETECT is set. The texts come
 from benchmark/corpus.json -- real HC3 rows with recorded labels -- because an authored sample would
 only prove the pipeline accepts English, not that it separates the two classes it is calibrated on.
 Nothing here prints a key: credentials are read from the repo .env and used, never echoed.
@@ -34,6 +36,7 @@ ROOT = Path(__file__).resolve().parent.parent
 # rather than failing at import.
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import check_visual_language as vis  # noqa: E402  # the same visual-language guard the build runs
+import make_icon  # noqa: E402  # so the served favicon can be checked against the geometry that writes it
 BASE = (sys.argv[1] if len(sys.argv) > 1 else "http://localhost:8080").rstrip("/")
 API = BASE + "/api"
 # Name a lane to score the texts on it instead of the shipped default, e.g.
@@ -41,11 +44,27 @@ API = BASE + "/api"
 # This exists because the deploy is not the only thing that can make a detection fail: on
 # 2026-10-17 the shared NVIDIA pool could not answer a 320-char text on the shipped primary inside
 # its own 180 s ceiling (raised to 240 s on 2026-10-17), twice, while the same containers answered
-# another calibrated row in 1.8 s.
+# another calibrated row in 1.8 s. Measured again on 2026-10-19: the same model answered in 11.6 s
+# -- on OpenRouter -- while NVIDIA's chat endpoint never answered an 8-token probe inside 30 s, and
+# its /v1/models answered in 0.2 s. Listed, not serving (see README).
 # Overriding the lane proves nginx -> gunicorn -> n8n -> provider -> parse -> verdict -> phrases ->
 # history end to end, and the class-separation check is then skipped rather than quietly re-labelled,
 # because that lane's operating point is not the one the stack ships.
 LANE = (os.environ.get("DETECT_MODEL") or "").strip() or None
+# Which gateway to pay that lane with. The backend fills base_url from a stored `models` row, and a
+# lane with no row -- any OpenRouter model, since this deploy pins its two lane rows on NVIDIA --
+# used to keep the workflow's env default: the model id got posted to integrate.api.nvidia.com, the
+# gateway answered the plain-text "not a valid model ID", and the override appeared to be the
+# pipeline's failure rather than the pool's. This is the variable the shipped tool lacked on
+# 2026-10-19, when the only gateway answering was OpenRouter.
+#   DETECT_MODEL=inclusionai/ling-3.1-flash \
+#   DETECT_BASE_URL=https://openrouter.ai/api/v1 python tools/verify_container_deploy.py
+LANE_BASE_URL = (os.environ.get("DETECT_BASE_URL") or "").strip() or None
+# Set SKIP_DETECT=1 to prove the deploy without asking a provider anything. The two texts below are
+# real HC3 rows scored on the deployed lane on the operator's own key, which is a purchase, not a
+# measurement -- so a rebuild that only needs to show the served bytes and the reclassified catalogue
+# runs this way, and the lane legs are reported as skipped instead of quietly missing.
+SKIP_DETECT = (os.environ.get("SKIP_DETECT") or "").strip().lower() in ("1", "true", "yes")
 RESULTS: list[tuple[bool, str]] = []
 
 
@@ -138,6 +157,17 @@ def main() -> int:
     check(st == 401, "…and the detailed status stays behind a login",
           f"{st} {body if isinstance(body, dict) else str(body)[:60]}")
 
+    # 2b: which deployment this is, as the SPA itself learns it. One built bundle serves both apps and
+    # asks /auth/me before it renders: "accounts" shows the sign-in gate, "local" opens straight into
+    # Detect. So the container's login page is a property of this answer, and the packaged exe's
+    # absence of one is proved by its own tool (tools/verify_exe_bundle.py). Read anonymously, because
+    # a host that reported "local" here would be handing an admin session to whoever reaches the port.
+    st, me = call(API + "/auth/me")
+    me = me if isinstance(me, dict) else {}
+    check(st == 200 and me.get("auth_mode") == "accounts" and me.get("user") is None,
+          "…and the hosted build reports the account mode, with nobody signed in",
+          f"{st} auth_mode={me.get('auth_mode')!r} user={me.get('user')!r}")
+
     # 3: the SPA itself is served and is the current build.
     # call() truncates non-JSON bodies, and the <script> tag can sit past the cut, so the SPA
     # bundle name is read from the raw bytes instead.
@@ -180,7 +210,7 @@ def main() -> int:
     # SPA fallback answers /fonts/anything with index.html and a 200. So: the woff2 magic, then byte
     # equality with the staged file. The Content-Type is printed, not gated: nginx's own mime table
     # decides it, and a browser takes a font it can parse.
-    face = "Spectral-400.woff2"
+    face = "Literata-var.woff2"
     served_face, face_ctype = fetch_raw(f"/fonts/{face}")
     dist_face = dist / "fonts" / face
     check(served_face[:4] == b"wOF2" and dist_face.is_file()
@@ -188,6 +218,25 @@ def main() -> int:
           "…and the self-hosted serif face is served, not the SPA fallback",
           f"{len(served_face)} B ctype={face_ctype.split(';')[0]!r} "
           f"identical_to_dist={dist_face.is_file() and served_face == dist_face.read_bytes()}")
+
+    # 3d-2: the favicon, which is the newest static asset and the one nobody looks at in a diff.
+    # Same failure shape as the face: a stale image keeps serving the previous mark and nothing
+    # anywhere complains. Byte equality against dist proves the deploy is current; byte equality
+    # against tools/make_icon.py's geometry proves the deploy carries the mark the repo actually
+    # specifies, which is the one that could drift (an .ico hand-edited once, a .svg never rebuilt).
+    for icon in ("favicon.svg", "favicon.ico"):
+        served_icon, _ = fetch_raw(f"/{icon}")
+        dist_icon = dist / icon
+        sys.path.insert(0, str(ROOT / "tools"))
+        import make_icon
+        want_icon = (make_icon.svg_text(make_icon.GEOMETRY).encode() if icon.endswith(".svg")
+                     else make_icon.ico_bytes(make_icon.GEOMETRY))
+        check(served_icon == want_icon and dist_icon.is_file()
+              and served_icon == dist_icon.read_bytes(),
+              f"…and the {icon} it serves is the mark the geometry says",
+              f"{len(served_icon)} B "
+              f"identical_to_dist={dist_icon.is_file() and served_icon == dist_icon.read_bytes()} "
+              f"identical_to_generator={served_icon == want_icon}")
 
     # 3e: the stylesheet, which is where a design pass actually lands. The application builder folds
     # every component's `styles:` into the global styles-*.css, so a chamfer/colour/radius change moves
@@ -236,41 +285,92 @@ def main() -> int:
           "the detection workflow is published and its webhook is registered",
           f"{st} webhook_registered={ns.get('webhook_registered')} url={str(ns.get('url'))[:60]}")
 
+    # 6c-6e: the rule a deployed install learns once, applied to the rows the previous build wrote.
+    # These two checks are why this pair lives here and not in a unit test: the hosted database is the
+    # operator's real one, 96 rows of it stamped with the old vocabulary by the import that shipped
+    # before the timeout/refusal split existed. `timeout` is a lane that ran out of time, which the
+    # current rule calls `slow` -- and a legacy word is invisible to `/my/pool/options`, whose picker
+    # reads only `models` rows. So an install that was told the new rule once must show (a) no old
+    # words left in the census and (b) at least one asleep model listed, pickable and unmeasured.
+    # Neither costs a provider call, and neither is provable from the source tree.
+    sys.path.insert(0, str(ROOT))  # `python tools/x.py` puts tools/ on the path, not the repo root
+    from backend import discovery as disc  # the shipped map, not a copy of it
+    st, cat = call(API + "/benchmark/catalog", opener=op)
+    cat = cat if isinstance(cat, dict) else {}
+    hist: dict[str, int] = {}
+    for by_status in cat.values():
+        if isinstance(by_status, dict):
+            for status, models in by_status.items():
+                hist[status] = hist.get(status, 0) + len(models or [])
+    stale = sorted(set(hist) & set(disc.LEGACY_PROBE_STATUS))
+    check(st == 200 and bool(hist) and not stale,
+          "…and the catalogue census holds no word from the old vocabulary",
+          f"{st} " + " ".join(f"{k}={v}" for k, v in sorted(hist.items()))
+          + (f" LEGACY_LEFT={stale}" if stale else ""))
+
+    st, opts = call(API + "/my/pool/options", opener=op)
+    opts = opts if isinstance(opts, dict) else {}
+    entries = opts.get("options") or []
+    check(st == 200 and bool(entries),
+          "…and the picker lists what the deploy actually lets a user add",
+          f"{st} entries={len(entries)} window_s={opts.get('window_s')} "
+          f"fast_ms={opts.get('fast_ms')}" if entries else
+          f"{st} — no JSON answer either way: {str(opts)[:120]}")
+
+    asleep = [e for e in entries
+              if e.get("measured") is False and e.get("probe_status") in ("slow", "busy")]
+    check(bool(asleep) and all(e.get("timeout_ms") == disc.DISCOVERED_TIMEOUT_MS for e in asleep)
+          and all(e.get("probe_status") not in disc.LEGACY_PROBE_STATUS for e in asleep),
+          "…and a model that only ever timed out is pickable, unmeasured, at the deployment's own ceiling",
+          f"{len(asleep)} asleep rows, e.g. "
+          + ", ".join(f"{e['provider']}/{e['model']}@{e['timeout_ms']}ms" for e in asleep[:3]))
+
     # 7-9: two real detections through the whole path.
     human, ai = corpus_pair()
     if not (human and ai):
         check(False, "corpus pair available", "benchmark/corpus.json has no labeled human+AI row")
     if LANE:
-        print(f"  (lane override: scoring on {LANE}; the shipped default is not being exercised)")
+        print(f"  (lane override: scoring on {LANE}"
+              + (f" at {LANE_BASE_URL}" if LANE_BASE_URL else "")
+              + "; the shipped default is not being exercised)")
     verdicts = {}
-    for name, row in (("human", human), ("AI", ai)):
-        if not row:
-            continue
-        t0 = time.time()
-        body = {"text": row["text"]}
-        if LANE:
-            body["lane_config"] = {"primary": {"model": LANE}}
-        # 360 s: above the whole server-side chain (270 s backend wait, 285 s gunicorn, 330 s nginx),
-        # so a slow answer is reported as the server's verdict, never as this client giving up.
-        st, res = call(API + "/detect", body, opener=op, timeout=360)
-        res = res if isinstance(res, dict) else {}
-        verdict = verdict_of(res)
-        ok = st == 200 and bool(verdict)
-        verdicts[name] = res if ok else {}
-        cfg = (res.get("config_used") or {}) if ok else {}
-        legs = (res.get("evidence") or {}).get("models") or [] if ok else []
-        phrases = sum(len((((l.get("result") or {}).get("phrases")) or [])) for l in legs)
-        check(bool(ok), f"a labeled {name} text is scored through nginx ({row['id']})",
-              f"{st} {time.time() - t0:.1f}s verdict={verdict} "
-              f"p={res.get('ai_probability') if ok else None} "
-              f"key_source={(cfg.get('primary') or {}).get('key_source')} "
-              f"lane={(cfg.get('primary') or {}).get('model')} "
-              f"secondary={ (cfg.get('secondary') or {}).get('enabled') } "
-              f"evidence_legs={len(legs)} phrases={phrases}"
-              # A 502 from this stack is a specific thing, and the backend already names it
-              # (ENGINE_TIMEOUT vs ENGINE_UNREACHABLE vs a pool error). Without it the line reads
-              # "no verdict", which hides whether the deploy is wired and the lane is merely slow.
-              + ("" if ok else f" error={res.get('error_code')} {str(res.get('error'))[:110]}"))
+    if SKIP_DETECT:
+        # Every leg below pays for itself: two texts on the deployed lane, on the operator's key.
+        # A deploy can be proven current without that (bundle + sheet + report + census + picker are
+        # all free), so the default for a rebuild is to run those and stop here until the operator
+        # says the lane may be asked.
+        print("  (detect legs skipped: SKIP_DETECT=1 -- nothing was asked of a provider, so the "
+              "nginx -> gunicorn -> n8n -> lane path is NOT proven by this run)")
+    else:
+        for name, row in (("human", human), ("AI", ai)):
+            if not row:
+                continue
+            t0 = time.time()
+            body = {"text": row["text"]}
+            if LANE:
+                body["lane_config"] = ({"primary": {"model": LANE, "base_url": LANE_BASE_URL}}
+                                       if LANE_BASE_URL else {"primary": {"model": LANE}})
+            # 360 s: above the whole server-side chain (270 s backend wait, 285 s gunicorn, 330 s nginx),
+            # so a slow answer is reported as the server's verdict, never as this client giving up.
+            st, res = call(API + "/detect", body, opener=op, timeout=360)
+            res = res if isinstance(res, dict) else {}
+            verdict = verdict_of(res)
+            ok = st == 200 and bool(verdict)
+            verdicts[name] = res if ok else {}
+            cfg = (res.get("config_used") or {}) if ok else {}
+            legs = (res.get("evidence") or {}).get("models") or [] if ok else []
+            phrases = sum(len((((l.get("result") or {}).get("phrases")) or [])) for l in legs)
+            check(bool(ok), f"a labeled {name} text is scored through nginx ({row['id']})",
+                  f"{st} {time.time() - t0:.1f}s verdict={verdict} "
+                  f"p={res.get('ai_probability') if ok else None} "
+                  f"key_source={(cfg.get('primary') or {}).get('key_source')} "
+                  f"lane={(cfg.get('primary') or {}).get('model')} "
+                  f"secondary={ (cfg.get('secondary') or {}).get('enabled') } "
+                  f"evidence_legs={len(legs)} phrases={phrases}"
+                  # A 502 from this stack is a specific thing, and the backend already names it
+                  # (ENGINE_TIMEOUT vs ENGINE_UNREACHABLE vs a pool error). Without it the line reads
+                  # "no verdict", which hides whether the deploy is wired and the lane is merely slow.
+                  + ("" if ok else f" error={res.get('error_code')} {str(res.get('error'))[:110]}"))
 
     if verdicts.get("human") and verdicts.get("AI"):
         # The shipped headline feature is phrase-level evidence: the page paints quotes green/red by

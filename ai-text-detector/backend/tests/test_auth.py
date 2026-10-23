@@ -25,8 +25,13 @@ import pytest  # noqa: E402
 
 from backend import db  # noqa: E402
 from backend.app import create_app  # noqa: E402
+from backend.tests._session import arm_csrf, fresh_throttle  # noqa: E402
 
 TEXT = "This is a long enough sample of text for the detector to accept it."
+
+# Sentinel meaning "confirm the same password I passed" -- a test that wants a mismatch or an
+# omitted confirmation field passes its own value instead.
+_SAME = object()
 
 
 @pytest.fixture()
@@ -38,23 +43,41 @@ def app():
     a = create_app()
     a.config["TESTING"] = True
     a.config["AUTH_FORCE"] = True  # enforce the guard even under the test client
-    return a
+    return fresh_throttle(a)
 
 
 @pytest.fixture()
 def client(app):
     with app.test_client() as c:
-        yield c
+        yield arm_csrf(c)
 
 
-def _register(client, username, password="userpass123"):
-    r = client.post("/auth/register", json={"username": username, "password": password})
+def _register(client, handle, password="userpass123", name=None, email=None, confirm=_SAME):
+    """Sign up the way the shipped form does: name, email, password typed twice.
+
+    `handle` is kept as the argument name because it is still what a test reads back -- an email
+    of `handle@example.org` derives the username `handle`, so the pre-email assertions hold. The
+    other fields are overridable so a single test can send a bad one.
+    """
+    body = {
+        "name": name if name is not None else f"Test {handle.title()}",
+        "email": email if email is not None else f"{handle}@example.org",
+        "password": password,
+    }
+    body["confirm"] = password if confirm is _SAME else confirm
+    r = client.post("/auth/register", json=body)
     assert r.status_code == 201, r.get_json()
     return r.get_json()["user"]
 
 
-def _login(client, username, password):
-    return client.post("/auth/login", json={"username": username, "password": password})
+def _login(client, identifier, password):
+    """Sign in by whatever the caller has: an email now, a legacy username still.
+
+    A successful sign-in is also what arms this client to write: the session's CSRF token arrives
+    on the response cookie, and the `client` fixture sends it back as a header on every later
+    request, the way the SPA's interceptor does.
+    """
+    return client.post("/auth/login", json={"identifier": identifier, "password": password})
 
 
 def _stub_forward(monkeypatch, status=200):
@@ -92,6 +115,9 @@ def test_me_is_null_when_anonymous(client):
     r = client.get("/auth/me")
     assert r.status_code == 200
     assert r.get_json()["user"] is None
+    # One built front-end serves both deployments, so it has to learn which one it is talking
+    # to before anyone signs in -- that is what this public field is for.
+    assert r.get_json()["auth_mode"] == "accounts"
 
 
 def test_me_returns_the_signed_in_user(client):
@@ -122,17 +148,96 @@ def test_login_rejects_bad_password(client):
     assert r.get_json()["error_code"] == "BAD_CREDENTIALS"
 
 
+def test_login_accepts_the_email_or_the_legacy_username(client):
+    """One lookup, two spellings.
+
+    The form asks for an e-mail, but the seeded admin and every account created before this
+    change have only a username -- and so do the deploy/verify tools. Refusing the old spelling
+    would log everyone out with no way back in from the UI.
+    """
+    _register(client, "kenji")
+    client.post("/auth/logout")
+    assert _login(client, "kenji@example.org", "userpass123").status_code == 200, "email is the way in now"
+    client.post("/auth/logout")
+    assert _login(client, "kenji", "userpass123").status_code == 200, "the derived handle still works"
+    client.post("/auth/logout")
+    # Case is folded on the stored address, so a caps-lock sign-in is not a failed one.
+    assert _login(client, "KENJI@EXAMPLE.ORG", "userpass123").status_code == 200
+
+
 def test_register_rejects_short_password(client):
-    r = client.post("/auth/register", json={"username": "carol", "password": "short"})
+    r = client.post("/auth/register", json={"name": "Carol Dan", "email": "carol@example.org",
+                                            "password": "short", "confirm": "short"})
     assert r.status_code == 400
     assert r.get_json()["error_code"] == "BAD_PASSWORD"
 
 
-def test_register_rejects_duplicate_username(client):
+def test_register_rejects_a_malformed_email(client):
+    # The form cannot verify an address, so the only honest check is the shape: no @, no domain,
+    # no dot in the domain. Anything that parses as an address is accepted and simply never used
+    # by this app -- there is no mail delivery here at all.
+    for bad in ("carol", "carol@example", "carol @example.org", "@example.org", "carol.org"):
+        r = client.post("/auth/register", json={"name": "Carol Dan", "email": bad,
+                                                "password": "anotherpass1", "confirm": "anotherpass1"})
+        assert r.status_code == 400, bad
+        assert r.get_json()["error_code"] == "BAD_EMAIL", bad
+
+
+def test_register_rejects_a_one_character_name(client):
+    # A name is what the header chip and the admin's user list show, so "x" is not a person's
+    # name -- but it is also the only field with no format to check, so length is the whole rule.
+    r = client.post("/auth/register", json={"name": "X", "email": "x@example.org",
+                                            "password": "anotherpass1", "confirm": "anotherpass1"})
+    assert r.status_code == 400
+    assert r.get_json()["error_code"] == "BAD_NAME"
+
+
+def test_register_rejects_two_different_passwords(client):
+    r = client.post("/auth/register", json={"name": "Dana Ray", "email": "dana@example.org",
+                                            "password": "firstpass123", "confirm": "secondpass1"})
+    assert r.status_code == 400
+    assert r.get_json()["error_code"] == "PASSWORD_MISMATCH"
+
+
+def test_register_accepts_a_password_it_cannot_confirm_only_because_the_field_is_absent(client):
+    """`confirm` is the form's guard; an API caller that omits it is not being careless twice.
+
+    Only a *present* confirmation that disagrees is refused, so a script posting
+    {name, email, password} keeps working -- the shipped front-end always sends both.
+    """
+    r = client.post("/auth/register", json={"name": "Eli Van", "email": "eli@example.org",
+                                            "password": "anotherpass1"})
+    assert r.status_code == 201, r.get_json()
+
+
+def test_register_rejects_a_duplicate_email(client):
     _register(client, "dave")
-    r = client.post("/auth/register", json={"username": "dave", "password": "anotherpass1"})
+    r = client.post("/auth/register", json={"name": "David Other", "email": "dave@example.org",
+                                            "password": "anotherpass1", "confirm": "anotherpass1"})
     assert r.status_code == 409
-    assert r.get_json()["error_code"] == "USERNAME_TAKEN"
+    assert r.get_json()["error_code"] == "EMAIL_TAKEN"
+
+
+def test_register_derives_the_legacy_username_from_the_email(client):
+    """The username column is not gone: pre-email accounts and the deploy tools still sign in
+    with it, so a new account has to arrive with one. The local part is the obvious choice."""
+    user = _register(client, "faythe")
+    assert user["username"] == "faythe"
+    assert user["email"] == "faythe@example.org"
+    assert user["display_name"] == "Test Faythe"
+
+
+def test_register_sanitizes_an_email_local_part_that_is_not_a_handle(client):
+    # plus-addressing and dots cannot be a username verbatim ("a.b+c" is fine as a handle but
+    # two accounts could collide), so the derivation folds it and adds a suffix on a clash.
+    a = _register(client, "glytch", email="Glytch+news@example.org", name="Glytch Prime")
+    assert a["username"], a
+    assert a["username"].lower().startswith("glytch")
+    # A second account with the same local part must not collide on the old unique column.
+    b = client.post("/auth/register", json={"name": "Glytch Two", "email": "glytch@sample.org",
+                                            "password": "anotherpass1", "confirm": "anotherpass1"})
+    assert b.status_code == 201, b.get_json()
+    assert b.get_json()["user"]["username"] != a["username"]
 
 
 def test_logout_clears_the_session(client):
@@ -386,6 +491,147 @@ def test_user_can_delete_own_key(client, monkeypatch):
     assert client.get("/my/keys").get_json() == []
 
 
+# ------------------------------------------------- a key for a self-hosted endpoint
+#
+# A gateway the deployment does not already serve is the one case where "which endpoint" is not a
+# fact the app knows: an OmniRoute-style box lives wherever its owner put it, and the same product
+# runs on 127.0.0.1:20128 for one person and on a hosted instance for another. So a key attached to
+# a provider flagged `self_hosted` carries its own endpoint, and a key for NVIDIA, OpenRouter or
+# Gemini still cannot — the guard that keeps a caller from naming an arbitrary endpoint for a
+# common provider is the same guard, unchanged.
+#
+# The trust the flag buys is https-only: an https URL is accepted anywhere, because that is what
+# "my gateway is on the web" means, while a plain http one still has to be in allowed_llm_hosts —
+# which already lists loopback, so a local box works and a stranger's LAN address does not.
+
+def _seed_gateway(client, name="omniroute", base_url="http://127.0.0.1:20128/v1",
+                  self_hosted=True):
+    """Admin creates a provider the way the shipped seed does, plus a primary model on it."""
+    _login(client, "root", "rootpass123")
+    body = {"name": name, "base_url": base_url}
+    body["self_hosted"] = self_hosted
+    pid = client.post("/providers", json=body).get_json()["id"]
+    client.post("/models", json={"provider_id": pid, "model_id": "route/model", "lane": "primary"})
+    client.post("/auth/logout")
+    return pid
+
+
+def _stub_probe_urls(monkeypatch, ok=True):
+    """Record which endpoint each probe was told to dial, without dialing it."""
+    import backend.app as app_mod
+    seen = []
+
+    def fake(prov, model_id, key, timeout_s):
+        seen.append(prov["base_url"])
+        return {"ok": ok, "status": 200 if ok else 401, "latency_ms": 5}
+
+    monkeypatch.setattr(app_mod, "_probe_with_key", fake)
+    return seen
+
+
+def test_a_self_hosted_key_carries_its_own_endpoint(client, monkeypatch):
+    pid = _seed_gateway(client)
+    seen = _stub_probe_urls(monkeypatch)
+    _register(client, "wes")
+    r = client.post("/my/keys", json={
+        "provider_id": pid, "api_key": "sk-route-123456", "label": "my box",
+        "base_url": "https://gateway.example.net/v1", "model_id": "route/model"})
+    assert r.status_code == 201, r.get_json()
+    got = client.get("/my/keys").get_json()[0]
+    # The endpoint is stored per key and read back: two owners of the same gateway row point at
+    # two different boxes, and neither one edits the shared provider.
+    assert got["base_url"] == "https://gateway.example.net/v1"
+    assert got["label"] == "my box"
+    assert seen == ["https://gateway.example.net/v1"]
+
+
+def test_a_plain_http_endpoint_outside_the_allowlist_is_refused(client, monkeypatch):
+    pid = _seed_gateway(client)
+    _stub_probe_urls(monkeypatch)
+    _register(client, "ivy")
+    r = client.post("/my/keys", json={"provider_id": pid, "api_key": "sk-route-123456",
+                                      "base_url": "http://10.0.0.5:20128/v1"})
+    assert r.status_code == 400, r.get_json()
+    assert r.get_json()["error_code"] == "HOST_NOT_ALLOWED"
+
+
+def test_a_loopback_endpoint_on_any_port_is_accepted(client, monkeypatch):
+    pid = _seed_gateway(client)
+    _stub_probe_urls(monkeypatch)
+    _register(client, "kai")
+    r = client.post("/my/keys", json={"provider_id": pid, "api_key": "sk-route-123456",
+                                      "base_url": "http://127.0.0.1:29999/v1"})
+    assert r.status_code == 201, r.get_json()
+    assert client.get("/my/keys").get_json()[0]["base_url"] == "http://127.0.0.1:29999/v1"
+
+
+def test_an_endpoint_that_is_not_a_gateway_url_is_refused(client, monkeypatch):
+    pid = _seed_gateway(client)
+    _stub_probe_urls(monkeypatch)
+    _register(client, "lena")
+    for bad in ("gateway.example.net/v1",              # no scheme: nothing to dial
+                "https://user:***@gateway.example.net/v1",  # credentials in a URL the app will fetch
+                "ftp://gateway.example.net/v1",        # not an HTTP gateway
+                "https://gateway.example.net/v1/../../etc"):
+        r = client.post("/my/keys", json={"provider_id": pid, "api_key": "sk-route-123456",
+                                          "base_url": bad})
+        assert r.status_code == 400, (bad, r.get_json())
+
+
+def test_a_common_provider_still_refuses_a_supplied_endpoint(client, monkeypatch):
+    """The flag is the whole difference: without it, a caller may not name an endpoint at all."""
+    _seed_gateway(client, name="nvidia", base_url="https://integrate.api.nvidia.com/v1",
+                  self_hosted=False)
+    _stub_probe_urls(monkeypatch)
+    _register(client, "omar")
+    r = client.post("/my/keys", json={"provider_id": 1, "api_key": "nvapi-omar-123",
+                                      "base_url": "https://attacker.example.com/v1"})
+    assert r.status_code == 400, r.get_json()
+    assert r.get_json()["error_code"] == "PROVIDER_NOT_SUPPORTED"
+
+
+def test_verify_reuses_the_endpoint_the_key_was_saved_with(client, monkeypatch):
+    pid = _seed_gateway(client)
+    seen = _stub_probe_urls(monkeypatch)
+    _register(client, "pia")
+    kid = client.post("/my/keys", json={
+        "provider_id": pid, "api_key": "sk-route-123456",
+        "base_url": "https://gateway.example.net/v1"}).get_json()["id"]
+    r = client.post(f"/my/keys/{kid}/verify", json={"model_id": "route/model"})
+    assert r.status_code == 200, r.get_json()
+    assert seen[-1] == "https://gateway.example.net/v1"
+
+
+def test_detect_dials_the_key_s_own_endpoint_for_a_self_hosted_lane(client, monkeypatch):
+    """Saving the URL is the easy half; the detection is what the user actually pays for.
+
+    The lane's base_url is resolved from the provider row (`provider_base_url_by_name`), so a key
+    that stores its own endpoint changes nothing unless the resolve prefers the key. Otherwise the
+    gateway the owner named is verified and then ignored, and the call goes to the seeded default.
+    """
+    _stub_forward(monkeypatch)
+    import backend.app as app_mod
+    real_forward = app_mod.forward
+    captured = {}
+
+    def capturing(url, payload, headers, timeout):
+        captured["payload"] = payload
+        captured["headers"] = headers
+        return real_forward(url, payload, headers, timeout)
+
+    monkeypatch.setattr(app_mod, "forward", capturing)
+    _stub_probe_urls(monkeypatch)
+    pid = _seed_gateway(client)
+    _register(client, "rex")
+    client.post("/my/keys", json={"provider_id": pid, "api_key": "sk-rex-123456",
+                                  "base_url": "https://gateway.example.net/v1",
+                                  "model_id": "route/model"})
+    r = client.post("/detect", json={"text": TEXT})
+    assert r.status_code == 200, r.get_json()
+    assert captured["payload"]["lane_config"]["primary"]["base_url"] == "https://gateway.example.net/v1"
+    assert captured["headers"].get("x-primary-api-key") == "sk-rex-123456"
+
+
 # ------------------------------------------------------------------ config / ranking / settings
 
 def test_config_is_readable_by_a_user_and_lists_supported_providers(client):
@@ -405,6 +651,25 @@ def test_config_is_readable_by_a_user_and_lists_supported_providers(client):
     # A user sees the tuned models but no admin key material.
     nv = next(p for p in cfg["providers"] if p["name"] == "nvidia")
     assert nv["models"] and "key_cipher" not in str(cfg)
+
+
+def test_config_marks_which_endpoint_the_owner_names(client):
+    """/config has to tell the key form which endpoint is a box the caller names for himself.
+
+    A common provider lives at one URL, so a key for it is a key and nothing else. A self-hosted
+    gateway is the row whose form carries endpoint and port, because the seeded address belongs to
+    whichever machine runs it -- and it is the same column POST /my/keys checks before accepting a
+    per-key override, so a page that guessed from the host name could offer a field the backend
+    refuses.
+    """
+    _login(client, "root", "rootpass123")
+    _seed_primary(client)
+    client.post("/providers", json={"name": "omniroute",
+                                    "base_url": "http://127.0.0.1:20128/v1",
+                                    "self_hosted": True})
+    by_name = {p["name"]: p for p in client.get("/config").get_json()["providers"]}
+    assert by_name["omniroute"]["self_hosted"] is True
+    assert by_name["nvidia"]["self_hosted"] is False
 
 
 def test_settings_is_admin_only(client):
@@ -669,4 +934,143 @@ def test_healthz_is_the_public_liveness_route(client):
     guarded = client.get("/gateway-health")
     assert guarded.status_code == 401, \
         "the detailed status answers 200 to an anonymous caller"
+
+
+# ------------------------------------------------------------------ single-owner local mode
+
+def _as_local(monkeypatch, host="127.0.0.1"):
+    """Turn the packaged exe's mode on for one test.
+
+    The launcher sets both variables before it imports the app; `local_mode()` reads them per
+    request, so a test can do the same. Both spellings have to be set together -- the flag alone
+    is deliberately not enough (see test_local_mode_is_refused_on_a_shared_bind).
+    """
+    monkeypatch.setenv("LOCAL_SINGLE_USER", "1")
+    monkeypatch.setenv("BACKEND_HOST", host)
+
+
+def test_local_mode_serves_the_owner_with_no_session(client, monkeypatch):
+    """The exe opens straight into the app: no sign-in card, and nothing behind it to fill in.
+
+    There is no cookie in play at all -- the guard acts as the seeded admin. That includes the
+    admin-only routes, because on their own machine the owner *is* the admin; it is where they
+    paste their API key, and a mode that hid /providers would make the app unusable.
+    """
+    _as_local(monkeypatch)
+    body = client.get("/auth/me").get_json()
+    assert body["auth_mode"] == "local"
+    assert body["user"] is not None and body["user"]["role"] == "admin"
+    assert body["user"]["username"] == "root"
+
+    # Protected and admin-only routes both answer, with no login first.
+    assert client.get("/detections").status_code == 200
+    assert client.post("/settings", json={"paper_url": "https://example.org/p"}).status_code == 200
+    pid = client.post("/providers", json={
+        "name": "nvidia", "base_url": "https://integrate.api.nvidia.com/v1"}).status_code
+    assert pid == 201
+
+
+def test_local_mode_closes_sign_up_because_there_is_nothing_to_sign_up_for(client, monkeypatch):
+    _as_local(monkeypatch)
+    r = client.post("/auth/register", json={"name": "Second Owner", "email": "second@example.org",
+                                             "password": "userpass123", "confirm": "userpass123"})
+    assert r.status_code == 409
+    assert r.get_json()["error_code"] == "SINGLE_USER_MODE"
+
+
+def test_local_mode_is_refused_on_a_shared_bind(client, monkeypatch):
+    """`BACKEND_HOST` is an operator knob, and the flag must not beat it.
+
+    Honouring LOCAL_SINGLE_USER on 0.0.0.0 would answer every request on the network as though
+    the machine's owner had signed in -- one admin session shared by everyone who can reach the
+    port, with their API key and their history. So the mode is only real while the bind address
+    is a loopback one, which is the only way the launcher ever opens a browser. A loopback
+    spelling in the 127.0.0.0/8 range counts, because Windows answers ::1 and 127.x alike.
+    """
+    _as_local(monkeypatch, host="0.0.0.0")
+    body = client.get("/auth/me").get_json()
+    assert body["auth_mode"] == "accounts"
+    assert body["user"] is None
+    assert client.post("/detect", json={"text": TEXT}).status_code == 401
+    # Sign-up is available again, because a shared deploy is where accounts are the point.
+    assert _register(client, "nina")["username"] == "nina"
+
+    monkeypatch.setenv("BACKEND_HOST", "127.0.0.53")
+    assert client.get("/auth/me").get_json()["auth_mode"] == "local", "the whole /8 is loopback"
+
+
+def test_local_mode_needs_the_flag_not_just_a_loopback_bind(client, monkeypatch):
+    # `docker run -p 8080:80` binds 0.0.0.0 *inside* the container and nginx reaches the backend
+    # over a docker network name, so a loopback default cannot be the whole test for "is this the
+    # exe". Without the flag the hosted build keeps its login gate.
+    monkeypatch.delenv("LOCAL_SINGLE_USER", raising=False)
+    monkeypatch.setenv("BACKEND_HOST", "127.0.0.1")
+    assert client.get("/auth/me").get_json()["auth_mode"] == "accounts"
+    assert client.post("/detect", json={"text": TEXT}).status_code == 401
+
+
+# ------------------------------------------------------------------ in-place upgrade
+
+LEGACY_USERS_DDL = """
+CREATE TABLE users (
+    id            INTEGER PRIMARY KEY,
+    username      TEXT NOT NULL UNIQUE,
+    password_hash TEXT NOT NULL,
+    role          TEXT NOT NULL DEFAULT 'user' CHECK (role IN ('admin','user')),
+    theme         TEXT NOT NULL DEFAULT 'dark' CHECK (theme IN ('dark','light')),
+    created_at    TEXT NOT NULL DEFAULT (datetime('now')),
+    last_login_at TEXT
+)
+"""
+
+
+def test_a_deployed_database_is_upgraded_in_place(tmp_path, monkeypatch):
+    """An installed exe and a running container both arrive with a `users` table that has rows in it.
+
+    `CREATE TABLE IF NOT EXISTS` cannot add a column to a table that already exists, so v5 has to
+    migrate -- and the unique e-mail index has to be created *after* the ALTER, exactly like
+    `idx_detections_user` before it. Declaring it in SCHEMA aborts `executescript` with
+    "no such column: email" on every installed database, which is a boot failure, not a data
+    failure: the app would refuse to start and the fix would be invisible from the UI.
+
+    The account that was already there has to still be able to sign in afterwards.
+    """
+    import sqlite3
+
+    legacy = tmp_path / "legacy.sqlite3"
+    conn = sqlite3.connect(legacy)
+    conn.execute(LEGACY_USERS_DDL)
+    conn.execute("INSERT INTO users (username, password_hash, role) VALUES (?,?,?)",
+                 ("legacy_admin", db.hash_password("legacypass1"), "admin"))
+    conn.commit()
+    conn.close()
+
+    monkeypatch.setattr(db, "DB_PATH", legacy)
+    monkeypatch.setattr(db, "SECRET_PATH", tmp_path / "legacy-secret.key")
+    db._fernet = None
+    try:
+        db.init_db()  # used to raise here
+        cols = {r["name"] for r in db.connect().execute("PRAGMA table_info(users)")}
+        assert {"email", "display_name"} <= cols
+        with db.session() as c:
+            row = db.get_user_by_identifier(c, "legacy_admin")
+            assert row is not None and db.check_password("legacypass1", row["password_hash"])
+            assert row["email"] is None, "an upgraded account keeps only what it had"
+            idx = {r["name"] for r in c.execute("PRAGMA index_list(users)")}
+            assert "idx_users_email" in idx, "the uniqueness rule did not survive the upgrade"
+
+        a = create_app()
+        a.config["TESTING"] = True
+        a.config["AUTH_FORCE"] = True
+        with arm_csrf(a.test_client()) as client:
+            # the pre-existing account signs in by its username, and now by an address once given one
+            assert _login(client, "legacy_admin", "legacypass1").status_code == 200
+            # a brand-new signup on the upgraded database works and is guarded against duplicates
+            assert _register(client, "omega")["email"] == "omega@example.org"
+            dup = client.post("/auth/register", json={
+                "name": "Omega Two", "email": "omega@example.org",
+                "password": "userpass123", "confirm": "userpass123"})
+            assert dup.status_code == 409 and dup.get_json()["error_code"] == "EMAIL_TAKEN"
+    finally:
+        db._fernet = None
 

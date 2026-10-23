@@ -27,7 +27,8 @@
 <div class="subtitle">A dated benchmark of model accuracy, quota regimes and out-of-sample stability across four providers, with a band-scoring protocol for production use</div>
 
 <div class="meta">
-  <strong>Preprint / technical report — version 2</strong> — not peer reviewed.<br>
+  <strong>Preprint / technical report</strong> — not peer reviewed. This file is the two-part edition: Part I (§1–§8) plus Part II (§9).<br>
+  <strong>Citation</strong>: deposited at <a href="https://doi.org/10.5281/zenodo.23460013">doi.org/10.5281/zenodo.23460013</a>. <a href="https://doi.org/10.5281/zenodo.23460012">doi.org/10.5281/zenodo.23460012</a> is the concept DOI and resolves to the newest version of the record.<br>
   <strong>Part I</strong> (§1–§8) measurement window: 2026-09-28 to 2026-10-13, published as it was measured.<br>
   <strong>Part II</strong> (§9) measurement window: 2026-10-13 to 2026-10-17 — it extends Part I with the length-band, evidence-output, de-formatting and deployment-regime measurements, and it corrects the claims later evidence refuted.<br>
   Reading note: where Part II supersedes a Part I claim, the Part I text is kept as the dated record and carries a † marker pointing into §9. Every availability, quota and latency claim in both parts is time-bound to the window that produced it.<br>
@@ -197,7 +198,7 @@
 <ul>
   <li>Corpora are rebuildable from the public HC3 dataset with the recorded offset windows [1]; per-document provenance (url, retrieved date, char offsets, sha256) is kept for every row. Raw text is not redistributed.</li>
   <li>Every capture is stored as append-only per-row JSONL (id, label, p, confidence, signals, latency, error class, attempt) with a run manifest recording every parameter of the command that produced it. The scoring and paired-test code (band scorer, Mann-Whitney, exact McNemar, corpus disjointness verifier with negative control) are plain JS, &lt;200 lines each.</li>
-  <li>The prompt, parser rules and band constants are exactly those listed in §2; a per-model reproduction checklist is available on request to the submitting author.</li>
+  <li>The prompt, parser rules and band constants are exactly those listed in §2. The per-model reproduction checklist is not behind a request: the record at the DOI above ships <code>model-ranking.csv</code> (one row per measured model, in the order the application ranks them), <code>per-text-scores.csv</code> (3,937 rows of label, probability, confidence, answered flag and error class — one per run and text, no corpus text redistributed), <code>runs-manifest.csv</code> (144 rows recording the parameters of every capture) and a <code>README.md</code> that defines each column. Re-scoring <code>per-text-scores.csv</code> at each model's own exported band reproduces the correct / wrong / decided / accuracy figures of all 48 ranking rows, so every number in this report can be traced from the dataset to the command that produced it.</li>
 </ul>
 
 <h2>9. Part II — 2026-10-13 to 2026-10-17: what a deployed system measures that a benchmark cannot</h2>
