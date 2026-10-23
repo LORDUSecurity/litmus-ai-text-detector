@@ -97,3 +97,7 @@ replay_pid*.log
 # A 0-byte SQLite file the very first boot created before the path moved to
 # backend/data/. Nothing reads it; it was tracked by mistake.
 ai-text-detector/detector.db
+
+# The original September build prompt: how the pipeline was specified to an
+# agent. Kept on disk for reference, not published with the repo.
+/prompt.txt
